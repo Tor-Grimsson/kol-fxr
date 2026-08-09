@@ -1,0 +1,29 @@
+/**
+ * Labs chrome skin — scoped under `.kol-editor-labs` (the LabsView wrapper),
+ * so nothing here reaches the editor chrome.
+ *
+ * One rule, ported from the reference: labs' own atoms pair `uppercase` with
+ * `tracking-widest` on control-label spans (kol-labs-single Slider.jsx:220,
+ * ToggleSwitch.jsx:31); the published DS atoms kept `tracking-widest` but
+ * dropped the `uppercase` (DS policy: casing is authored, not transformed).
+ * The rail's labels flow through those DS atoms (LabeledControl), which we
+ * can't author strings into — so the labs chrome restores the reference's
+ * treatment at cascade level, keyed on the exact class pair labs used.
+ * Section headers (`kol-helper-10` WITHOUT tracking-widest) stay authored
+ * case, same as the reference.
+ */
+.kol-editor-labs .kol-helper-10.tracking-widest {
+  text-transform: uppercase;
+}
+
+/* Labs param density — the reference groups tight (≈10px between rows,
+ * inline labels) with a hairline between sections. `.kol-params-section`
+ * is AutoControls' section wrapper; in the editor its inner gap matches the
+ * outer flow (no visual change there), here it tightens and divides. */
+.kol-editor-labs .kol-params-section {
+  gap: 0.625rem;
+}
+.kol-editor-labs .kol-params-section + .kol-params-section {
+  border-top: 1px solid var(--kol-fg-08);
+  padding-top: 1rem;
+}

@@ -44,6 +44,10 @@ function Rail({ side, panels }) {
 
 export default function EditorShell({ registry }) {
   const Canvas = registry?.canvas ?? null
+  /* The topbar is registry-driven like the rails, defaulting to MenuTop so
+   * the compose registry (which declares no topbar) is untouched. Labs mode
+   * swaps in its own reduced bar — plan.md Phase 11.4. */
+  const Topbar = registry?.topbar ?? MenuTop
   const canvasHeader = panelsForSlot(registry?.panels, 'canvas.header')
   const canvasFooter = panelsForSlot(registry?.panels, 'canvas.footer')
   /* `data-editor-keep-selection` is the single marker the document-level
@@ -53,7 +57,7 @@ export default function EditorShell({ registry }) {
    * inside the shell is sufficient. */
   return (
     <div className="kol-editor-shell" data-editor-keep-selection>
-      <MenuTop />
+      <Topbar />
       <div className="kol-editor-grid">
         <Rail side="left"  panels={registry?.panels} />
         <div className="kol-editor-canvas-column">

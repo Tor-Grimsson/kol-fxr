@@ -46,17 +46,17 @@ importers:
         version: 0.169.0
     devDependencies:
       '@kolkrabbi/kol-component':
-        specifier: ^0.6.0
-        version: 0.6.0(framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(gsap@3.15.0)(hls.js@1.6.16)(opentype.js@2.0.0)(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+        specifier: ^0.27.0
+        version: 0.27.0(framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(gsap@3.15.0)(hls.js@1.6.16)(opentype.js@2.0.0)(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       '@kolkrabbi/kol-framework':
-        specifier: ^0.2.1
-        version: 0.2.1(framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(gsap@3.15.0)(hls.js@1.6.16)(opentype.js@2.0.0)(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+        specifier: ^0.14.0
+        version: 0.14.0(framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(gsap@3.15.0)(hls.js@1.6.16)(opentype.js@2.0.0)(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       '@kolkrabbi/kol-icons':
-        specifier: ^0.5.0
-        version: 0.5.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^0.10.0
+        version: 0.10.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@kolkrabbi/kol-theme':
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.31.3
+        version: 0.31.3
       '@vitejs/plugin-react':
         specifier: ^6.0.1
         version: 6.0.3(vite@8.1.2(jiti@2.7.0))
@@ -130,6 +130,10 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  '@babel/runtime@7.29.7':
+    resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
+    engines: {node: '>=6.9.0'}
+
   '@babel/template@7.29.7':
     resolution: {integrity: sha512-puq+Gf35oI24FeN11LkoUQFqv9uwNeWpxXZi/Ji3rRIoKAzKnxRaZ+Gkj0vKS9ZCiTESfng1N9LyOyXvo+m+Gg==}
     engines: {node: '>=6.9.0'}
@@ -188,8 +192,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@kolkrabbi/kol-component@0.4.0':
-    resolution: {integrity: sha512-B4LL0IV4L8G1YgJJ5JY2T2a5Rl+c4zys4r1LkXF11Rj5jHO6UpuzSlDo1QaMwAbcVSHYq8FleY9DEjW/x/+d4Q==}
+  '@kolkrabbi/kol-component@0.24.0':
+    resolution: {integrity: sha512-eyEadVgIUjJM143/vUEn8XWEaIvUGIwGbkhxp1xgyYbMxhcxp9Ni0VGRkH2FSscxnm8sUB7fY1JHyBiSMsNtEg==}
     peerDependencies:
       framer-motion: ^12.0.0
       gsap: ^3.13.0
@@ -204,8 +208,8 @@ packages:
       react-router-dom:
         optional: true
 
-  '@kolkrabbi/kol-component@0.6.0':
-    resolution: {integrity: sha512-/v6QxJBQIrLg5PcCDzRM8rUxz53Ko29RxzveQKLAsQQurRPykeBzUDj030yGQnlBfEjUJQ2qXK5PuScHp11qrA==}
+  '@kolkrabbi/kol-component@0.27.0':
+    resolution: {integrity: sha512-5bEuKLARu4j7iobsi6uJU8zdC9XhleLznpojzH05nC0rAIqxEDKx/ylkmG3GK/Wx8QICo9CRJLV9YEOiIz1TAw==}
     peerDependencies:
       framer-motion: ^12.0.0
       gsap: ^3.13.0
@@ -220,28 +224,22 @@ packages:
       react-router-dom:
         optional: true
 
-  '@kolkrabbi/kol-framework@0.2.1':
-    resolution: {integrity: sha512-8ILybj6lXQt1wqky/rur7enpS5sIuU3hFDMxMVEO+Rl8G50VOv01A91mHTiPXIS6uWFADNvjjQ/Awy6zMcSImQ==}
+  '@kolkrabbi/kol-framework@0.14.0':
+    resolution: {integrity: sha512-WbMxlcIbOThL1PwS51z8wJgo9seQpv9sXS14tuAg6MltL3BM/vyG4ogYxSCqjaasLSAEtIAZ5SH83AUNq/8Lsg==}
     peerDependencies:
       react: ^18.3.0 || ^19.0.0
       react-dom: ^18.3.0 || ^19.0.0
       react-router-dom: ^6.0.0 || ^7.0.0
 
-  '@kolkrabbi/kol-icons@0.5.0':
-    resolution: {integrity: sha512-1zcyARot+mCt40OX4pYKUsPJm5cc0zCpjUBdxccaFwvo0yKJxZMVwd+mzBZ8eP3+yyrNY1zWso4IYggZ/EOWFg==}
+  '@kolkrabbi/kol-icons@0.10.0':
+    resolution: {integrity: sha512-dlf2jBbC/nlVO71IFDGpeDiDIxSb+WX0PAYHKCFbft2G+lNcZLu6IW5Roo0MO+NEGdF47CSVQRa1xxmV/LCxeg==}
     hasBin: true
     peerDependencies:
       react: ^18.3.0 || ^19.0.0
       react-dom: ^18.3.0 || ^19.0.0
 
-  '@kolkrabbi/kol-loader@0.3.0':
-    resolution: {integrity: sha512-o29jA175ad3adyBud7r2gRNc4vecaJMoU2YralrSwXQyn+jK1NJwbvigeV2muHEwYHva8YFzApasBJEJF9hhag==}
-    peerDependencies:
-      react: ^18.3.0 || ^19.0.0
-      react-dom: ^18.3.0 || ^19.0.0
-
-  '@kolkrabbi/kol-theme@0.6.0':
-    resolution: {integrity: sha512-hGs08V6OLJGQG1zxcIaYGkS6vzvRJkWpHb0YP/rfK2GwjSy0EjDeuqZ7mshCAW6Eh3SVUbH0VfWSrmB6BdzrCQ==}
+  '@kolkrabbi/kol-theme@0.31.3':
+    resolution: {integrity: sha512-cbIVKmXTuienoOZKtjW4VZO43Scf5wQNiXSVv7FSXPX+qXLrDEWwZvlcuc0poWF2cyqGVqQNnQPk2yaOgrPq4g==}
 
   '@napi-rs/wasm-runtime@1.1.6':
     resolution: {integrity: sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg==}
@@ -542,6 +540,18 @@ packages:
   '@types/gradient-parser@0.1.5':
     resolution: {integrity: sha512-r7K3NkJz3A95WkVVmjs0NcchhHstC2C/VIYNX4JC6tieviUNo774FFeOHjThr3Vw/WCeMP9kAT77MKbIRlO/4w==}
 
+  '@types/hast@3.0.5':
+    resolution: {integrity: sha512-rp/ezSWaD1m44dPKICGhiskI13nVr7qTloFwDa/IYkhhf5nzwP+zIQcIJh3WIFSBOy/H1PzB40jPjMDksN4F+g==}
+
+  '@types/prismjs@1.26.6':
+    resolution: {integrity: sha512-vqlvI7qlMvcCBbVe0AKAb4f97//Hy0EBTaiW8AalRnG/xAN5zOiWWyrNqNXeq8+KAuvRewjCVY1+IPxk4RdNYw==}
+
+  '@types/unist@2.0.11':
+    resolution: {integrity: sha512-CmBKiL6NNo/OqgmMn95Fk9Whlp2mtvIv+KNpQKN2F4SjvrEesubTRWGYSg+BnWZOnlCaSTU1sMpsBOzgbYhnsA==}
+
+  '@types/unist@3.0.3':
+    resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
+
   '@vitejs/plugin-react@6.0.3':
     resolution: {integrity: sha512-vmFvco5/QuC2f9Oj+wTk0+9XeDFkHxSamwZKYc7MxYwKICfvUvlMhqKI0VuICPltGqh1neqBKDvO4kes1ya8vg==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -586,8 +596,20 @@ packages:
   caniuse-lite@1.0.30001800:
     resolution: {integrity: sha512-MMHtuAz9Ys840zAY5F4k6fV5GaivZ9sPk+nz0mY+GYVzRBnYkN0mpqkSR92oWRQ19yQWo4HvBV/FnC16AJX8MA==}
 
+  character-entities-legacy@3.0.0:
+    resolution: {integrity: sha512-RpPp0asT/6ufRm//AJVwpViZbGM/MkjQFxJccQRHmISF/22NBtsHqAWmL+/pmkPWoIUJdWyeVleTl1wydHATVQ==}
+
+  character-entities@2.0.2:
+    resolution: {integrity: sha512-shx7oQ0Awen/BRIdkjkvz54PnEEI/EjwXDSIZp86/KKdbafHh1Df/RYGBhn4hbe2+uKC9FnT5UCEdyPz3ai9hQ==}
+
+  character-reference-invalid@2.0.1:
+    resolution: {integrity: sha512-iBZ4F4wRbyORVsu0jPV7gXkOsGYjGHPmAyv+HiHG8gi5PtC9KI2j1+v8/tlibRvjoWX027ypmG/n0HtO5t7unw==}
+
   colord@2.9.3:
     resolution: {integrity: sha512-jeC1axXpnb0/2nn/Y1LPuLdgXBLH7aDcHu4KEKfqw3CUhX7ZpfBSlPKyqXE6btIgEzfWtrX3/tyBCaCvXvMkOw==}
+
+  comma-separated-tokens@2.0.3:
+    resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
@@ -633,6 +655,9 @@ packages:
     peerDependenciesMeta:
       supports-color:
         optional: true
+
+  decode-named-character-reference@1.3.0:
+    resolution: {integrity: sha512-GtpQYB283KrPp6nRw50q3U9/VfOutZOe103qlN7BPP6Ad27xYnOIWv4lPzo8HCAL+mMZofJ9KEy30fq6MfaK6Q==}
 
   delaunator@5.1.0:
     resolution: {integrity: sha512-AGrQ4QSgssa1NGmWmLPqN5NY2KajF5MqxetNEO+o0n3ZwZZeTmt7bBnvzHWrmkZFxGgr4HdyFgelzgi06otLuQ==}
@@ -684,6 +709,9 @@ packages:
   eventemitter3@5.0.4:
     resolution: {integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==}
 
+  fault@1.0.4:
+    resolution: {integrity: sha512-CJ0HCB5tL5fYTEA7ToAq5+kTwd++Borf1/bifxd9iT70QcXr4MRrO3Llf8Ifs70q+SJcGHFtnIE/Nw6giCtECA==}
+
   fdir@6.5.0:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
@@ -692,6 +720,10 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
+
+  format@0.2.2:
+    resolution: {integrity: sha512-wzsgA6WOq+09wrU1tsJ09udeR/YZRaeArL9e1wPbFg3GG2yDnC2ldKpxs4xunpFF9DgqCqOIra3bc1HWrJ37Ww==}
+    engines: {node: '>=0.4.x'}
 
   framer-motion@12.42.2:
     resolution: {integrity: sha512-5XY9luDiu0oHfHBjpDthFMh0ES+122w6p/papSJBweMkO8Sn+PW2QaEgRblQBpWFnuvZS5qvarpt/hO2pjGmnw==}
@@ -725,6 +757,18 @@ packages:
   gsap@3.15.0:
     resolution: {integrity: sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==}
 
+  hast-util-parse-selector@4.0.0:
+    resolution: {integrity: sha512-wkQCkSYoOGCRKERFWcxMVMOcYE2K1AaNLU8DXS9arxnLOUEWbOXKXiJUNzEpqZ3JOKpnha3jkFrumEjVliDe7A==}
+
+  hastscript@9.0.1:
+    resolution: {integrity: sha512-g7df9rMFX/SPi34tyGCyUBREQoKkapwdY/T04Qn9TDWfHhAYt4/I0gMVirzK5wEzeUqIjEB+LXC/ypb7Aqno5w==}
+
+  highlight.js@10.7.3:
+    resolution: {integrity: sha512-tzcUFauisWKNHaRkN4Wjl/ZA07gENAjFl3J/c480dprkGTg5EQstgaNFqBfUqCq54kZRIEcreTsAgF/m2quD7A==}
+
+  highlightjs-vue@1.0.0:
+    resolution: {integrity: sha512-PDEfEF102G23vHmPhLyPboFCD+BkMGu+GuJe2d9/eH4FsCwvgBpnc9n0pGE+ffKdph38s6foEZiEjdgHdzp+IA==}
+
   hls.js@1.6.16:
     resolution: {integrity: sha512-VSIRpLfRwlAAdGL4wiTucx2ScRipo0ed1FBatWkyt832jC4CReKstga6yIhYVwGu9LOBjuX9wzmRMeQdBJtzEA==}
 
@@ -732,8 +776,20 @@ packages:
     resolution: {integrity: sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ==}
     engines: {node: '>=6'}
 
+  is-alphabetical@2.0.1:
+    resolution: {integrity: sha512-FWyyY60MeTNyeSRpkM2Iry0G9hpr7/9kD40mD/cGQEuilcZYS4okz8SN2Q6rLCJ8gbCt6fN+rC+6tMGS99LaxQ==}
+
+  is-alphanumerical@2.0.1:
+    resolution: {integrity: sha512-hmbYhX/9MUMF5uh7tOXyK/n0ZvWpad5caBA17GsC6vyuCqaWliRG5K1qS9inmUhEMaOBIW7/whAnSwveW/LtZw==}
+
   is-arrayish@0.2.1:
     resolution: {integrity: sha512-zz06S8t0ozoDXMG+ube26zeCTNXcKIPJZJi8hBrF4idCLms4CG9QtK7qBl1boi5ODzFpjswb5JPmHCbMpjaYzg==}
+
+  is-decimal@2.0.1:
+    resolution: {integrity: sha512-AAB9hiomQs5DXWcRB1rqsxGUstbRroFOPPVAomNk/3XHR5JyEZChOyTWe2oayKnsSsr/kcGqF+z6yuH6HHpN0A==}
+
+  is-hexadecimal@2.0.1:
+    resolution: {integrity: sha512-DgZQp241c8oO6cA1SbTEWiXeoxV42vlcJxgH+B3hi1AiqqKruZR3ZGF8In3fj4+/y/7rHvlOZLZtgJ/4ttYGZg==}
 
   ismobilejs@1.1.1:
     resolution: {integrity: sha512-VaFW53yt8QO61k2WJui0dHf4SlL8lxBofUuUmwBo0ljPk0Drz2TiuDW4jo3wDcv41qy/SxrJ+VAzJ/qYqsmzRw==}
@@ -845,6 +901,9 @@ packages:
   lower-case@2.0.2:
     resolution: {integrity: sha512-7fm3l3NAF9WfN6W3JOmf5drwpVqX78JtoGJ3A6W0a6ZnldM41w2fV5D490psKFTpMds8TJse/eHLFFsNHHjHgg==}
 
+  lowlight@1.20.0:
+    resolution: {integrity: sha512-8Ktj+prEb1RoCPkEOrPMYUN/nCggB7qAWe3a7OpMjWQkh3l2RD5wKRQ+o8Q8YuI9RG/xs95waaI/E6ym/7NsTw==}
+
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
@@ -887,6 +946,9 @@ packages:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
 
+  parse-entities@4.0.2:
+    resolution: {integrity: sha512-GG2AQYWoLgL877gQIKeRPGO1xF9+eG1ujIb5soS5gPvLQ1y2o8FL90w2QWNdf9I361Mpp7726c+lj3U0qK1uGw==}
+
   parse-json@5.2.0:
     resolution: {integrity: sha512-ayCKvm/phCGxOkYRSCM82iDwct8/EonSEgCSxWxD7ve6jHggsFl4fZVQBPRNgQoKiuV/odhFrGzQXZwbifC8Rg==}
     engines: {node: '>=8'}
@@ -917,6 +979,13 @@ packages:
     resolution: {integrity: sha512-vuwillviilfKZsg0VGj5R/YwwcHx4SLsIOI/7K6mQkWx+l5cUHTjj5g0AasTBcyXsbfTgrwsUNmVUb5xVwyPwg==}
     engines: {node: ^10 || ^12 || >=14}
 
+  prismjs@1.30.0:
+    resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}
+    engines: {node: '>=6'}
+
+  property-information@7.2.0:
+    resolution: {integrity: sha512-IAtzIB6sUiWaJYrX9smp3V46pBGbBeLFRGdh25kg1334VcBlD8HzhPeNIWQH9zhGmo2itIe25EHt9dQP7G5hmg==}
+
   react-dom@19.2.7:
     resolution: {integrity: sha512-t0BRVXvbiE/o20Hfw669rLbMCDWtYZLvmJigy2f0MxsXF+71pxhR3xOkspmsO8h3ZlNzyibAmtCa3l4lYKk6gQ==}
     peerDependencies:
@@ -939,9 +1008,18 @@ packages:
       react-dom:
         optional: true
 
+  react-syntax-highlighter@16.1.1:
+    resolution: {integrity: sha512-PjVawBGy80C6YbC5DDZJeUjBmC7skaoEUdvfFQediQHgCL7aKyVHe57SaJGfQsloGDac+gCpTfRdtxzWWKmCXA==}
+    engines: {node: '>= 16.20.2'}
+    peerDependencies:
+      react: '>= 0.14.0'
+
   react@19.2.7:
     resolution: {integrity: sha512-HNe9WslTbXmFK8o8cmwgAeJFSBvt1bPdHCVKtaaV+WlAN36mpT4hcRpwbf3fY56ar2oIXzsBpOAiIRHAdY0OlQ==}
     engines: {node: '>=0.10.0'}
+
+  refractor@5.0.0:
+    resolution: {integrity: sha512-QXOrHQF5jOpjjLfiNk5GFnWhRXvxjUVnlFxkeDmewR5sXkr3iM46Zo+CnRR8B+MDVqkULW4EcLVcRBNOPXHosw==}
 
   resolve-from@4.0.0:
     resolution: {integrity: sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g==}
@@ -974,6 +1052,9 @@ packages:
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
+
+  space-separated-tokens@2.0.2:
+    resolution: {integrity: sha512-PEGlAwrG8yXGXRjW32fGbg66JAlOAwbObuqVoJpv/mRgoWDQfgH1wDPvtzWyUSNAXBGSk8h755YDbbcEy3SH2Q==}
 
   svg-parser@2.0.4:
     resolution: {integrity: sha512-e4hG1hRwoOdRb37cIMSgzNsxyzKfayW6VOflrwvR+/bzrkyxY/31WkbgnQpgtrNp1SdpJvpUAGTa/ZoiPNDuRQ==}
@@ -1138,6 +1219,8 @@ snapshots:
     dependencies:
       '@babel/types': 7.29.7
 
+  '@babel/runtime@7.29.7': {}
+
   '@babel/template@7.29.7':
     dependencies:
       '@babel/code-frame': 7.29.7
@@ -1221,38 +1304,40 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@kolkrabbi/kol-component@0.4.0(framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(gsap@3.15.0)(hls.js@1.6.16)(opentype.js@2.0.0)(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+  '@kolkrabbi/kol-component@0.24.0(framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(gsap@3.15.0)(hls.js@1.6.16)(opentype.js@2.0.0)(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@floating-ui/react': 0.27.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@kolkrabbi/kol-loader': 0.3.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@kolkrabbi/kol-icons': 0.10.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       embla-carousel-react: 8.6.0(react@19.2.7)
       framer-motion: 12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       gsap: 3.15.0
       hls.js: 1.6.16
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
+      react-syntax-highlighter: 16.1.1(react@19.2.7)
     optionalDependencies:
       opentype.js: 2.0.0
       react-router-dom: 7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
 
-  '@kolkrabbi/kol-component@0.6.0(framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(gsap@3.15.0)(hls.js@1.6.16)(opentype.js@2.0.0)(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+  '@kolkrabbi/kol-component@0.27.0(framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(gsap@3.15.0)(hls.js@1.6.16)(opentype.js@2.0.0)(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@floating-ui/react': 0.27.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@kolkrabbi/kol-icons': 0.5.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@kolkrabbi/kol-icons': 0.10.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       embla-carousel-react: 8.6.0(react@19.2.7)
       framer-motion: 12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       gsap: 3.15.0
       hls.js: 1.6.16
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
+      react-syntax-highlighter: 16.1.1(react@19.2.7)
     optionalDependencies:
       opentype.js: 2.0.0
       react-router-dom: 7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
 
-  '@kolkrabbi/kol-framework@0.2.1(framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(gsap@3.15.0)(hls.js@1.6.16)(opentype.js@2.0.0)(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+  '@kolkrabbi/kol-framework@0.14.0(framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(gsap@3.15.0)(hls.js@1.6.16)(opentype.js@2.0.0)(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@kolkrabbi/kol-component': 0.4.0(framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(gsap@3.15.0)(hls.js@1.6.16)(opentype.js@2.0.0)(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
-      '@kolkrabbi/kol-loader': 0.3.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@kolkrabbi/kol-component': 0.24.0(framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(gsap@3.15.0)(hls.js@1.6.16)(opentype.js@2.0.0)(react-dom@19.2.7(react@19.2.7))(react-router-dom@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+      '@kolkrabbi/kol-icons': 0.10.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
       react-router-dom: 7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -1262,17 +1347,12 @@ snapshots:
       - hls.js
       - opentype.js
 
-  '@kolkrabbi/kol-icons@0.5.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@kolkrabbi/kol-icons@0.10.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
-  '@kolkrabbi/kol-loader@0.3.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
-    dependencies:
-      react: 19.2.7
-      react-dom: 19.2.7(react@19.2.7)
-
-  '@kolkrabbi/kol-theme@0.6.0': {}
+  '@kolkrabbi/kol-theme@0.31.3': {}
 
   '@napi-rs/wasm-runtime@1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
@@ -1497,6 +1577,16 @@ snapshots:
 
   '@types/gradient-parser@0.1.5': {}
 
+  '@types/hast@3.0.5':
+    dependencies:
+      '@types/unist': 3.0.3
+
+  '@types/prismjs@1.26.6': {}
+
+  '@types/unist@2.0.11': {}
+
+  '@types/unist@3.0.3': {}
+
   '@vitejs/plugin-react@6.0.3(vite@8.1.2(jiti@2.7.0))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
@@ -1524,7 +1614,15 @@ snapshots:
 
   caniuse-lite@1.0.30001800: {}
 
+  character-entities-legacy@3.0.0: {}
+
+  character-entities@2.0.2: {}
+
+  character-reference-invalid@2.0.1: {}
+
   colord@2.9.3: {}
+
+  comma-separated-tokens@2.0.3: {}
 
   convert-source-map@2.0.0: {}
 
@@ -1556,6 +1654,10 @@ snapshots:
   debug@4.4.3:
     dependencies:
       ms: 2.1.3
+
+  decode-named-character-reference@1.3.0:
+    dependencies:
+      character-entities: 2.0.2
 
   delaunator@5.1.0:
     dependencies:
@@ -1601,9 +1703,15 @@ snapshots:
 
   eventemitter3@5.0.4: {}
 
+  fault@1.0.4:
+    dependencies:
+      format: 0.2.2
+
   fdir@6.5.0(picomatch@4.0.4):
     optionalDependencies:
       picomatch: 4.0.4
+
+  format@0.2.2: {}
 
   framer-motion@12.42.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
@@ -1627,6 +1735,22 @@ snapshots:
 
   gsap@3.15.0: {}
 
+  hast-util-parse-selector@4.0.0:
+    dependencies:
+      '@types/hast': 3.0.5
+
+  hastscript@9.0.1:
+    dependencies:
+      '@types/hast': 3.0.5
+      comma-separated-tokens: 2.0.3
+      hast-util-parse-selector: 4.0.0
+      property-information: 7.2.0
+      space-separated-tokens: 2.0.2
+
+  highlight.js@10.7.3: {}
+
+  highlightjs-vue@1.0.0: {}
+
   hls.js@1.6.16: {}
 
   import-fresh@3.3.1:
@@ -1634,7 +1758,18 @@ snapshots:
       parent-module: 1.0.1
       resolve-from: 4.0.0
 
+  is-alphabetical@2.0.1: {}
+
+  is-alphanumerical@2.0.1:
+    dependencies:
+      is-alphabetical: 2.0.1
+      is-decimal: 2.0.1
+
   is-arrayish@0.2.1: {}
+
+  is-decimal@2.0.1: {}
+
+  is-hexadecimal@2.0.1: {}
 
   ismobilejs@1.1.1: {}
 
@@ -1709,6 +1844,11 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  lowlight@1.20.0:
+    dependencies:
+      fault: 1.0.4
+      highlight.js: 10.7.3
+
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
@@ -1746,6 +1886,16 @@ snapshots:
   parent-module@1.0.1:
     dependencies:
       callsites: 3.1.0
+
+  parse-entities@4.0.2:
+    dependencies:
+      '@types/unist': 2.0.11
+      character-entities-legacy: 3.0.0
+      character-reference-invalid: 2.0.1
+      decode-named-character-reference: 1.3.0
+      is-alphanumerical: 2.0.1
+      is-decimal: 2.0.1
+      is-hexadecimal: 2.0.1
 
   parse-json@5.2.0:
     dependencies:
@@ -1786,6 +1936,10 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
+  prismjs@1.30.0: {}
+
+  property-information@7.2.0: {}
+
   react-dom@19.2.7(react@19.2.7):
     dependencies:
       react: 19.2.7
@@ -1805,7 +1959,24 @@ snapshots:
     optionalDependencies:
       react-dom: 19.2.7(react@19.2.7)
 
+  react-syntax-highlighter@16.1.1(react@19.2.7):
+    dependencies:
+      '@babel/runtime': 7.29.7
+      highlight.js: 10.7.3
+      highlightjs-vue: 1.0.0
+      lowlight: 1.20.0
+      prismjs: 1.30.0
+      react: 19.2.7
+      refractor: 5.0.0
+
   react@19.2.7: {}
+
+  refractor@5.0.0:
+    dependencies:
+      '@types/hast': 3.0.5
+      '@types/prismjs': 1.26.6
+      hastscript: 9.0.1
+      parse-entities: 4.0.2
 
   resolve-from@4.0.0: {}
 
@@ -1846,6 +2017,8 @@ snapshots:
       tslib: 2.8.1
 
   source-map-js@1.2.1: {}
+
+  space-separated-tokens@2.0.2: {}
 
   svg-parser@2.0.4: {}
 

@@ -19,7 +19,7 @@ export const PALETTE_REFS = [
  * grid. Extracted from LayerInspector so both it and the schema-driven
  * AutoControls can consume it without an import cycle.
  */
-export function ColorField({ value, onChange, palette, label = 'Color', hideLabel = false, autoValue = null }) {
+export function ColorField({ value, onChange, palette, label = 'Color', hideLabel = false, autoValue = null, inline = false }) {
   const isPaletteRef = typeof value === 'string' && value.startsWith('palette:')
   const isNone       = value == null
   /* A `var(--kol-*)` value is a themed token that flips with light/dark — the
@@ -56,40 +56,66 @@ export function ColorField({ value, onChange, palette, label = 'Color', hideLabe
     else      setDraft(hexValue)
   }
 
+  /* Swatch opens the palette popover; hex commits on blur/Enter. Inline
+   * (labs row) = [24px swatch] LABEL ……… #hex — the reference's exact order
+   * and size (labs: 24×24 rounded-[2px], swatch leads the row). */
+  const swatchBtn = (
+    <button
+      type="button"
+      ref={popover.refs.setReference}
+      {...popover.getReferenceProps()}
+      aria-label={`${label}: ${subtitle}`}
+      className="inline-flex items-center shrink-0"
+    >
+      <ColorSwatch
+        hex={resolved}
+        size={inline ? 24 : 32}
+        showTransparent={isNone}
+        transparentTone={isStroke ? 'error' : 'warning'}
+        hoverable={false}
+        /* hairline — a surface-colored hex (#111 on dark) vanishes on the
+           rail without an edge; the DS chip is borderless by default */
+        className="border border-fg-08"
+      />
+    </button>
+  )
+  /* None / themed show an empty field ('# –' via placeholder), not a
+   * hex — a disabled fill claiming #FFFFFF reads as white, and a themed
+   * token has no single hex. */
+  const hexInput = (
+    <Input
+      variant="filled"
+      size="sm"
+      prefix="#"
+      chars={6}
+      uppercase
+      placeholder="–"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commitHex}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+    />
+  )
+
+  const row = inline ? (
+    <div className="flex items-center gap-3">
+      {swatchBtn}
+      {!hideLabel && (
+        <span className="kol-helper-10 tracking-widest text-meta whitespace-nowrap">{label}</span>
+      )}
+      <div className="flex-1" />
+      {hexInput}
+    </div>
+  ) : (
+    <div className="flex items-center gap-2">
+      {swatchBtn}
+      {hexInput}
+    </div>
+  )
+
   return (
-    <LabeledControl label={hideLabel ? null : label}>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          ref={popover.refs.setReference}
-          {...popover.getReferenceProps()}
-          aria-label={`${label}: ${subtitle}`}
-          className="inline-flex items-center shrink-0"
-        >
-          <ColorSwatch
-            hex={resolved}
-            size={32}
-            showTransparent={isNone}
-            transparentTone={isStroke ? 'error' : 'warning'}
-            hoverable={false}
-          />
-        </button>
-        {/* None / themed show an empty field ('# –' via placeholder), not a
-            hex — a disabled fill claiming #FFFFFF reads as white, and a themed
-            token has no single hex. */}
-        <Input
-          variant="ghost"
-          size="sm"
-          prefix="#"
-          chars={6}
-          uppercase
-          placeholder="–"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commitHex}
-          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
-        />
-      </div>
+    <LabeledControl label={inline || hideLabel ? null : label}>
+      {row}
       <PopoverPanel
         popover={popover}
         panel={false}

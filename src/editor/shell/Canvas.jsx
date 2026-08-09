@@ -215,8 +215,9 @@ function zoomAt(v, factor, sx, sy) {
 }
 
 /* Live framerate for the fps chip, measured only while shown (RAF idles
- * when off). Toggled by `f` alongside the zoom readout below. */
-function useFps(enabled) {
+ * when off). Toggled by `f` alongside the zoom readout below.
+ * Exported: labs' stage corner renders the same chip. */
+export function useFps(enabled) {
   const [fps, setFps] = useState(0)
   useEffect(() => {
     if (!enabled) return

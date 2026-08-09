@@ -468,8 +468,12 @@ const layerDefaults = (type, vh = CANVAS_H) => {
 /* `persistDraft={false}` (mobile chrome, output window) opts out of the WHOLE
  * draft surface: no restore prompt, no `kol.editor.draft` reads/writes/deletes,
  * no load-time clip GC — an ephemeral session must never touch the desktop's
- * draft or reap its IndexedDB clips. */
-export function ComposeStateProvider({ children, persistDraft = true }) {
+ * draft or reap its IndexedDB clips.
+ *
+ * `draftKey` picks WHICH slot a persisting chrome autosaves to. Labs mode
+ * passes its own (plan.md Phase 11.6) so it neither offers to restore the
+ * editor's composition nor overwrites it; the editor keeps the default. */
+export function ComposeStateProvider({ children, persistDraft = true, draftKey = DRAFT_KEY }) {
   /* ─── Frame: aspect + canvas dimensions ───
    * `aspect` is the preset label (or 'custom'); `canvasW`/`canvasH` are the
    * real pixel output dimensions. The 1080-virtual coordinate space is
@@ -1640,16 +1644,16 @@ export function ComposeStateProvider({ children, persistDraft = true }) {
      * (below), where the draft can't be trusted — don't nuke on a transient. */
     const resolve = (finalLayers) => { restoreResolvedRef.current = true; gcClips(finalLayers) }
     let raw
-    try { raw = localStorage.getItem(DRAFT_KEY) } catch { restoreResolvedRef.current = true; return }
+    try { raw = localStorage.getItem(draftKey) } catch { restoreResolvedRef.current = true; return }
     if (!raw) { resolve(layersRef.current); return }
     let draft
     try { draft = JSON.parse(raw) } catch {
-      try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+      try { localStorage.removeItem(draftKey) } catch { /* ignore */ }
       resolve(layersRef.current)
       return
     }
     if (!draft || !Array.isArray(draft.layers) || draft.layers.length === 0) {
-      try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+      try { localStorage.removeItem(draftKey) } catch { /* ignore */ }
       resolve(layersRef.current)
       return
     }
@@ -1693,7 +1697,7 @@ export function ComposeStateProvider({ children, persistDraft = true }) {
         setSelectedIds([])
         resolve(restoredLayers)
       } else {
-        try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+        try { localStorage.removeItem(draftKey) } catch { /* ignore */ }
         resolve(layersRef.current)
       }
     })()
@@ -1704,7 +1708,7 @@ export function ComposeStateProvider({ children, persistDraft = true }) {
     const t = setTimeout(() => {
       try {
         if (layers.length === 0) {
-          localStorage.removeItem(DRAFT_KEY)
+          localStorage.removeItem(draftKey)
           return
         }
         const draft = {
@@ -1715,7 +1719,7 @@ export function ComposeStateProvider({ children, persistDraft = true }) {
           palette: { poolId, modeId, colors, locks },
           paint:   { fill: paintFill, stroke: paintStroke, active: activePaint },
         }
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+        localStorage.setItem(draftKey, JSON.stringify(draft))
       } catch { /* quota / disabled storage: ignore */ }
     }, 500)
     return () => clearTimeout(t)

@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useState } from 'react'
-import { Input, Dropdown, ViewToggle, LabeledControl, Textarea } from '@kolkrabbi/kol-component'
+import { useEffect, useState } from 'react'
+import { Input, Dropdown, ViewToggle, ToggleSwitch, LabeledControl, Textarea } from '@kolkrabbi/kol-component'
 import { visibleParams, isAnimatable, paramTab, paramSection } from './schema'
 import { isBinding, resolveValue } from './resolve'
 import { useTransportCtx } from './transport'
@@ -22,12 +22,18 @@ import { ColorField } from '../compose/inspectors/ColorField'
  * ('generate' | 'style' | 'anim' — see paramTab); absent renders all.
  * Consecutive same-section params share one small header; `emptyHint`
  * renders when the filter leaves nothing (the Animation tab's hint line).
+ *
+ * `inline` (labs skin): rows go label-left (LabeledControl's own inline
+ * layout), toggles become the DS ToggleSwitch, colors go inline too. The
+ * editor default stays label-above. Sections always wrap in a
+ * `.kol-params-section` block — same spacing as before (outer gap = inner
+ * gap), but a hook labs.css can tighten and divide.
  */
-export default function AutoControls({ schema, layer, setProp, palette, renderAnimate, tab, emptyHint }) {
+export default function AutoControls({ schema, layer, setProp, palette, renderAnimate, tab, emptyHint, inline = false }) {
   let params = visibleParams(schema, layer)
   if (tab) params = params.filter((p) => paramTab(p) === tab)
   if (params.length === 0) {
-    return emptyHint ? <p className="kol-helper-12 text-meta">{emptyHint}</p> : null
+    return emptyHint ? <p className="kol-mono-12 text-meta">{emptyHint}</p> : null
   }
   const groups = []
   for (const p of params) {
@@ -39,8 +45,13 @@ export default function AutoControls({ schema, layer, setProp, palette, renderAn
   return (
     <>
       {groups.map((g) => (
-        <Fragment key={g.params[0].key}>
-          {g.section && <span className="kol-helper-10 text-meta">{g.section}</span>}
+        <div key={g.params[0].key} className="kol-params-section flex flex-col gap-4">
+          {/* A section whose first param carries the same word as its label
+              ("Geometry" header over a "Geometry" select) prints doubled —
+              the param's own label already says it, so the header drops. */}
+          {g.section && g.section !== g.params[0].label && (
+            <span className="kol-helper-10 text-meta">{g.section}</span>
+          )}
           {g.params.map((p) => {
             const bound = isBinding(layer[p.key])
             const animate = renderAnimate && isAnimatable(p) ? renderAnimate(p, bound) : null
@@ -53,10 +64,11 @@ export default function AutoControls({ schema, layer, setProp, palette, renderAn
                 palette={palette}
                 bound={bound}
                 animate={animate}
+                inline={inline}
               />
             )
           })}
-        </Fragment>
+        </div>
       ))}
     </>
   )
@@ -111,7 +123,7 @@ function RangeField({ param: p, layer, setProp }) {
         style={bound ? { opacity: 0.7 } : undefined}
       />
       <Input
-        type="text" variant="filled" size="sm" chars={8}
+        type="text" variant="filled" size="sm" chars={6}
         value={draft}
         title="Number sets a constant · an expression like sin(t) binds it"
         onFocus={(e) => { setEditing(true); e.target.select() }}
@@ -127,7 +139,10 @@ function RangeField({ param: p, layer, setProp }) {
   )
 }
 
-function ParamControl({ param: p, layer, setProp, palette, bound, animate }) {
+/* labs' inline label column — wide enough for "ORIGINAL COLOR". */
+const INLINE_LABEL_W = 96
+
+function ParamControl({ param: p, layer, setProp, palette, bound, animate, inline }) {
   const raw = layer[p.key]
   const value = raw === undefined ? p.default : raw
 
@@ -136,20 +151,35 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate }) {
     return (
       <div className="flex items-end gap-2">
         <div className="flex-1 min-w-0">
-          <ColorField label={p.label} value={value} onChange={(v) => setProp(p.key, v)} palette={palette} />
+          <ColorField label={p.label} value={value} onChange={(v) => setProp(p.key, v)} palette={palette} inline={inline} />
         </div>
         {animate}
       </div>
     )
   }
 
+  /* Inline rows keep only the row-shaped controls; selects and text stay
+   * label-above in both skins (labs' own dropdowns are label-above too). */
+  let rowInline = inline
   let control = null
   if (p.type === 'range') {
     /* Direct input + live modulation readout, both in one field (RangeField):
      * type a number for a constant or an expression to bind it; a bound track
      * shows the resolved value moving. */
     control = <RangeField param={p} layer={layer} setProp={setProp} />
+    if (inline) {
+      /* Labs row: natural-width UPPERCASE label, track takes the rest —
+       * a fixed label column starves the track in a 300px rail. */
+      return (
+        <div className="flex items-center gap-3">
+          <span className="kol-helper-10 tracking-widest text-meta whitespace-nowrap">{p.label}</span>
+          <div className="flex-1 min-w-0">{control}</div>
+          {animate}
+        </div>
+      )
+    }
   } else if (p.type === 'select') {
+    rowInline = false
     control = (
       <Dropdown
         variant="subtle" size="sm" className="w-full"
@@ -158,7 +188,18 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate }) {
         onChange={(v) => setProp(p.key, p.numeric ? Number(v) : v)}
       />
     )
+    if (inline) {
+      /* Labs authors select labels sentence-case (section-header treatment),
+       * so they skip the uppercase label pair the row controls use. */
+      return (
+        <div className="flex flex-col gap-2">
+          <span className="kol-helper-10 text-meta">{p.label}</span>
+          {animate ? <div className="flex items-center gap-2"><div className="flex-1 min-w-0">{control}</div>{animate}</div> : control}
+        </div>
+      )
+    }
   } else if (p.type === 'segmented') {
+    rowInline = false
     control = (
       <ViewToggle
         options={p.options ?? []}
@@ -167,17 +208,33 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate }) {
       />
     )
   } else if (p.type === 'toggle') {
-    /* boolean stored as-is; presented as an off/on segmented control.
-     * `labels: ['Clip', 'Visible']` overrides the cell text (value stays bool). */
+    /* boolean stored as-is. Editor: off/on segmented cells; labs (inline):
+     * the DS ToggleSwitch, right-aligned — unless `labels` carries meaning
+     * the switch can't (`['Clip', 'Visible']`), which keeps the cells. */
     const [offLabel, onLabel] = p.labels ?? ['Off', 'On']
-    control = (
-      <ViewToggle
-        options={[{ value: 'off', label: offLabel }, { value: 'on', label: onLabel }]}
-        viewMode={value ? 'on' : 'off'}
-        onViewChange={(v) => setProp(p.key, v === 'on')}
-      />
-    )
+    if (inline && !p.labels) {
+      /* Label + switch span the row freely — a fixed label column would wrap
+       * the longer toggle labels ("ORIGINAL COLOR"). */
+      return (
+        <div className="flex items-center gap-3">
+          <span className="kol-helper-10 tracking-widest text-meta whitespace-nowrap">{p.label}</span>
+          <div className="flex-1" />
+          <ToggleSwitch size="sm" checked={!!value} onChange={(v) => setProp(p.key, v)} />
+          {animate}
+        </div>
+      )
+    } else {
+      rowInline = false
+      control = (
+        <ViewToggle
+          options={[{ value: 'off', label: offLabel }, { value: 'on', label: onLabel }]}
+          viewMode={value ? 'on' : 'off'}
+          onViewChange={(v) => setProp(p.key, v === 'on')}
+        />
+      )
+    }
   } else if (p.type === 'text') {
+    rowInline = false
     control = (
       <Textarea
         variant="ghost" size="sm" rows={p.rows ?? 2}
@@ -192,7 +249,7 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate }) {
 
   const hint = p.type === 'range' && p.format && typeof value === 'number' && !bound ? p.format(value) : undefined
   return (
-    <LabeledControl label={p.label} hint={hint}>
+    <LabeledControl label={p.label} hint={hint} inline={rowInline} labelWidth={INLINE_LABEL_W}>
       {animate ? <div className="flex items-center gap-2"><div className="flex-1 min-w-0">{control}</div>{animate}</div> : control}
     </LabeledControl>
   )

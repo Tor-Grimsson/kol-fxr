@@ -1,3 +1,5 @@
+import { withView } from '../mode'
+
 /* Mobile-chrome gating. Primary-pointer coarse + real touch = phone/tablet →
  * the generative MobileView; a tablet with a keyboard/trackpad reports a fine
  * primary pointer and gets the desktop editor natively. */
@@ -22,6 +24,5 @@ export const setWantsDesktop = (on) => {
  * flag+reload. A forced `?view=mobile` URL would survive a reload and loop, so
  * the way OUT must set the URL, not just the flag. `goDesktop` also persists
  * the preference so a tablet's plain (no-param) reload stays on desktop. */
-const withView = (view) => `${window.location.pathname}?view=${view}`
 export const goDesktop = () => { setWantsDesktop(true); window.location.assign(withView('desktop')) }
 export const goMobile = () => window.location.assign(withView('mobile'))

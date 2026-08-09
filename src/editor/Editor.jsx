@@ -51,17 +51,22 @@ function EditorBody() {
 
 /**
  * EditorProviders — the full context stack (error boundary + library > tool >
- * compose > palette > pattern > type), shared by the editor and the
- * chromeless output window (`./OutputView`) so both render off identical
- * state. Nesting order is load-bearing (see EditorBody). Library outermost —
- * MenuTop (File > Open) and every save-to-library flow read it.
+ * compose > palette > pattern > type), shared by the editor, the chromeless
+ * output window (`./OutputView`), the mobile chrome and labs mode
+ * (`./labs/LabsView`) so every chrome renders off identical state. Nesting
+ * order is load-bearing (see EditorBody). Library outermost — MenuTop
+ * (File > Open) and every save-to-library flow read it.
+ *
+ * `persistDraft` / `draftKey` are the draft-surface knobs: off entirely for
+ * ephemeral chromes, or pointed at a separate slot so a second persisting
+ * chrome (labs) can autosave without touching the editor's composition.
  */
-export function EditorProviders({ children, persistDraft = true }) {
+export function EditorProviders({ children, persistDraft = true, draftKey }) {
   return (
     <EditorErrorBoundary>
       <GeneratorLibraryProvider>
         <ToolProvider>
-          <ComposeStateProvider persistDraft={persistDraft}>
+          <ComposeStateProvider persistDraft={persistDraft} draftKey={draftKey}>
             <PaletteStateProvider>
               <PatternStateProvider>
                 <TypeStateProvider>

@@ -114,6 +114,75 @@ Effects attach to ANY layer, not just photos: the layer's own rendered output be
 
 **Why motion before effects, even with the effects repo ready:** a static effect is just a filter — effect × modulation is what unicorn/effect actually sell. Motion ships now on the base we have; effects wait on the risky GL spike. And the param graph built for motion *is* the graph effects plug into — motion-first de-risks effects for free.
 
+### Phase 11 — Labs mode (SCOPED 2026-08-08, not committed)
+
+A **second chrome over the same engine**: standardized output, no compositor UI. Named for `kol-labs-single` (labs.kolkrabbi.io), which predates this repo and whose content already lives here in full after parity waves A–F.
+
+**It is not a reduced feature set.** Effects, generative and modulation are all present — the same capability the editor has. What it drops is the *compositing* surface: no layer stack, no frames, no canvas placement, no tool palette. One generator or one media source on a fixed output, with its params, its effect chain, its modulation, and transport. Labs' shape, the editor's engine.
+
+**Why it's cheap — most of it is already standing:**
+
+| Piece | Where | Gives |
+|---|---|---|
+| Slot-registry chrome | `editor/EditorShell.jsx` + `pages/Compose.jsx:20-31` | The shell already takes a `registry` of `canvas` / `left.*` / `right.*` / `canvas.*` panels. A second chrome is a second registry. |
+| Simplified-chrome precedent | `editor/mobile/` (409 L total), doc `12-mobile` | Entry → category → live over `EditorProviders`, ephemeral. Proves the pattern end to end. |
+| Chromeless stage | `editor/OutputView.jsx:36` `OutputStage` | Fixed letterboxed output, no pan/zoom/rulers/selection — already exported for reuse. |
+| Labs' nav as data | `loops/taxonomy.js` (`GENERATIVE_TREE`) · `compose/inspectors/effectCategories.js` | Both trees are labs-true and labs-ordered, already presentation-layer data over flat registries. |
+| Params / effects / modulation surfaces | `ParametersPanel` (540 L) · `EffectsPanel` (443 L) · `ModulationList` · `TimelineDock` | The whole right rail, reusable verbatim — see the one-layer trick below. |
+| Footer | `shell/panels/EditorFooter.jsx` | Transport / Output (aspect + @Nx + PNG + webm) / File. Labs' bottom bar, already built. |
+| View gate + persisted preference | `App.jsx:11-20` · `mobile/device.js:13-27` | `?view=` branching and a localStorage view preference already exist. |
+
+**The load-bearing trick — labs mode is a one-layer document with that layer permanently selected.** `ParametersPanel` resolves its subject from `selectedId` (`ParametersPanel.jsx:73`), and every other inspector does the same. Constrain the doc to one layer, keep it selected, and the entire params/effects/modulation rail works unchanged. Switching category = *swapping* that layer, not adding one.
+
+**What genuinely doesn't exist yet (the real build):**
+
+1. **A labs registry** — `canvas` → `OutputStage` instead of `CanvasArea`; `left.body` → the category nav; `right.body` → params/effects/modulation directly instead of `SelectionPalettePanel`'s tab group; keep `canvas.footer` `TimelineDock` and `left.footer` `EditorFooter`; drop `ToolPalette`.
+2. **The topbar seam** — `MenuTop` is hardcoded in `EditorShell.jsx:56`, the one part of the shell the registry doesn't reach. Labs mode needs a reduced topbar, so the shell grows a topbar slot (or a mode prop).
+3. **The category nav panel** — persistent, always-visible, method-grouped (Effects · Generative · Composition · Modulation, per the labs screenshot). `TreePicker` / `LoopPicker` are modal-ish pickers, not this. New UI, but over existing data.
+4. **The one-layer constraint** in compose state — add/delete replaced by swap.
+5. **The entry chooser** — first visit asks Editor or Labs; choice persisted with the `device.js` localStorage pattern, `?view=` overriding.
+
+**URLs.** Labs' deep links (`/pattern/interlace/herringbone`) stay query-param here — `?view=labs&type=pattern&preset=herringbone` — not react-router. `App.jsx` is explicit that there is no router, and `?view=` already established the scheme.
+
+**Three modes, not two (user-decided 2026-08-08).** The entry chooser offers:
+
+| Mode | What it is | State |
+|---|---|---|
+| **Editor** | The compositor — layers, frames, tools. | Shipped. |
+| **Labs** | Standardized output, full capability (effects · generative · modulation), no compositor UI. | This phase. |
+| **Randomiser** | The randomize-only playground — currently `editor/mobile/`, touch-gated. Becomes its own mode, available everywhere. | Exists as the mobile chrome; promoting it is its own step. |
+
+The mobile chrome does **not** fold into labs mode. It is the randomiser, and the randomiser is the third mode — a different intent (roll the dice) from labs (drive the knobs).
+
+**Drafts (resolved).** `DRAFT_KEY` is a module constant (`compose/state.jsx:29`) and `persistDraft` is already a `ComposeStateProvider` prop. Labs gets its **own** draft key — not the editor's (opening labs must never offer to restore, or overwrite, a composition) and not ephemeral (labs is a real working surface; a reload shouldn't lose the session). The change is small: promote the key to a prop alongside `persistDraft`. Randomiser stays `persistDraft={false}` — throwaway is its nature.
+
+**Media source (resolved).** Both, exactly as labs does it: any effect needing a source shows a two-pane empty state — **From library** (the existing `MediaPicker` + `/media` proxy) and **Upload**, side by side. Not mutually exclusive; it is the effect's empty state.
+
+**Kill criteria:** if the one-layer constraint can't be expressed without forking compose state, stop and re-scope. The whole premise is that this is *chrome* over the existing engine — the moment it needs a second engine, it's the sprawl ARCHITECTURE §1 exists to prevent.
+
+#### Build plan — **ALL SIX BUILT 2026-08-08**, `pnpm build` + `pnpm build:lib` green. Runtime still unverified: the 11.1 kill criteria are a LIVE check (params drive the layer · a filter attaches · a bind dot modulates · transport plays) and a passing build does not prove any of them.
+
+Landed as written, with three build-time decisions worth keeping:
+- **`OutputStage` was split, not flagged.** The plan's `fixed={false}` prop would have written a raw-hex backdrop into a new line; instead the composition half is now `OutputCanvas` (no backdrop, fills its box) and `OutputStage` is that on the absolute-black recording backdrop. Output tab and mobile chrome are byte-identical in behaviour; labs mounts `OutputCanvas` in the shell cell under the themed `--kol-surface-secondary`.
+- **No Modulation rail tab.** `ModulationList` already renders inside `ParametersPanel`'s Animation tab per layer type; a third tab would have re-derived that per-type schema. The rail is Parameters · Effects and the nav's Modulation row flips to Parameters.
+- **`firstPresetPatch` / `presetLayerPatch` / `groupOfPreset` moved into `loops/registry.js`** — the mobile chrome had a private copy of the first; labs needed the same shape plus a preset→group reverse lookup for deep links.
+
+Known rough edge: picking an effect is **two** undo steps (swap the layer, then push the filter) — `setOnly` commits its transaction before `addFilter` runs.
+
+(Original phase plan, for the record:)
+
+**11.1 — Spike: prove the one-layer trick.** `App.jsx` gains a `view === 'labs'` branch → new `src/editor/labs/LabsView.jsx`: `EditorProviders persistDraft={false}` (temporary until 11.6) wrapping `EditorShell` with a `LABS_REGISTRY` — canvas → the labs stage, `right.body` → `ParametersPanel`, `left.footer` → `EditorFooter`, `canvas.footer` → `TimelineDock`; no `ToolPalette`, no `LayerStack`, `MenuTop` left as-is (seam is 11.4). Seed ONE loop layer on mount and select it (`MobileView`'s `presetsInGroup`/`presetParams` seeding is the precedent). ⚠ Stage gotcha: `OutputStage` is `fixed inset-0` (`OutputView.jsx:43`) — it would overlay the shell grid; either give it a `fixed={false}` prop or use `Canvas` + `LayerRenderer` directly inside the canvas cell the way it does. **Verify:** params drive the layer, a filter attaches via the Effects surface, a bind dot modulates, transport plays. The kill criteria live here — if this fails, stop.
+
+**11.2 — One-layer swap.** Category/preset switch replaces the single layer at chrome level via existing compose actions (remove + add; `MobileView` already swaps its single layer this way) — no compose-state fork. Selection follows the new layer. **Verify:** switching never accumulates layers; undo history stays sane.
+
+**11.3 — Category nav (left rail).** New `labs/LabsNav.jsx` in `left.body`, labs sidebar order: **Effects** (`effectCategories.js` categories + pixi groups) · **Generative** (`GENERATIVE_TREE`) · **Composition** (Kinetic · Type; Interfaces stays out — accepted out-of-scope) · **Modulation**. Effects leaves create a photo/video layer + `filterId`; a sourceless effect shows the two-pane empty state in the canvas cell — **From library** (`MediaPicker`) | **Upload** — per the labs reference (screenshot 2026-08-08). Modulation's surface (`ModulationList`) placement decided when building (rail tab vs nav target). **Verify:** every nav leaf lands a working layer or the source empty state.
+
+**11.4 — Topbar seam.** `EditorShell.jsx:56` hardcodes `MenuTop` → registry gains a `topbar` entry (default `MenuTop`, so Compose is untouched). Labs topbar: reduced — mode name, theme/settings, switch-mode. **Verify:** editor topbar byte-identical; labs topbar renders.
+
+**11.5 — Entry chooser + deep links.** No `?view=` and no persisted choice → chooser screen: **Editor · Labs · Randomiser**. Choice persisted via the `device.js` localStorage pattern (own key, e.g. `kol-editor:mode`); `?view=` always overrides; touch-primary default remains the randomiser. Deep links `?view=labs&cat=…&preset=…` parsed at boot, written with `history.replaceState` on selection — no router. Randomiser enters the chooser as-is (`MobileView`); its desktop polish is a separate later phase. **Standalone-app only:** the chooser and `?view=labs` live in `App.jsx` — the embedded `<DesignEditor />` (`src/index.jsx` lib entry) stays the editor exactly as today, the same stance as `?view=output`. **Verify:** chooser shows once, choice sticks, deep link lands on the right preset, lib build unchanged.
+
+**11.6 — Labs draft key.** Promote `DRAFT_KEY` (`compose/state.jsx:29`) to a `draftKey` prop beside `persistDraft` (`state.jsx:472`; consumers `state.jsx:1635-1718`). Labs switches to `persistDraft` on + `draftKey='kol.editor.labs-draft'`. Editor and randomiser unchanged. **Verify:** labs reload restores labs; editor draft untouched in both directions.
+
 ---
 
 ## Feature entries

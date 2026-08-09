@@ -75,7 +75,7 @@ const iconBtnStyle = { lineHeight: 0, display: 'inline-flex', alignItems: 'cente
 /* short group tag (a·b·c…) so grouped rows read as a set (labs groupTag) */
 const groupTag = (gid, groups) => (gid ? String.fromCharCode(97 + (groups.indexOf(gid) % 26)) : null)
 
-export default function KineticPanel({ layer, setProp, updateLayer, palette, renderAnimate, tab, tabStrip }) {
+export default function KineticPanel({ layer, setProp, updateLayer, palette, renderAnimate, tab, tabStrip, picker = true }) {
   const comp = layer.comp ?? { bg: '#0b0d12', instances: [] }
   const insts = comp.instances ?? []
 
@@ -215,13 +215,16 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
   /* "Text colour" — every element's fill in one write (labs onAllFill). */
   const onAllFill = (hex) => writeComp({ ...comp, instances: insts.map((x) => ({ ...x, fill: hex })) })
 
-  const knobs = KINETIC_KNOBS.filter((k) => k.tab === tab && (!k.when || k.when(viewFor(k), idx)))
+  /* labs-effect (LabsParams) = Generate + Style as one flow; the knob
+   * catalog only knows the three editor tabs, so it reads as 'style'. */
+  const knobTab = tab === 'labs-effect' ? 'style' : tab
+  const knobs = KINETIC_KNOBS.filter((k) => k.tab === knobTab && (!k.when || k.when(viewFor(k), idx)))
   const anyMorph = insts.some((x) => x?.morph?.on)
   const selInst = insts[idx]
 
   return (
     <>
-      <KineticPicker layer={layer} onPreset={applyPreset} />
+      {picker && <KineticPicker layer={layer} onPreset={applyPreset} />}
 
       <div className="flex flex-col gap-1">
         <span className="kol-helper-10 text-meta">Elements</span>
@@ -230,7 +233,7 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
           marked={marked} onMark={toggleMark} onGroup={groupMarked} onUngroup={ungroupMarked}
         />
         <EditorButton
-          variant="secondary" size="sm" className="w-full"
+          variant="primary" size="sm" className="w-full"
           title="Edit elements on the canvas (click to select, drag to move, corners to scale)"
           onClick={() => window.dispatchEvent(new CustomEvent('kol:kinetic-edit', { detail: { id: layer.id, index: idx } }))}
         >
@@ -240,7 +243,7 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
 
       {tabStrip}
 
-      {tab === 'generate' && (
+      {(tab === 'generate' || tab === 'labs-effect') && (
         <>
           <LabeledControl label="Text">
             <Textarea
@@ -427,15 +430,15 @@ function ElementList({ insts, idx, onSelect, onWrite, marked, onMark, onGroup, o
         })}
       </div>
       <div className="grid grid-cols-2 gap-1">
-        <EditorButton variant="secondary" size="sm" disabled={marked.length < 2} onClick={onGroup}>
+        <EditorButton variant="primary" size="sm" disabled={marked.length < 2} onClick={onGroup}>
           Group
         </EditorButton>
-        <EditorButton variant="secondary" size="sm" disabled={!marked.length} onClick={onUngroup}>
+        <EditorButton variant="primary" size="sm" disabled={!marked.length} onClick={onUngroup}>
           Ungroup
         </EditorButton>
       </div>
       <div className="flex items-center gap-1">
-        <EditorButton variant="secondary" size="sm" className="flex-1" iconLeft="plus" iconSize={12} onClick={add}>
+        <EditorButton variant="primary" size="sm" className="flex-1" iconLeft="plus" iconSize={12} onClick={add}>
           Add element
         </EditorButton>
         <EditorButton
@@ -630,10 +633,10 @@ function CustomPathPoints({ inst, layer, onPoints }) {
         ))}
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <EditorButton variant="secondary" size="sm" onClick={() => onPoints([...points, [0.5, 0.5]])}>
+        <EditorButton variant="primary" size="sm" onClick={() => onPoints([...points, [0.5, 0.5]])}>
           Add point
         </EditorButton>
-        <EditorButton variant="secondary" size="sm" disabled={points.length <= 2} onClick={() => onPoints(points.slice(0, -1))}>
+        <EditorButton variant="primary" size="sm" disabled={points.length <= 2} onClick={() => onPoints(points.slice(0, -1))}>
           Remove point
         </EditorButton>
       </div>

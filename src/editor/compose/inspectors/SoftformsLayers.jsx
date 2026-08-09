@@ -244,7 +244,7 @@ export default function SoftformsLayers({ layer }) {
       </div>
 
       <EditorButton
-        variant="secondary" size="sm" className="w-full" iconLeft="plus" iconSize={12}
+        variant="primary" size="sm" className="w-full" iconLeft="plus" iconSize={12}
         disabled={forms.length >= MAX_FORMS} onClick={addForm}
       >
         Add form
@@ -252,7 +252,7 @@ export default function SoftformsLayers({ layer }) {
 
       {!is3d && (
         <EditorButton
-          variant="secondary" size="sm" className="w-full"
+          variant="primary" size="sm" className="w-full"
           title="Edit forms on the canvas (click to select, drag to move, corners to scale, knob to rotate)"
           onClick={() => window.dispatchEvent(new CustomEvent('kol:softform-edit', { detail: { id: layer.id, index: Math.max(0, sel) } }))}
         >
@@ -289,7 +289,7 @@ export default function SoftformsLayers({ layer }) {
         <EditorButton variant="primary" size="sm" onClick={rollScale}>Scale</EditorButton>
         <EditorButton variant="primary" size="sm" onClick={rollAnim}>Animation</EditorButton>
       </div>
-      <EditorButton variant="secondary" size="sm" className="w-full" onClick={rollRearrange}>Rearrange</EditorButton>
+      <EditorButton variant="primary" size="sm" className="w-full" onClick={rollRearrange}>Rearrange</EditorButton>
     </div>
   )
 }

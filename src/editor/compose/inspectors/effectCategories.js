@@ -9,7 +9,7 @@
 import { filterById } from '../../../filters'
 
 const CATEGORIES = [
-  { id: 'halftone',   label: 'Halftone',   filterIds: ['fx-ascii', 'fx-halftone-dither', 'fx-bitmap'] },
+  { id: 'halftone',   label: 'Halftone',   filterIds: ['fx-halftone-dither', 'fx-ascii', 'fx-bitmap'] },   /* labs page order: Dither · ASCII · Bitmap */
   { id: 'scanline',   label: 'Scanline',   filterIds: ['scanline'] },
   /* gl-trails joins the CRT family — phosphor-persistence feedback. */
   { id: 'crt',        label: 'CRT',        filterIds: ['gl-disco', 'gl-slitscan', 'gl-scan', 'gl-trails', 'fx-kaleido', 'fx-mirror'] },

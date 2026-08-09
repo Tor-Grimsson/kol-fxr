@@ -73,6 +73,18 @@ export const presetsInGroup = (group) => PRESETS_BY_GROUP[group] || []
 export const presetsInSub = (group, sub) => presetsInGroup(group).filter((p) => p.sub === sub)
 export const presetById = (id) => PRESETS.find((p) => p.id === id) || PRESETS[0]
 
+// The registry group owning a preset id — the reverse of PRESETS_BY_GROUP,
+// since presets carry no group field of their own. Null when the id is
+// unknown, so callers can tell "not found" from "found in group 0" (unlike
+// presetById, which falls back to the first preset). Used to resolve a labs
+// deep link (`?view=labs&preset=…`) back to a full layer patch.
+export const groupOfPreset = (id) => {
+  for (const group in PRESETS_BY_GROUP) {
+    if (PRESETS_BY_GROUP[group].some((p) => p.id === id)) return group
+  }
+  return null
+}
+
 // Off-schema keys any preset of a loop sets (e.g. iridescent freq/relief/spin,
 // sf-lava bulge). Schema keys reset via loopDefaults on every preset apply, but
 // call sites MERGE the param patch into the layer — without an explicit
@@ -97,6 +109,25 @@ export const presetParams = (preset) => ({
   ...loopDefaults(loopById(preset.loop)),
   ...(preset.params || {}),
 })
+
+// The full loop-layer patch a preset pick applies — a preset is a full param
+// RESET, not a diff (LoopPicker's applyPreset shape). Shared by every "put
+// this preset on a layer" entry point: the mobile chrome and the labs nav.
+export const presetLayerPatch = (preset, group) => ({
+  loopGroup:   group,
+  presetId:    preset.id,
+  presetLabel: preset.label,
+  loopId:      preset.loop,
+  ...presetParams(preset),
+})
+
+// The same patch for a taxonomy entry's FIRST group + preset — the "just give
+// me this generative type" entry point. Null when the group is empty.
+export const firstPresetPatch = (entry) => {
+  const group = entry.groups[0]
+  const preset = presetsInGroup(group)[0]
+  return preset ? presetLayerPatch(preset, group) : null
+}
 
 // ── Background toggle (Phase 6-C) ────────────────────────────────────────
 // A loop layer can render transparent by suppressing its bg-roled colour

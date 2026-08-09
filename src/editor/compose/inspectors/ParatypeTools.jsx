@@ -32,7 +32,7 @@ function FlattenAction({ layer }) {
   if (!flattenParatype) return null
   return (
     <EditorButton
-      variant="secondary" size="sm" className="w-full"
+      variant="primary" size="sm" className="w-full"
       onClick={() => flattenParatype(layer.id)}
       title="Flatten the glyph(s) to vector shape layers (one-way)"
     >

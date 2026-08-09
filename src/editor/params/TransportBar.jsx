@@ -1,5 +1,4 @@
 import { Icon } from '@kolkrabbi/kol-icons'
-import { Input } from '@kolkrabbi/kol-component'
 import { useTransport } from './transport'
 
 /**
@@ -22,8 +21,24 @@ import { useTransport } from './transport'
  * scales the cells, icons, and the loop readout to the touch scale used by
  * the mobile overlay (matches `size="lg"` buttons/toggles, ~40px tall). */
 const SIZES = {
-  sm: { cell: 'px-3 py-1.5', icon: 14, input: 'sm' },
-  lg: { cell: 'px-4 py-2.5', icon: 20, input: 'lg' },
+  sm: { cell: 'px-3 py-1.5', icon: 14, mono: 'kol-mono-12' },
+  lg: { cell: 'px-4 py-2.5', icon: 20, mono: 'kol-mono-16' },
+}
+
+/* stop / rewind are absent from kol-icons 0.10.0 (TransportIcons filed in the
+ * kol-ds-ui lobby) — local glyphs bridge the gap so the cells aren't blank.
+ * Delete when the set ships the names. */
+const FALLBACK_GLYPHS = {
+  stop: (size) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="3.75" y="3.75" width="8.5" height="8.5" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  ),
+  rewind: (size) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M8 4 4.5 8 8 12M12 4 8.5 8 12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
 }
 
 function Cell({ name, title, active, onClick, divider, cfg }) {
@@ -40,7 +55,7 @@ function Cell({ name, title, active, onClick, divider, cfg }) {
         active ? 'text-emphasis' : 'text-meta hover:text-emphasis',
       ].filter(Boolean).join(' ')}
     >
-      <Icon name={name} size={cfg.icon} />
+      {FALLBACK_GLYPHS[name] ? FALLBACK_GLYPHS[name](cfg.icon) : <Icon name={name} size={cfg.icon} />}
     </button>
   )
 }
@@ -56,18 +71,21 @@ export default function TransportBar({ size = 'sm' }) {
         <Cell name="pause" title="Pause" active={!playing} onClick={pause} divider cfg={cfg} />
       </div>
 
-      <Input
-        variant="ghost"
-        size={cfg.input}
-        prefix="Loop /"
-        suffix="s"
-        chars={3}
-        value={String(loopSeconds)}
-        onChange={(e) => setLoopSeconds(e.target.value)}
-        inputClassName="text-center"
-        className="flex-1 justify-center"
-        title="Loop length (seconds)"
-      />
+      {/* Bare readout, labs' transport center ("Tempo / 120", borderless) —
+          the DS Input lost its borderless variant (ghost → outline, the
+          2026-07-08 chrome law), so the readout is authored chrome here. */}
+      <label className={`flex-1 flex items-center justify-center gap-1.5 ${cfg.mono}`} title="Loop length (seconds)">
+        <span className="text-meta">Loop /</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={String(loopSeconds)}
+          onChange={(e) => setLoopSeconds(e.target.value)}
+          className="bg-transparent border-0 outline-none p-0 w-8 text-center text-emphasis"
+          style={{ font: 'inherit' }}
+        />
+        <span className="text-meta">s</span>
+      </label>
 
       {/* Stop / rewind bump the transport's reset epoch — stateful consumers
           (sims, trails, video) restart fresh. Pause (left group) never does. */}

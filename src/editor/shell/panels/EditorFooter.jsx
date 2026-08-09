@@ -101,7 +101,7 @@ function PhotoFileTab({ layer }) {
         Webcam
       </EditorButton>
       {(layer.src || layer.srcType === 'webcam') && (
-        <EditorButton variant="secondary" size="sm" className="w-full" iconLeft="trash" iconSize={12} onClick={onClear}>
+        <EditorButton variant="primary" size="sm" className="w-full" iconLeft="trash" iconSize={12} onClick={onClear}>
           Clear image
         </EditorButton>
       )}
@@ -196,7 +196,7 @@ export default function EditorFooter() {
 
   return (
     <div className="relative border-t border-fg-08 flex flex-col gap-3" style={{ padding: '16px 20px 24px 20px' }}>
-      <SegmentedToggle value={tab} onChange={setTab} options={TABS} className={TOGGLE_FIX} />
+      <SegmentedToggle value={tab} onChange={setTab} options={TABS} size="sm" className={TOGGLE_FIX} />
       <div className={tab === 'transport' ? undefined : 'hidden'}>
         <TransportBar />
       </div>

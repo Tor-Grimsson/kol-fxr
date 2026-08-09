@@ -29,32 +29,43 @@ function hexWithAlpha(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-/* Chromeless frame: the same `Canvas` letterbox CanvasArea uses, with
+/* The composition itself — the same `Canvas` letterbox CanvasArea uses, with
  * `guideColor="transparent"` collapsing the dashed border + aspect label to
- * nothing, and no pan/zoom/rulers. Just the composition, fit to the tab.
- * Exported — the mobile chrome (`./mobile/MobileView`) renders on it too. */
-export function OutputStage({ fit = 'contain' }) {
+ * nothing, and no pan/zoom/rulers. Fills whatever box it is given and paints
+ * NO backdrop, so the caller owns that. Labs mode (`./labs/LabsView`) mounts
+ * this one directly inside the EditorShell canvas cell — a viewport-fixed
+ * wrapper there would cover the rails. */
+export function OutputCanvas({ fit = 'contain' }) {
   const { aspect, canvasW, canvasH, layers, palette, canvasFill, canvasFillOpacity } = useComposeState()
   const fillHex = resolveColor(canvasFill, palette)
   const bgColor = fillHex
     ? (canvasFillOpacity < 1 ? hexWithAlpha(fillHex, canvasFillOpacity) : fillHex)
     : null
   return (
+    <Canvas
+      aspect={aspect}
+      customRatio={canvasW / canvasH}
+      bgColor={bgColor ?? undefined}
+      guideColor="transparent"
+      gutter={0}
+      fit={fit}
+    >
+      <div className="relative w-full h-full">
+        {layers.map((layer) => (
+          <LayerRenderer key={layer.id} layer={layer} palette={palette} />
+        ))}
+      </div>
+    </Canvas>
+  )
+}
+
+/* The full-screen recording surface — OutputCanvas on an absolute-black
+ * viewport backdrop. Used by the output tab (`?view=output`) and the mobile
+ * chrome (`./mobile/MobileView`); both ARE the whole screen. */
+export function OutputStage({ fit = 'contain' }) {
+  return (
     <div className="fixed inset-0" style={{ background: '#000' }}>
-      <Canvas
-        aspect={aspect}
-        customRatio={canvasW / canvasH}
-        bgColor={bgColor ?? undefined}
-        guideColor="transparent"
-        gutter={0}
-        fit={fit}
-      >
-        <div className="relative w-full h-full">
-          {layers.map((layer) => (
-            <LayerRenderer key={layer.id} layer={layer} palette={palette} />
-          ))}
-        </div>
-      </Canvas>
+      <OutputCanvas fit={fit} />
     </div>
   )
 }

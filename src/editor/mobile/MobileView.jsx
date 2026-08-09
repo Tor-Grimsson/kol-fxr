@@ -7,7 +7,7 @@ import { PRESET_SIZES } from '../shell/aspects'
 import { transport } from '../params/transport'
 import { applyThemeMode, getThemeMode } from '../theme'
 import { GENERATIVE_TREE } from '../../loops/taxonomy'
-import { presetsInGroup, presetParams } from '../../loops/registry'
+import { firstPresetPatch } from '../../loops/registry'
 import { saveClip } from '../lib/clipStore'
 import { isTabletSized, goDesktop } from './device'
 import MobileOverlay from './MobileOverlay'
@@ -64,21 +64,6 @@ function CategoryScreen({ onPick, onBack }) {
       </div>
     </div>
   )
-}
-
-/* The full-preset patch for a taxonomy entry's first group — LoopPicker's
- * applyPreset shape (a preset is a full param reset, not a diff). */
-function firstPresetPatch(entry) {
-  const group = entry.groups[0]
-  const preset = presetsInGroup(group)[0]
-  if (!preset) return null
-  return {
-    loopGroup:   group,
-    presetId:    preset.id,
-    presetLabel: preset.label,
-    loopId:      preset.loop,
-    ...presetParams(preset),
-  }
 }
 
 function MobileBody() {

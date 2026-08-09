@@ -171,8 +171,13 @@ const motionOpts = (presets, val) => {
  * preset picker (labs Loops page model, always visible above the sub-tab
  * strip), then Generate (theme/toggles + scoped seeded randomize) · Style ·
  * Animation (motion Frame/Form preset dropdowns + params + camera rail).
+ *
+ * Exported for labs mode (LabsParams): `picker={false}` drops the
+ * Category/Preset stack (labs swaps presets via its chips row), and
+ * `tab="labs-effect"` renders Generate + Style as ONE flow — labs' two-tab
+ * Effect · Motion model over the same three-tab surface.
  */
-function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate, tab, tabStrip, tree }) {
+export function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate, tab, tabStrip, tree, picker = true, inline = false }) {
   const loop = loopById(layer.loopId)
   const schema = loop?.params ?? []
 
@@ -250,11 +255,11 @@ function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate
 
   return (
     <>
-      <LoopPicker layer={layer} tree={tree} />
+      {picker && <LoopPicker layer={layer} tree={tree} />}
 
       {tabStrip}
 
-      {tab === 'generate' && (
+      {(tab === 'generate' || tab === 'labs-effect') && (
         <>
           {/* Soft Forms per-form scene editing (labs Layers tab) — the
               primary control surface, above Look/Theme. */}
@@ -302,7 +307,7 @@ function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate
                 : ck.yaw ? 'drag to rotate, scroll to zoom'
                 : 'scroll to zoom'
               return (
-                <p className="kol-helper-11 text-meta col-span-2">
+                <p className="kol-mono-10 text-meta col-span-2">
                   Press C (Orbit tool) to move the camera — {verb}.
                 </p>
               )
@@ -311,15 +316,20 @@ function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate
 
           {/* Schema params flagged tab:'generate' (penrose shape/glyph/font/
               weight/seed) — pickers above the randomize block, labs order. */}
-          <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="generate" />
+          <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="generate" inline={inline} />
 
           <EditorButton variant="primary" size="sm" className="w-full" onClick={() => roll(allScopeParams(schema, layer))}>
             Randomize all
           </EditorButton>
           {scopes.length > 0 && (
             <div className="grid grid-cols-2 gap-2">
-              {scopes.map((s) => (
-                <EditorButton key={s.id} variant="primary" size="sm" onClick={() => roll(s.params, s)}>
+              {scopes.map((s, i) => (
+                <EditorButton
+                  key={s.id} variant="primary" size="sm"
+                  /* An odd count leaves a lone half-width cell — span it. */
+                  className={scopes.length % 2 === 1 && i === scopes.length - 1 ? 'col-span-2' : undefined}
+                  onClick={() => roll(s.params, s)}
+                >
                   {s.label}
                 </EditorButton>
               ))}
@@ -334,9 +344,9 @@ function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate
         </>
       )}
 
-      {tab === 'style' && (
+      {(tab === 'style' || tab === 'labs-effect') && (
         <>
-          <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="style" />
+          <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="style" inline={inline} />
           {/* Organic field, Edge profile = Custom: the draggable bezier curve
               (self-gates on render/field/waveProfile). */}
           {layer.loopId === 'pattern-rules' && <OrganicProfileEditor layer={layer} patch={patch} />}
@@ -369,12 +379,12 @@ function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate
             </>
           )}
           <ModulationList layer={layer} schema={schema} setProp={setParamProp} />
-          <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="anim" emptyHint={ANIM_HINT} />
+          <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="anim" emptyHint={ANIM_HINT} inline={inline} />
           {showKeyframes && (
             <KeyframeEditor layer={layer} patch={patch} defaultDuration={loop?.duration ?? 8} />
           )}
           {cameraSchema && (
-            <AutoControls schema={cameraSchema} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} />
+            <AutoControls schema={cameraSchema} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} inline={inline} />
           )}
           {showCamSlots && (
             <CameraPoseSlots layer={layer} patch={patch} camParams={camParams} isEngine={isEngine} showHeader={!cameraSchema} />
@@ -382,8 +392,9 @@ function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate
         </>
       )}
       {/* Para-Type misc layer: flatten-to-vector (Generate) + XY explore
-          pad (Style) — self-gates on loopId + tab. */}
-      <ParatypeTools layer={layer} patch={patch} tab={tab} />
+          pad (Style) — self-gates on loopId + tab. labs-effect maps to Style
+          (the XY pad; flatten is a compositor action labs doesn't need). */}
+      <ParatypeTools layer={layer} patch={patch} tab={tab === 'labs-effect' ? 'style' : tab} />
     </>
   )
 }

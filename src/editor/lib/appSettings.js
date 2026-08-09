@@ -25,6 +25,8 @@ const DEFAULTS = {
   defaultTheme: 'kol',    // loops/lib/themes id — seeds new loop layers' themeId
   autoplay: false,        // transport starts playing on load
   clipToFrame: true,      // new layers/exports crop to the aspect frame
+  labsModDots: false,     // labs rail shows bind dots (M / Settings toggle)
+  defaultLoopSeconds: 4,  // transport loop length seeded at labs boot
 }
 
 function load() {

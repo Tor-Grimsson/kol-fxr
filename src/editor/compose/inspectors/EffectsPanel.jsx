@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { LabeledControl, SegmentedToggle, ViewToggle, Slider, Input } from '@kolkrabbi/kol-component'
+import { LabeledControl, SegmentedToggle, ToggleSwitch, ViewToggle, Slider, Input } from '@kolkrabbi/kol-component'
 import EditorIcon from '../../icons/EditorIcon'
 import EditorButton from '../../components/EditorButton'
 import { PickerRow, PickerDropdown } from './TreePicker'
@@ -344,7 +344,7 @@ function RandomizeRow({ def: _def, onRoll }) {
           onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
         />
         <EditorButton
-          variant="secondary" size="sm"
+          variant="primary" size="sm" iconLeft="refresh" iconSize={12}
           onClick={() => {
             const s = randomSeed()
             setSeed(s)
@@ -361,12 +361,26 @@ function RandomizeRow({ def: _def, onRoll }) {
 
 /* Stacked sweep rig (labs SweepControls over the sweeps array): one-click
  * presets append a tuned sweep, plus add/remove/edit custom. Speed is whole
- * wavefront cycles per loop (integer — the editor's loop-safe time model). */
-function SweepStack({ sweeps, onChange }) {
+ * wavefront cycles per loop (integer — the editor's loop-safe time model).
+ * Exported: labs' Motion tab (LabsParams) renders the same rig; `inline`
+ * is its skin — enable becomes the DS ToggleSwitch and the sliders go
+ * label-left with a value readout (the labs sweep card). */
+export function SweepStack({ sweeps, onChange, inline = false }) {
   const shapeLabel = (v) => SWEEP_SHAPE_OPTIONS.find((s) => s.value === v)?.label ?? v
   const add = (preset) => onChange([...sweeps, preset ? makeSweep(preset.shape, preset) : makeSweep()])
   const removeAt = (i) => onChange(sweeps.filter((_, j) => j !== i))
   const setField = (i, k, v) => onChange(sweeps.map((sw, j) => (j === i ? { ...sw, [k]: v } : sw)))
+
+  /* The DS Slider is already the row (track + editable readout); inline
+   * swaps its sentence-case label for the labs uppercase pair. */
+  const Row = ({ label, ...slider }) => inline ? (
+    <div className="flex items-center gap-3">
+      <span className="kol-helper-10 tracking-widest text-meta whitespace-nowrap">{label}</span>
+      <div className="flex-1 min-w-0"><Slider {...slider} /></div>
+    </div>
+  ) : (
+    <LabeledControl label={label}><Slider {...slider} /></LabeledControl>
+  )
 
   return (
     <div className="flex flex-col gap-3">
@@ -386,19 +400,31 @@ function SweepStack({ sweeps, onChange }) {
         return (
           <div key={i} className="flex flex-col gap-2 p-2 rounded bg-fg-04">
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                aria-label={enabled ? 'Disable sweep' : 'Enable sweep'}
-                title={enabled ? 'Disable sweep' : 'Enable sweep'}
-                onClick={() => setField(i, 'enabled', !enabled)}
-                className="inline-flex items-center justify-center w-5 h-5 rounded shrink-0 text-body hover:text-emphasis"
-                style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
-              >
-                <EditorIcon name={enabled ? 'eye-on' : 'eye-off'} size={12} />
-              </button>
-              <span className={`kol-helper-12 flex-1 truncate ${enabled ? 'text-emphasis' : 'text-meta'}`}>
-                {shapeLabel(sw.shape ?? 'linear')}
-              </span>
+              {inline ? (
+                <>
+                  <span className={`kol-helper-10 tracking-widest ${enabled ? 'text-emphasis' : 'text-meta'}`}>
+                    {shapeLabel(sw.shape ?? 'linear')}
+                  </span>
+                  <ToggleSwitch size="sm" checked={enabled} onChange={(v) => setField(i, 'enabled', v)} />
+                  <div className="flex-1" />
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    aria-label={enabled ? 'Disable sweep' : 'Enable sweep'}
+                    title={enabled ? 'Disable sweep' : 'Enable sweep'}
+                    onClick={() => setField(i, 'enabled', !enabled)}
+                    className="inline-flex items-center justify-center w-5 h-5 rounded shrink-0 text-body hover:text-emphasis"
+                    style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
+                  >
+                    <EditorIcon name={enabled ? 'eye-on' : 'eye-off'} size={12} />
+                  </button>
+                  <span className={`kol-helper-12 flex-1 truncate ${enabled ? 'text-emphasis' : 'text-meta'}`}>
+                    {shapeLabel(sw.shape ?? 'linear')}
+                  </span>
+                </>
+              )}
               <button
                 type="button"
                 aria-label="Remove sweep"
@@ -415,27 +441,19 @@ function SweepStack({ sweeps, onChange }) {
                 <PickerDropdown options={SWEEP_SHAPE_OPTIONS} value={sw.shape ?? 'linear'} onChange={(v) => setField(i, 'shape', v)} />
                 <PickerDropdown options={SWEEP_TARGET_OPTIONS} value={sw.target ?? 'brightness'} onChange={(v) => setField(i, 'target', v)} />
                 {!isReveal && (
-                  <LabeledControl label="Amount">
-                    <Slider min={-1} max={1} step={0.05} value={sw.amount ?? 0.6} onChange={(v) => setField(i, 'amount', v)} />
-                  </LabeledControl>
+                  <Row label="Amount" min={-1} max={1} step={0.05} value={sw.amount ?? 0.6} onChange={(v) => setField(i, 'amount', v)} />
                 )}
-                <LabeledControl label="Speed · cycles">
-                  <Slider min={-4} max={4} step={1} value={sw.speed ?? 1} onChange={(v) => setField(i, 'speed', v)} />
-                </LabeledControl>
-                <LabeledControl label="Width">
-                  <Slider min={0.05} max={1} step={0.01} value={sw.width ?? 0.35} onChange={(v) => setField(i, 'width', v)} />
-                </LabeledControl>
+                <Row label="Speed · cycles" min={-4} max={4} step={1} value={sw.speed ?? 1} onChange={(v) => setField(i, 'speed', v)} />
+                <Row label="Width" min={0.05} max={1} step={0.01} value={sw.width ?? 0.35} onChange={(v) => setField(i, 'width', v)} />
                 {angled && (
-                  <LabeledControl label="Angle">
-                    <Slider min={0} max={360} step={1} value={sw.angle ?? 0} onChange={(v) => setField(i, 'angle', v)} />
-                  </LabeledControl>
+                  <Row label="Angle" min={0} max={360} step={1} value={sw.angle ?? 0} onChange={(v) => setField(i, 'angle', v)} />
                 )}
               </>
             )}
           </div>
         )
       })}
-      <EditorButton variant="secondary" size="sm" className="w-full" onClick={() => add()}>
+      <EditorButton variant="primary" size="sm" className="w-full" iconLeft="plus" iconSize={12} onClick={() => add()}>
         Add custom sweep
       </EditorButton>
     </div>

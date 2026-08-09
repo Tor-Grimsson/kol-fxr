@@ -28,10 +28,10 @@
     "preview": "vite preview"
   },
   "peerDependencies": {
-    "@kolkrabbi/kol-component": "^0.1.2",
-    "@kolkrabbi/kol-framework": "^0.1.2",
-    "@kolkrabbi/kol-icons": "^0.5.0",
-    "@kolkrabbi/kol-theme": "^0.1.1",
+    "@kolkrabbi/kol-component": "^0.27.0",
+    "@kolkrabbi/kol-framework": "^0.14.0",
+    "@kolkrabbi/kol-icons": "^0.10.0",
+    "@kolkrabbi/kol-theme": "^0.31.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -50,10 +50,10 @@
     "three": "^0.169.0"
   },
   "devDependencies": {
-    "@kolkrabbi/kol-component": "^0.6.0",
-    "@kolkrabbi/kol-framework": "^0.2.1",
-    "@kolkrabbi/kol-icons": "^0.5.0",
-    "@kolkrabbi/kol-theme": "^0.6.0",
+    "@kolkrabbi/kol-component": "^0.27.0",
+    "@kolkrabbi/kol-framework": "^0.14.0",
+    "@kolkrabbi/kol-icons": "^0.10.0",
+    "@kolkrabbi/kol-theme": "^0.31.3",
     "@vitejs/plugin-react": "^6.0.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

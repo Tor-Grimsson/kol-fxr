@@ -72,7 +72,7 @@ function TermsEditor({ def, commit }) {
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <span className="kol-helper-10 text-meta">Vectors</span>
-        <EditorButton variant="secondary" size="sm" onClick={addTerm}>Add</EditorButton>
+        <EditorButton variant="primary" size="sm" onClick={addTerm}>Add</EditorButton>
       </div>
       <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1.5 items-center min-w-0 [&>*]:min-w-0">
         <span className="kol-helper-10 text-fg-48 text-center">amp</span>
