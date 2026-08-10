@@ -16,14 +16,35 @@
   text-transform: uppercase;
 }
 
-/* Labs param density — the reference groups tight (≈10px between rows,
- * inline labels) with a hairline between sections. `.kol-params-section`
- * is AutoControls' section wrapper; in the editor its inner gap matches the
- * outer flow (no visual change there), here it tightens and divides. */
+/* Labs param density — sections hold rows at 8px (labs Section gap-2);
+ * `.kol-params-section` is AutoControls' section wrapper. Hairlines exist
+ * ONLY on effect pages (`.kol-labs-fx`, labs' "dividers between major
+ * zones" law) — generative pages separate sections with gap alone. */
 .kol-editor-labs .kol-params-section {
-  gap: 0.625rem;
+  gap: 0.5rem;
 }
-.kol-editor-labs .kol-params-section + .kol-params-section {
+.kol-editor-labs .kol-labs-fx .kol-params-section + .kol-params-section {
   border-top: 1px solid var(--kol-fg-08);
-  padding-top: 1rem;
+  padding-top: 1.25rem;
+}
+
+/* Labs' left rail rides the DS sidenav tokens — useDragResize (framework
+ * 0.17.0) writes --kol-sidenav-w live on :root and stamps
+ * data-sidenav="collapsed"; the editor grid's left column must follow the
+ * same number (the shipped rules only know .kol-brand-layout). The right
+ * rail keeps the editor's fixed 20rem. */
+.kol-editor-labs .kol-editor-grid {
+  grid-template-columns: var(--kol-sidenav-w, 20rem) minmax(0, 1fr) 20rem;
+  transition: grid-template-columns 150ms ease;
+}
+:root[data-sidenav="collapsed"] .kol-editor-labs .kol-editor-grid {
+  grid-template-columns: var(--kol-sidenav-w-collapsed, 3.5rem) minmax(0, 1fr) 20rem;
+}
+:root[data-sidenav-dragging] .kol-editor-labs .kol-editor-grid {
+  transition: none;
+}
+/* Section eyebrows (Effects · Generative · …) — labs-only structure, so the
+ * shipped collapsed rules don't cover them. */
+:root[data-sidenav="collapsed"] .kol-editor-labs .kol-labs-eyebrow {
+  display: none;
 }

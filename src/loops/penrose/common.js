@@ -21,9 +21,22 @@ const _hexRGB = (h) => {
 // For pixel-field prototypes that write raw ImageData and bypass the stroke tint
 // (CA / reaction-diffusion / fractals): replace their per-pixel colour with this so
 // the field reads in the theme instead of hardcoded/garish hues.
+// HARDENED 2026-08-09: (a) NaN intensity guarded — stops[NaN] was undefined and
+// `a[0]` killed the editor ("can't access property 0"); any sim whose physics
+// blows up now renders black instead of crashing. (b) The 5-stop parse is
+// memoized by palette signature — sims call this per element per frame, and
+// re-running five hex regexes each call was a real frame-budget leak.
+let _rampStops = null
+let _rampSig = ''
 export function rampRGB(t) {
-  const stops = ['bg', 'dim', 'accent', 'fg', 'warm'].map((k) => _hexRGB(PALETTE[k] ?? PALETTE.fg))
-  const x = Math.max(0, Math.min(1, t)) * (stops.length - 1)
+  const sig = `${PALETTE.bg}|${PALETTE.dim}|${PALETTE.accent}|${PALETTE.fg}|${PALETTE.warm}`
+  if (sig !== _rampSig) {
+    _rampSig = sig
+    _rampStops = ['bg', 'dim', 'accent', 'fg', 'warm'].map((k) => _hexRGB(PALETTE[k] ?? PALETTE.fg))
+  }
+  const stops = _rampStops
+  const tt = Number.isFinite(t) ? t : 0
+  const x = Math.max(0, Math.min(1, tt)) * (stops.length - 1)
   const i = Math.floor(x)
   const f = x - i
   const a = stops[i]
@@ -93,7 +106,13 @@ export function clear(ctx, W, H, bg) {
   ctx.fillRect(0, 0, W, H)
 }
 
-// Faint SDF=0 outline, useful so the shape is visible even when empty
+// Faint SDF=0 outline, useful so the shape is visible even when empty.
+// PERF (2026-08-09): the sign-change probe scanned the full SDF grid EVERY
+// frame (~250k samples at 2000px) and drew each dot as its own beginPath/
+// fill — and every proto calls this per frame. The SDF is immutable per
+// instance, so the point list is memoized per sdf.data, and the dots batch
+// into ONE path + ONE fill.
+const _outlinePts = new WeakMap()
 export function strokeOutline(
   ctx,
   sdf,
@@ -102,24 +121,76 @@ export function strokeOutline(
   color = 'rgba(240, 230, 210, 0.35)',
   size = 1.2,
 ) {
-  ctx.fillStyle = color
-  const raw = []
-  // Sparse sign-change probe, every 4 pixels, adds ~enough dots for an outline
-  const stride = 4
-  for (let y = 0; y < sdf.h - 1; y += stride) {
-    for (let x = 0; x < sdf.w - 1; x += stride) {
-      const a = sdf.data[y * sdf.w + x]
-      const b = sdf.data[y * sdf.w + (x + stride)]
-      const c = sdf.data[(y + stride) * sdf.w + x]
-      if ((a < 0) !== (b < 0)) raw.push([x + (stride * a) / (a - b), y])
-      if ((a < 0) !== (c < 0)) raw.push([x, y + (stride * a) / (a - c)])
+  let raw = _outlinePts.get(sdf.data)
+  if (!raw) {
+    raw = []
+    // Sparse sign-change probe, every 4 pixels, adds ~enough dots for an outline
+    const stride = 4
+    for (let y = 0; y < sdf.h - 1; y += stride) {
+      for (let x = 0; x < sdf.w - 1; x += stride) {
+        const a = sdf.data[y * sdf.w + x]
+        const b = sdf.data[y * sdf.w + (x + stride)]
+        const c = sdf.data[(y + stride) * sdf.w + x]
+        if ((a < 0) !== (b < 0)) raw.push([x + (stride * a) / (a - b), y])
+        if ((a < 0) !== (c < 0)) raw.push([x, y + (stride * a) / (a - c)])
+      }
     }
+    _outlinePts.set(sdf.data, raw)
   }
+  ctx.fillStyle = color
   const sx = W / sdf.w, sy = H / sdf.h
-  for (const p of raw) {
-    ctx.beginPath()
-    ctx.arc(p[0] * sx, p[1] * sy, size, 0, Math.PI * 2)
-    ctx.fill()
+  ctx.beginPath()
+  for (let i = 0; i < raw.length; i++) {
+    const px = raw[i][0] * sx, py = raw[i][1] * sy
+    ctx.moveTo(px + size, py)
+    ctx.arc(px, py, size, 0, Math.PI * 2)
+  }
+  ctx.fill()
+}
+
+// ── pointer forces — the shared interaction verbs (2026-08-09) ───────────
+// Every proto gets a `pointer()` accessor from the host (null when off-layer,
+// else {x,y} in SIM/sdf space). These are the two standard applications so
+// per-proto wiring stays one call. Scale both by the proto's interaction knob.
+
+// REPEL — push point-state away inside a reach ring; the sim's own dynamics
+// (relaxation, springs, flow) restore. `pts` is any array whose items carry
+// the coordinate fields named by xKey/yKey; `keep(nx, ny, item)` gates the
+// write (SDF containment etc.) — omit for unguarded.
+export function repelPoints(pts, ptr, { reach, strength, xKey = 'x', yKey = 'y', keep } = {}) {
+  if (!ptr || !reach || !strength) return
+  const r2 = reach * reach
+  for (const c of pts) {
+    const dx = c[xKey] - ptr.x
+    const dy = c[yKey] - ptr.y
+    const d2 = dx * dx + dy * dy
+    if (d2 >= r2 || d2 < 1e-6) continue
+    const d = Math.sqrt(d2)
+    const f = (1 - d / reach) * strength
+    const nx = c[xKey] + (dx / d) * f
+    const ny = c[yKey] + (dy / d) * f
+    if (!keep || keep(nx, ny, c)) { c[xKey] = nx; c[yKey] = ny }
+  }
+}
+
+// STAMP — write a radial falloff into a grid field at the pointer (inject
+// chemistry, heat, sand, disturbance). `set(i, w)` receives the cell index
+// and the 0..1 falloff weight so the proto owns the write semantics.
+export function stampGrid(gw, gh, ptr, radius, set) {
+  if (!ptr || !radius) return
+  const x0 = Math.max(0, Math.floor(ptr.x - radius))
+  const x1 = Math.min(gw - 1, Math.ceil(ptr.x + radius))
+  const y0 = Math.max(0, Math.floor(ptr.y - radius))
+  const y1 = Math.min(gh - 1, Math.ceil(ptr.y + radius))
+  const r2 = radius * radius
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const dx = x - ptr.x
+      const dy = y - ptr.y
+      const d2 = dx * dx + dy * dy
+      if (d2 > r2) continue
+      set(y * gw + x, 1 - Math.sqrt(d2) / radius)
+    }
   }
 }
 

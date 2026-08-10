@@ -69,6 +69,20 @@ export const r2_wave_02_chladni            = {
     tmpC.width = G; tmpC.height = G
     const tctx = tmpC.getContext('2d')
 
+    // Cached mode fields — rebuilt only when a mode index changes.
+    // Per-frame evalMode cost 4×G×G sin calls (~130k at G=180); now amortized.
+    const fieldA = new Float32Array(N)
+    const fieldB = new Float32Array(N)
+    let cachedA = -1, cachedB = -1
+    const buildField = (buf, m, n) => {
+      for (let y = 0; y < G; y++) {
+        for (let x = 0; x < G; x++) buf[y * G + x] = evalMode(m, n, x, y)
+      }
+    }
+
+    const rampLUT = new Uint8Array(64 * 3)
+    let lastBgKey = -1
+
     return wrapLoop(() => {
       const t      = clock.nowSeconds()
       const modeA  = Math.max(0, Math.min(MODES.length - 1, num(params, 'modeA', 3) - 1))
@@ -83,29 +97,41 @@ export const r2_wave_02_chladni            = {
       const cA = Math.cos(wA * t)
       const cB = Math.cos(wB * t)
 
-      for (let y = 0; y < G; y++) {
-        for (let x = 0; x < G; x++) {
-          const i = y * G + x
-          const j = i * 4
-          if (!mask[i]) {
-            const [br, bgc, bb] = roleRGB('bg')
-            img.data[j] = br; img.data[j+1] = bgc; img.data[j+2] = bb; img.data[j+3] = 255
-            continue
+      if (modeA !== cachedA) { buildField(fieldA, mA, nA); cachedA = modeA }
+      if (modeB !== cachedB) { buildField(fieldB, mB, nB); cachedB = modeB }
+
+      // theme ramp LUT — wide dynamic range: nodal lines stay dark, crests burn
+      for (let k = 0; k < 64; k++) {
+        const [rr, gg, bb] = rampRGB(k / 63)
+        rampLUT[k * 3] = rr; rampLUT[k * 3 + 1] = gg; rampLUT[k * 3 + 2] = bb
+      }
+      const [bgR0, bgG0, bgB0] = roleRGB('bg')
+      const bgKey = (bgR0 << 16) | (bgG0 << 8) | bgB0
+      const repaintBg = bgKey !== lastBgKey
+      lastBgKey = bgKey
+      const invBand = 0.5 / band
+      const data = img.data
+      for (let i = 0; i < N; i++) {
+        const j = i * 4
+        if (!mask[i]) {
+          if (repaintBg) {
+            data[j] = bgR0; data[j+1] = bgG0; data[j+2] = bgB0; data[j+3] = 255
           }
-          const u = cA * evalMode(mA, nA, x, y) + cB * evalMode(mB, nB, x, y)
-          const abs = Math.abs(u)
-          // nodal line: u near 0 → bg end of ramp. Away from zero → bright end
-          const bright = abs < band ? abs / band : 1.0
-          const [r, g, b] = rampRGB(bright)
-          img.data[j] = r; img.data[j+1] = g; img.data[j+2] = b; img.data[j+3] = 255
+          continue
         }
+        const u = cA * fieldA[i] + cB * fieldB[i]
+        const abs = Math.abs(u)
+        // nodal line: u near 0 → bg end of ramp; crest amplitude keeps climbing
+        const bright = abs < band ? abs * invBand : Math.min(1, 0.5 + (abs - band) * 0.8)
+        const ki = (bright * 63) | 0
+        data[j] = rampLUT[ki * 3]; data[j+1] = rampLUT[ki * 3 + 1]; data[j+2] = rampLUT[ki * 3 + 2]; data[j+3] = 255
       }
 
       clear(ctx, W, H)
       tctx.putImageData(img, 0, 0)
       ctx.imageSmoothingEnabled = true
       ctx.drawImage(tmpC, 0, 0, W, H)
-      strokeOutline(ctx, sdf, W, H)
+      strokeOutline(ctx, sdf, W, H, 'rgba(240, 230, 210, 0.35)', 2)
     })
   },
 }

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { EditorProviders } from './Editor'
-import Canvas from './shell/Canvas'
+import Canvas, { CANVAS_VIRTUAL_W } from './shell/Canvas'
 import LayerRenderer from './compose/LayerRenderer'
 import { resolveColor, useComposeState } from './compose/state'
 import { transport } from './params/transport'
@@ -50,7 +50,35 @@ export function OutputCanvas({ fit = 'contain' }) {
       gutter={0}
       fit={fit}
     >
-      <div className="relative w-full h-full">
+      {/* Stage pointer → transport (virtual px, CanvasArea's convention) —
+          feeds the layer-local pointer sources and sim pointer forces, with
+          the contact state (hover-repel vs grab-drag). Pointer events so
+          touch counts; capture on down keeps a drag reporting outside the
+          box. CanvasArea owns the editor's copy; this covers output/labs/
+          randomizer, which never mount it. */}
+      <div
+        className="relative w-full h-full"
+        onPointerMove={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          if (!r.width) return
+          const k = CANVAS_VIRTUAL_W / r.width
+          transport.setStagePointer((e.clientX - r.left) * k, (e.clientY - r.top) * k, e.buttons > 0)
+        }}
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId)
+          const r = e.currentTarget.getBoundingClientRect()
+          if (!r.width) return
+          const k = CANVAS_VIRTUAL_W / r.width
+          transport.setStagePointer((e.clientX - r.left) * k, (e.clientY - r.top) * k, true)
+        }}
+        onPointerUp={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          if (!r.width) return
+          const k = CANVAS_VIRTUAL_W / r.width
+          transport.setStagePointer((e.clientX - r.left) * k, (e.clientY - r.top) * k, false)
+        }}
+        onPointerLeave={(e) => { if (e.buttons === 0) transport.setStagePointer(null) }}
+      >
         {layers.map((layer) => (
           <LayerRenderer key={layer.id} layer={layer} palette={palette} />
         ))}

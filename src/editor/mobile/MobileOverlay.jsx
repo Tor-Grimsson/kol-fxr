@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { SegmentedToggle } from '@kolkrabbi/kol-component'
 import EditorButton from '../components/EditorButton'
+import EditorIcon from '../icons/EditorIcon'
 import TransportBar from '../params/TransportBar'
 import { useComposeState } from '../compose/state'
 import { useComposeFile } from '../compose/useComposeFile'
-import { groupById, loopById, presetsInGroup, presetParams } from '../../loops/registry'
+import { transport } from '../params/transport'
+import { groupById, loopById, presetsInGroup, presetLayerPatch } from '../../loops/registry'
 import { GENERATIVE_TREE } from '../../loops/taxonomy'
 import { deriveScopes, allScopeParams, computeRoll, useRollSeed } from '../params/rolls'
+import { mulberry32 } from '../lib/rng'
 
 /**
  * MobileOverlay — one SEE-THROUGH floating modal (35% surface veil, no
@@ -81,10 +84,14 @@ export default function MobileOverlay({ layer, onSwitchCategory, onRestart, aspe
     updateLayer(layer.id, computeRoll(layer, allScopeParams(schema, layer), seed.take()))
   const rollScope = (scope) =>
     updateLayer(layer.id, computeRoll(layer, scope.params, seed.take(), { stripNoRandom: !!scope.motion }))
+  /* Seeded like every other roll (the _rollSeed flow), and the patch is the
+   * registry's canonical one — not a hand-rolled subset. */
   const shufflePreset = () => {
     const pool = presetsInGroup(layer.loopGroup).filter((p) => p.id !== layer.presetId)
-    const p = pool[Math.floor(Math.random() * pool.length)]
-    if (p) updateLayer(layer.id, { presetId: p.id, presetLabel: p.label, loopId: p.loop, ...presetParams(p) })
+    if (!pool.length) return
+    const s = seed.take()
+    const p = pool[Math.floor(mulberry32(s >>> 0)() * pool.length)]
+    updateLayer(layer.id, { ...presetLayerPatch(p, layer.loopGroup), _rollSeed: s })
   }
 
   /* Collapsed: Randomize all left, the open pill right. */
@@ -94,7 +101,12 @@ export default function MobileOverlay({ layer, onSwitchCategory, onRestart, aspe
         {isLoop && (
           <EditorButton variant="primary" size="lg" onClick={rollAll}>Randomize all</EditorButton>
         )}
-        <EditorButton variant="primary" size="lg" onClick={() => setOpen(true)}>{title} ▴</EditorButton>
+        <EditorButton variant="primary" size="lg" onClick={() => setOpen(true)}>
+          <span className="flex items-center gap-2">
+            {title}
+            <EditorIcon name="chevron-down" size={12} className="rotate-180" />
+          </span>
+        </EditorButton>
       </div>
     )
   }
@@ -119,7 +131,9 @@ export default function MobileOverlay({ layer, onSwitchCategory, onRestart, aspe
                 </EditorButton>
               </div>
             ))}
-            <EditorButton variant="ghost" size="lg" onClick={() => setShowCats(false)}>Cancel</EditorButton>
+            {/* outline, not ghost — ghost is bare oq-48 text floating on the
+                scrim, and its baked grey assumes a surface that isn't there. */}
+            <EditorButton variant="outline" size="lg" onClick={() => setShowCats(false)}>Cancel</EditorButton>
           </div>
         </div>
       )}
@@ -135,7 +149,9 @@ export default function MobileOverlay({ layer, onSwitchCategory, onRestart, aspe
           onClick={() => setOpen(false)}
         >
           <span>{title}</span>
-          <span>▾</span>
+          {/* Real icon, opaque ink (the icons law — the header's text-meta
+              alpha stays on the TEXT only). */}
+          <EditorIcon name="chevron-down" size={12} className="text-oq-48" />
         </button>
 
         <div className="px-3 pb-3">
@@ -144,7 +160,7 @@ export default function MobileOverlay({ layer, onSwitchCategory, onRestart, aspe
           {activeTab === 'generate' && isLoop && (
             <div className="flex flex-col gap-2 pt-3">
               <div className="grid grid-cols-2 gap-2">
-                <EditorButton variant="primary" size="lg" onClick={shufflePreset}>Preset ⚄</EditorButton>
+                <EditorButton variant="primary" size="lg" iconRight="refresh" onClick={shufflePreset}>Preset</EditorButton>
                 <EditorButton variant="primary" size="lg" onClick={() => setShowCats(true)}>Generator</EditorButton>
               </div>
               <EditorButton variant="primary" size="lg" className="w-full" onClick={rollAll}>
@@ -157,6 +173,13 @@ export default function MobileOverlay({ layer, onSwitchCategory, onRestart, aspe
                       {s.label}
                     </EditorButton>
                   ))}
+                  {/* Re-trigger — restart the sim clock (rewind: t=0 + a new
+                      reset epoch, keeps playing). Accumulative sims (penrose
+                      growth, trails, diffusion) re-run from seed; pure loops
+                      just restart their phase. Fills the odd grid cell. */}
+                  <EditorButton variant="primary" size="lg" onClick={() => transport.rewind()}>
+                    Re-trigger
+                  </EditorButton>
                 </div>
               )}
             </div>

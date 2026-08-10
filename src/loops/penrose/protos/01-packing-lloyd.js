@@ -1,6 +1,6 @@
 import { Delaunay } from 'd3-delaunay'
 
-import { clear, strokeOutline, wrapLoop, pc } from '../common.js'
+import { clear, strokeOutline, wrapLoop, pc, repelPoints } from '../common.js'
 
 
 
@@ -33,7 +33,7 @@ export const packingLloyd            = {
     { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
     { key: 'loop', type: 'range', min: 0.5, max: 8, step: 0.5, default: 3, label: 'loop (s)' },
   ],
-  init({ ctx, sdf, W, H, rng, params, clock }) {
+  init({ ctx, sdf, W, H, rng, params, clock, pointer }) {
     const sx = W / sdf.w, sy = H / sdf.h
 
     const { minR, maxR, radiusScale, padding, attempts } = params
@@ -70,6 +70,10 @@ export const packingLloyd            = {
       return false
     }
 
+    // PERF: hard population cap — every frame runs a full Delaunay+Voronoi
+    // rebuild over the cells, so the pack size must stay bounded no matter
+    // what density/minR the sliders ask for.
+    const CELL_CAP = 1500
     const bands                     = [
       [maxR * 0.7, maxR],
       [maxR * 0.45, maxR * 0.7],
@@ -77,7 +81,8 @@ export const packingLloyd            = {
       [minR, maxR * 0.25],
     ]
     for (const [lo, hi] of bands) {
-      for (let i = 0; i < attempts; i++) {
+      if (cells.length >= CELL_CAP) break
+      for (let i = 0; i < attempts && cells.length < CELL_CAP; i++) {
         const x = rng() * sdf.w
         const y = rng() * sdf.h
         const s = sdf.sample(x, y)
@@ -94,6 +99,9 @@ export const packingLloyd            = {
 
     // interaction multiplication — scales how strongly cells relax/interact
     const relaxStrength = params.relax * params.interact
+    // grab state — the held cell + a smoothed drag-velocity estimate that
+    // becomes the release fling (the inertia feel).
+    let grab = null
     const TAU = Math.PI * 2
     // per-cell pulsing display radius (alive bounce), looping every `loop` seconds
     const dispR = (c, ci) => c.r * (1 + params.bounce * Math.sin((clock.nowSeconds() / params.loop) * TAU + ci * 0.7))
@@ -127,6 +135,76 @@ export const packingLloyd            = {
         }
       }
 
+      // ── pointer interaction, three modes (scaled by `interact`, 0 = inert):
+      //   hover  — ambient repel; cells shove aside, Lloyd reseals behind.
+      //   hold   — GRAB the nearest cell under the press; it rides the
+      //            pointer, plowing overlapping neighbors out of its way.
+      //   release— the grabbed cell flies with the drag's smoothed velocity
+      //            (inertia fling), friction-decayed below while Lloyd
+      //            reabsorbs it. A quick tap = grab + ~zero fling = a poke.
+      // ponytail: force constants eyeballed against relax 0.18; tune here.
+      const inMask = (nx, ny, c) => sdf.sample(nx, ny) < -c.r * 0.2
+      const ptr = params.interact > 0 && pointer ? pointer() : null
+      if (ptr?.down) {
+        if (!grab) {
+          let best = null, bd = Infinity
+          for (const c of cells) {
+            const dx = c.x - ptr.x, dy = c.y - ptr.y
+            const d2 = dx * dx + dy * dy
+            const rr = Math.max(c.r * 1.5, minR * 3) // generous ring — touch
+            if (d2 < rr * rr && d2 < bd) { bd = d2; best = c }
+          }
+          if (best) grab = { c: best, px: ptr.x, py: ptr.y, vx: 0, vy: 0 }
+        }
+        if (grab) {
+          const c = grab.c
+          grab.vx = grab.vx * 0.5 + (ptr.x - grab.px) * 0.5
+          grab.vy = grab.vy * 0.5 + (ptr.y - grab.py) * 0.5
+          grab.px = ptr.x
+          grab.py = ptr.y
+          if (inMask(ptr.x, ptr.y, c)) { c.x = ptr.x; c.y = ptr.y }
+          c.vx = 0
+          c.vy = 0
+          // the carried cell plows overlapping neighbors aside
+          for (const o of cells) {
+            if (o === c) continue
+            const dx = o.x - c.x, dy = o.y - c.y
+            const s = c.r + o.r + padding
+            const d2 = dx * dx + dy * dy
+            if (d2 >= s * s || d2 < 1e-6) continue
+            const d = Math.sqrt(d2)
+            const push = (s - d) * 0.6
+            const nx = o.x + (dx / d) * push
+            const ny = o.y + (dy / d) * push
+            if (inMask(nx, ny, o)) { o.x = nx; o.y = ny }
+          }
+        }
+      } else {
+        if (grab) { // release → inertia fling
+          grab.c.vx = grab.vx * params.interact
+          grab.c.vy = grab.vy * params.interact
+          grab = null
+        }
+        if (ptr) {
+          repelPoints(cells, ptr, {
+            reach: maxR * 2.5,
+            strength: maxR * 0.12 * params.interact,
+            keep: inMask,
+          })
+        }
+      }
+      // momentum integration — flung cells coast with friction, soft-bounce
+      // off the mask, and hand back to Lloyd as they slow.
+      for (const c of cells) {
+        if (!c.vx && !c.vy) continue
+        const nx = c.x + c.vx, ny = c.y + c.vy
+        if (inMask(nx, ny, c)) { c.x = nx; c.y = ny }
+        else { c.vx *= -0.5; c.vy *= -0.5 }
+        c.vx *= 0.92
+        c.vy *= 0.92
+        if (c.vx * c.vx + c.vy * c.vy < 0.01) { c.vx = 0; c.vy = 0 }
+      }
+
       // Render — each element pulls its colour from the palette by role:
       // outline/spokes = dim (recessive), edges + dot rings = accent, dots = fg,
       // centres = warm.
@@ -152,12 +230,11 @@ export const packingLloyd            = {
       ctx.strokeStyle = pc('accent', 0.4)
       ctx.lineWidth = 0.8
       ctx.beginPath()
-      const visited = new Set        ()
+      // PERF: neighbors() yields both directions — skipping j<i dedupes
+      // without the per-frame Set + string-key churn
       for (let i = 0; i < cells.length; i++) {
         for (const j of voronoi.neighbors(i)) {
-          const key = i < j ? `${i}-${j}` : `${j}-${i}`
-          if (visited.has(key)) continue
-          visited.add(key)
+          if (j < i) continue
           const a = cells[i], b = cells[j]
           const dx = a.x - b.x, dy = a.y - b.y
           if (dx * dx + dy * dy < (a.r + b.r + 10) ** 2) {
@@ -168,30 +245,33 @@ export const packingLloyd            = {
       }
       ctx.stroke()
 
-      // boundary dots (per spoke endpoint)
+      // boundary dots (per spoke endpoint) — PERF: one batched path for all
+      // dots (cells × spokes arcs), one fill + one stroke instead of one per dot
       ctx.fillStyle = pc('fg')
       ctx.strokeStyle = pc('accent')
       ctx.lineWidth = 1
+      ctx.beginPath()
       cells.forEach((c, ci) => {
         const rr = dispR(c, ci)
         for (let i = 0; i < spokeCount; i++) {
           const ang = (i / spokeCount) * TAU
           const bx = (c.x + Math.cos(ang) * rr) * sx
           const by = (c.y + Math.sin(ang) * rr) * sy
-          ctx.beginPath()
+          ctx.moveTo(bx + 1.6, by)
           ctx.arc(bx, by, 1.6, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.stroke()
         }
       })
+      ctx.fill()
+      ctx.stroke()
 
-      // centers
+      // centers — batched
       ctx.fillStyle = pc('warm')
+      ctx.beginPath()
       for (const c of cells) {
-        ctx.beginPath()
+        ctx.moveTo(c.x * sx + 2.4, c.y * sy)
         ctx.arc(c.x * sx, c.y * sy, 2.4, 0, Math.PI * 2)
-        ctx.fill()
       }
+      ctx.fill()
     })
   },
 }

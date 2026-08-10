@@ -1,7 +1,7 @@
 
 
 import { num, bool } from '../knobs.js'
-import { clear, strokeOutline, wrapLoop } from '../common.js'
+import { clear, strokeOutline, wrapLoop, rampRGB } from '../common.js'
 
 const PARAMS          = [
   { key: 'visc', type: 'range', min: 0, max: 0.0004, default: 0.00005, step: 0.00001, label: 'viscosity' },
@@ -9,6 +9,7 @@ const PARAMS          = [
   { key: 'res', type: 'int', min: 48, max: 128, default: 80, step: 8, label: 'grid res' },
   { key: 'splat', type: 'range', min: 0.1, max: 1.5, default: 0.6, step: 0.05, label: 'splat strength' },
   { key: 'dyefade', type: 'boolean', default: true, label: 'dye fade' },
+  { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]
 
 export const r2_fluid_03_stam            = {
@@ -20,14 +21,13 @@ export const r2_fluid_03_stam            = {
   helps:
     'Smoke-trapped-in-glass aesthetic — tight vortex tubes spiral inward from stroke edges when ε > 2.',
   params: PARAMS,
-  init({ ctx, sdf, W, H, rng, params, clock }) {
+  init({ ctx, sdf, W, H, rng, params, clock, pointer }) {
     const visc = num(params, 'visc', 0.00005)
     const confEps = num(params, 'conf', 2.5)
     const N = num(params, 'res', 80)
     const splatStr = num(params, 'splat', 0.6)
     const dyeFade = bool(params, 'dyefade', true)
 
-    const scaleX = W / N, scaleY = H / (N * H / W)
     const NY = Math.round(N * H / W)
     const sz = (N + 2) * (NY + 2)
 
@@ -132,13 +132,21 @@ export const r2_fluid_03_stam            = {
       }
     }
 
-    const img = ctx.createImageData(W, H)
+    // Grid-sized blit target — nearest-neighbor upscale replaces the old
+    // full-canvas ImageData (a W×H putImageData per frame at up to 2000px).
+    const img = ctx.createImageData(N, NY)
     const pixels = img.data
+    const tmpC = document.createElement('canvas')
+    tmpC.width = N; tmpC.height = NY
+    const tctx = tmpC.getContext('2d')
     let prevT = clock.nowSeconds()
+    let prevPtr = null // previous pointer sample (SDF coords) for the motion impulse
+    let prevDown = false
 
     return wrapLoop(() => {
       const now = clock.nowSeconds()
-      const dt = Math.min(now - prevT, 0.05)
+      // floored at 0 — a backwards clock jump would make diffuse's 1/c divide blow up
+      const dt = Math.max(0, Math.min(now - prevT, 0.05))
       prevT = now
 
       // Inject dye + force at sources
@@ -148,8 +156,51 @@ export const r2_fluid_03_stam            = {
         v0[IX(si, sj)] += (rng() - 0.5) * splatStr * 3
       }
 
-      // Velocity step
-      u.set(u0); v.set(v0)
+      // Pointer splat: mirror the source injection at the cursor cell — dye
+      // plus a velocity impulse from pointer motion (scaled by `interact`).
+      // Held drag = the motion splat (heavier pour while down); down-EDGE =
+      // a BURST — a large dye charge with a radial velocity blast outward,
+      // an explosion in the fluid.
+      const ptr = params.interact > 0 && pointer ? pointer() : null
+      const edge = !!(ptr && ptr.down) && !prevDown
+      prevDown = !!(ptr && ptr.down)
+      if (ptr) {
+        const gi = Math.floor(ptr.x / sdf.w * N)
+        const gj = Math.floor(ptr.y / sdf.h * NY)
+        if (gi >= 0 && gi < N && gj >= 0 && gj < NY && !solid[IX(gi, gj)]) {
+          dens0[IX(gi, gj)] += splatStr * 8 * params.interact * (ptr.down ? 2 : 1)
+          if (prevPtr) {
+            u0[IX(gi, gj)] += (ptr.x - prevPtr.x) / sdf.w * N * 1 * params.interact
+            v0[IX(gi, gj)] += (ptr.y - prevPtr.y) / sdf.h * NY * 1 * params.interact
+          }
+        }
+        if (edge && gi >= 0 && gi < N && gj >= 0 && gj < NY) {
+          const rad = Math.max(3, Math.round(N * 0.12 * (0.5 + params.interact * 0.5)))
+          for (let dj = -rad; dj <= rad; dj++) {
+            for (let di = -rad; di <= rad; di++) {
+              const ci = gi + di, cj = gj + dj
+              if (ci < 0 || ci >= N || cj < 0 || cj >= NY) continue
+              if (solid[IX(ci, cj)]) continue
+              const d = Math.hypot(di, dj)
+              if (d > rad) continue
+              const w = 1 - d / rad
+              dens0[IX(ci, cj)] += splatStr * 40 * w * params.interact
+              const inv = 1 / (d || 1)
+              const kick = splatStr * 12 * w * params.interact
+              u0[IX(ci, cj)] += di * inv * kick
+              v0[IX(ci, cj)] += dj * inv * kick
+            }
+          }
+        }
+        prevPtr = { x: ptr.x, y: ptr.y }
+      } else {
+        prevPtr = null
+      }
+
+      // Velocity step — ADD sources into the field (Stam add_source);
+      // `u.set(u0)` was wiping the velocity's memory every frame and the
+      // dye never entered `dens` at all → the empty view (2026-08-09).
+      for (let n = 0; n < sz; n++) { u[n] += u0[n]; v[n] += v0[n] }
       if (visc > 0) { diffuse(1, u0, u, visc, dt); diffuse(2, v0, v, visc, dt) }
       project(u0, v0, p, div)
       advect(1, u, u0, u0, v0, dt); advect(2, v, v0, u0, v0, dt)
@@ -176,37 +227,39 @@ export const r2_fluid_03_stam            = {
       }
       u0.fill(0); v0.fill(0)
 
-      // Density step
+      // Density step — add the injected dye first (add_source), THEN
+      // diffuse into the scratch and advect back.
+      for (let n = 0; n < sz; n++) dens[n] += dens0[n]
       diffuse(0, dens0, dens, visc * 0.1, dt)
       advect(0, dens, dens0, u, v, dt)
       if (dyeFade) for (let n = 0; n < sz; n++) dens[n] *= 0.993
       dens0.fill(0)
 
-      // Render density to ImageData
-      const cw = Math.ceil(scaleX), ch = Math.ceil(scaleY)
+      // Render density to ImageData — theme ramp LUT, hot cells hit full white-warm
+      const rampLUT = new Uint8Array(64 * 3)
+      for (let k = 0; k < 64; k++) {
+        const [rr, gg, bb] = rampRGB(k / 63)
+        rampLUT[k * 3] = rr; rampLUT[k * 3 + 1] = gg; rampLUT[k * 3 + 2] = bb
+      }
       for (let j = 0; j < NY; j++) {
         for (let i = 0; i < N; i++) {
-          if (solid[IX(i, j)]) continue
-          const d = Math.min(1, dens[IX(i, j)] * 0.8)
-          const r = Math.round(d * 255 * 0.85)
-          const g = Math.round(d * 190)
-          const b = Math.round(d * 255 * 0.7 + (1 - d) * 40)
-          const a = Math.round(d * 220)
-          const px0 = Math.round(i * scaleX), py0 = Math.round(j * scaleY)
-          for (let dy = 0; dy < ch; dy++) {
-            for (let dx = 0; dx < cw; dx++) {
-              const pidx = ((py0 + dy) * W + (px0 + dx)) * 4
-              if (pidx + 3 < pixels.length) {
-                pixels[pidx] = r; pixels[pidx + 1] = g; pixels[pidx + 2] = b; pixels[pidx + 3] = a
-              }
-            }
-          }
+          const pidx = (j * N + i) * 4
+          if (solid[IX(i, j)]) { pixels[pidx + 3] = 0; continue }
+          const d = Math.min(1, dens[IX(i, j)] * 1.5)
+          const ki = (d * 63) | 0
+          pixels[pidx]     = rampLUT[ki * 3]
+          pixels[pidx + 1] = rampLUT[ki * 3 + 1]
+          pixels[pidx + 2] = rampLUT[ki * 3 + 2]
+          pixels[pidx + 3] = Math.round(Math.min(1, d * 1.4) * 255)
         }
       }
 
       clear(ctx, W, H)
-      ctx.putImageData(img, 0, 0)
-      strokeOutline(ctx, sdf, W, H)
+      tctx.putImageData(img, 0, 0)
+      ctx.imageSmoothingEnabled = false
+      ctx.drawImage(tmpC, 0, 0, W, H)
+      ctx.imageSmoothingEnabled = true
+      strokeOutline(ctx, sdf, W, H, 'rgba(240, 230, 210, 0.35)', 2)
     })
   },
 }

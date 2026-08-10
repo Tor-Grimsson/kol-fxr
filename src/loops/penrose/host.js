@@ -26,7 +26,7 @@ import { setPalette, syncOpacity } from './palette.js'
 import { makeSDF, setLoopClock, collectSteps } from './common.js'
 import { makeMapper, tintedContext } from './tint.js'
 import { rasterizeGlyph, computeSDF } from './sdf.js'
-import { rasterizeShape, SHAPE_SOURCES } from './shapes.js'
+import { rasterizeShape, rasterizeSvg, SHAPE_SOURCES } from './shapes.js'
 import { mulberry32 } from '../gl/rng.js'
 import { defaultValues } from './knobs.js'
 
@@ -44,11 +44,15 @@ const LOGICAL = 960     // default logical artboard res (the labs bake scale) �
 
 const T = themeById(DEFAULT_THEME)
 const DEFAULT_FONT = 'TG Gullhamrar' // labs default face; shipped by kinetic/fonts.js
-const isGlyph = (l) => (l.shape ?? 'glyph') === 'glyph'
+const isGlyph = (l) => (l.shape ?? 'none') === 'glyph'
 
 const MASK_PARAMS = [
-  { key: 'shape', label: 'Shape', type: 'select', default: 'glyph', tab: 'generate', options: SHAPE_SOURCES.map((s) => ({ value: s.id, label: s.label })) },
+  /* Default 'none' — generation-first (user ruling 2026-08-09): the sim owns
+   * the full frame; picking a glyph/shape here is the opt-in that makes a
+   * FORM interact with the generation. */
+  { key: 'shape', label: 'Shape', type: 'select', default: 'none', tab: 'generate', options: SHAPE_SOURCES.map((s) => ({ value: s.id, label: s.label })) },
   { key: 'glyph', label: 'Glyph', type: 'text', rows: 1, default: 'A', tab: 'generate', when: isGlyph },
+  { key: 'customSvg', label: 'SVG code', type: 'text', rows: 4, placeholder: '<svg viewBox="0 0 24 24"><path d="…"/></svg>', default: '', tab: 'generate', noRandom: true, when: (l) => l.shape === 'custom' },
   { key: 'font', label: 'Font', type: 'select', default: DEFAULT_FONT, tab: 'generate', when: isGlyph, options: EDITOR_FONTS.map((f) => ({ value: f.family, label: f.label })) },
   { key: 'weight', label: 'Weight', type: 'select', default: '700', tab: 'generate', when: isGlyph, options: ['300', '400', '500', '700', '900'].map((w) => ({ value: w, label: w })) },
   { key: 'seed', label: 'Seed', type: 'range', min: 1, max: 99, step: 1, default: 1, tab: 'generate', noRandom: true },
@@ -128,7 +132,7 @@ function getState(proto, structuralKeys, w, h, p) {
    * proto instance rebuilds (init re-runs) and the generative run starts
    * fresh — the LRU no longer lets sim state survive a stop. */
   const sig = [
-    proto.id, p.shape ?? 'glyph', p.glyph ?? 'A', p.font ?? '', p.weight ?? '700',
+    proto.id, p.shape ?? 'none', p.glyph ?? 'A', p.font ?? '', p.weight ?? '700', p.customSvg ?? '',
     p.seed ?? 1, p.resolution ?? LOGICAL, w | 0, h | 0, transport.getEpoch(),
     ...structuralKeys.map((k) => `${k}:${p[k]}`),
   ].join('|')
@@ -175,6 +179,30 @@ function createState(proto, w, h, p) {
     isPaused: () => false,
     speed: CLOCK_RATE,
   }
+  /* Live stage pointer → SIM coords (sdf space) for protos that take a
+   * pointer force. Maps through the layer's current box (draw() refreshes
+   * it each tick); null while the pointer is off the layer. Rotation is
+   * ignored — the repo-wide nested-rotation gap, accepted. */
+  s.layerBox = null
+  s.ptrSm = null
+  s.pointer = () => {
+    const st = transport.getCtx().stage
+    const b = s.layerBox
+    if (!st || !b || !b.w || !b.h) { s.ptrSm = null; return null }
+    const fx = (st.x - b.x) / b.w
+    const fy = (st.y - b.y) / b.h
+    if (fx < 0 || fx > 1 || fy < 0 || fy > 1) { s.ptrSm = null; return null }
+    /* Low-passed — the raw pointer is hypersensitive (user runs a fast
+     * mouse; raw coupling reads as twitching, 2026-08-09). One damped
+     * smooth HERE gives every sim the same weighted, fluid feel. `down`
+     * passes through raw — events must not lag. */
+    const x = fx * mw
+    const y = fy * mh
+    if (!s.ptrSm) s.ptrSm = { x, y }
+    s.ptrSm.x += (x - s.ptrSm.x) * 0.1
+    s.ptrSm.y += (y - s.ptrSm.y) * 0.1
+    return { x: s.ptrSm.x, y: s.ptrSm.y, down: !!st.down }
+  }
 
   /* SDF/sim space: contain the layer aspect in a logical box (labs parity —
    * labs baked a square 960 mask; non-square layers keep the logical res on
@@ -200,7 +228,7 @@ function createState(proto, w, h, p) {
     setLoopClock(s.clock)
     try {
       s.steps = collectSteps(() => {
-        s.cleanup = proto.init({ canvas: buf, ctx: wctx, sdf, W: bw, H: bh, rng, seed: p.seed ?? 1, params, clock: s.clock }) ?? null
+        s.cleanup = proto.init({ canvas: buf, ctx: wctx, sdf, W: bw, H: bh, rng, seed: p.seed ?? 1, params, clock: s.clock, pointer: s.pointer }) ?? null
       })
       s.ready = true
     } catch (err) {
@@ -210,7 +238,7 @@ function createState(proto, w, h, p) {
     }
   }
 
-  const shape = p.shape ?? 'glyph'
+  const shape = p.shape ?? 'none'
   if (shape === 'glyph') {
     /* Async: FontFace registration + document.fonts.load, then bake. Until it
      * resolves, draw() paints bg only; no re-kick per frame (state persists). */
@@ -218,6 +246,12 @@ function createState(proto, w, h, p) {
     rasterizeGlyph(String(p.glyph ?? 'A') || 'A', p.font ?? DEFAULT_FONT, String(p.weight ?? '700'), Math.min(mw, mh) * 0.9, mw, mh)
       .then(finish)
       .catch((err) => console.error(`[penrose-${proto.id}] glyph bake failed:`, err))
+  } else if (shape === 'custom') {
+    /* Async like the glyph bake; a broken/empty paste falls back to the
+     * full-frame mask so the layer never renders dead. */
+    rasterizeSvg(p.customSvg, mw, mh)
+      .then(finish)
+      .catch(() => finish(rasterizeShape('none', mw, mh)))
   } else {
     finish(rasterizeShape(shape, mw, mh))
   }
@@ -244,6 +278,8 @@ export function protoLoop(proto, opts = {}) {
       const paletteSig = syncPalette(p)
       syncOpacity(p)
       const s = getState(proto, structuralKeys, w, h, p)
+      /* The layer's live box (virtual px) — s.pointer maps through it. */
+      s.layerBox = { x: p.x ?? 0, y: p.y ?? 0, w: p.w ?? 0, h: p.h ?? 0 }
       if (s.paletteSig !== paletteSig) {
         s.paletteSig = paletteSig
         s.mapColor = makeMapper({ bg: p.bg ?? T.bg, fg: p.fg ?? T.fg, accent: p.accent ?? T.accent, dim: p.dim ?? T.dim, warm: p.warm ?? T.warm })

@@ -75,7 +75,10 @@ const FOUNDATION_PRESETS = FOUNDATIONS
     label: proto.name,
     loop: `penrose-${proto.id}`,
     sub: SUB[proto.id] ?? 'Packing',
-    params: { ...SUBSTRATE_POOL[i % SUBSTRATE_POOL.length] },
+    /* Mask pins retired from boot (generation-first ruling 2026-08-09): the
+     * sim owns the frame; SUBSTRATE_POOL stays authored above for a future
+     * "authored form" mode and the Shape select opts back in live. */
+    params: {},
   }))
   .sort((a, b) => SUB_ORDER.indexOf(a.sub) - SUB_ORDER.indexOf(b.sub))
 

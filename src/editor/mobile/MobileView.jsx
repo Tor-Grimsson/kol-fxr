@@ -8,7 +8,7 @@ import { transport } from '../params/transport'
 import { applyThemeMode, getThemeMode } from '../theme'
 import { GENERATIVE_TREE } from '../../loops/taxonomy'
 import { firstPresetPatch } from '../../loops/registry'
-import { saveClip } from '../lib/clipStore'
+import LabsSourcePicker from '../labs/LabsSourcePicker'
 import { isTabletSized, goDesktop } from './device'
 import MobileOverlay from './MobileOverlay'
 
@@ -37,7 +37,7 @@ function EntryScreen({ onInsert, onGenerate }) {
       </div>
       {isTabletSized() && (
         <div className="mt-8">
-          <EditorButton variant="ghost" size="lg" onClick={goDesktop}>
+          <EditorButton variant="outline" size="lg" onClick={goDesktop}>
             Use desktop editor
           </EditorButton>
         </div>
@@ -59,7 +59,8 @@ function CategoryScreen({ onPick, onBack }) {
           </div>
         ))}
         <div className="mt-4">
-          <EditorButton variant="ghost" size="lg" onClick={onBack}>Back</EditorButton>
+          {/* outline, not ghost — scrim buttons need an affordance edge. */}
+          <EditorButton variant="outline" size="lg" onClick={onBack}>Back</EditorButton>
         </div>
       </div>
     </div>
@@ -71,7 +72,39 @@ function MobileBody() {
   const [screen, setScreen] = useState('entry')   /* entry | category | live */
   const [activeId, setActiveId] = useState(null)
   const [stageFit, setStageFit] = useState('contain')  /* contain = 4:5 letterbox · cover = fill display */
-  const fileRef = useRef(null)
+
+  /* Pinch-to-scale the stage (touch): frame the shot after Hide UI without
+   * any controls. Capture-phase so a second finger suspends the sim-pointer
+   * forwarding (no accidental grabs mid-pinch); scale clamps 0.5–3 and
+   * sticks until Start over. */
+  const [stageScale, setStageScale] = useState(1)
+  const pinchRef = useRef({ pts: new Map(), startDist: 0, startScale: 1 })
+  const pinchDist = () => {
+    const [a, b] = [...pinchRef.current.pts.values()]
+    return Math.hypot(a.x - b.x, a.y - b.y)
+  }
+  const onPinchDown = (e) => {
+    pinchRef.current.pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pinchRef.current.pts.size === 2) {
+      pinchRef.current.startDist = pinchDist()
+      pinchRef.current.startScale = stageScale
+      transport.setStagePointer(null)
+      e.stopPropagation()
+    }
+  }
+  const onPinchMove = (e) => {
+    const p = pinchRef.current
+    if (!p.pts.has(e.pointerId)) return
+    p.pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (p.pts.size >= 2 && p.startDist > 0) {
+      e.stopPropagation()
+      setStageScale(Math.min(3, Math.max(0.5, p.startScale * (pinchDist() / p.startDist))))
+    }
+  }
+  const onPinchEnd = (e) => {
+    pinchRef.current.pts.delete(e.pointerId)
+    if (pinchRef.current.pts.size < 2) pinchRef.current.startDist = 0
+  }
 
   useEffect(() => {
     applyThemeMode(getThemeMode())
@@ -100,18 +133,13 @@ function MobileBody() {
     if (patch && activeId) updateLayer(activeId, patch)
   }
 
-  const insertFile = (file) => {
-    const isVideo = file.type.startsWith('video/')
-    if (!isVideo && !file.type.startsWith('image/')) return
-    const url = URL.createObjectURL(file)
-    /* Full-bleed cover — on mobile the media IS the composition (desktop's
-     * drop-at-point 60%-fit placement doesn't apply). */
+  /* Insert media = create the photo layer EMPTY (full-bleed cover — on
+   * mobile the media IS the composition) and let labs' two-pane source
+   * picker fill it: From library | Upload, same as labs — the picker IS
+   * the empty state, so both ways in are always offered. */
+  const startInsert = () => {
     const virtualH = Math.round(CANVAS_W * canvasH / canvasW)
-    const id = addLayer('photo', {
-      src: url, srcType: isVideo ? 'video' : 'image', fit: 'cover',
-      x: 0, y: 0, w: CANVAS_W, h: virtualH,
-    })
-    if (isVideo && id) saveClip(id, file)
+    const id = addLayer('photo', { fit: 'cover', x: 0, y: 0, w: CANVAS_W, h: virtualH })
     setActiveId(id)
     transport.play()
     setScreen('live')
@@ -136,14 +164,31 @@ function MobileBody() {
      * clip is freed here — mobile never runs the desktop's load-time gc. */
     for (const l of [...layers]) removeLayer(l.id)
     setActiveId(null)
+    setStageScale(1)
     setScreen('entry')
   }
 
   return (
     <div className="fixed inset-0 bg-black">
-      <OutputStage fit={stageFit} />
+      {/* touch-none: touches over the stage arrive as pointer events (the
+          mouse modulation source), not browser pan/zoom gestures. Scoped to
+          the stage wrapper — the overlay/screens above keep native touch
+          (the category list scrolls). The transform also makes this the
+          containing block for OutputStage's fixed positioning, so the pinch
+          scale applies to the whole stage. */}
+      <div
+        className="absolute inset-0 touch-none"
+        style={{ transform: stageScale === 1 ? undefined : `scale(${stageScale})` }}
+        onPointerDownCapture={onPinchDown}
+        onPointerMoveCapture={onPinchMove}
+        onPointerUpCapture={onPinchEnd}
+        onPointerCancelCapture={onPinchEnd}
+        onPointerLeave={onPinchEnd}
+      >
+        <OutputStage fit={stageFit} />
+      </div>
       {screen === 'entry' && (
-        <EntryScreen onInsert={() => fileRef.current?.click()} onGenerate={() => setScreen('category')} />
+        <EntryScreen onInsert={startInsert} onGenerate={() => setScreen('category')} />
       )}
       {screen === 'category' && (
         <CategoryScreen onPick={startGenerative} onBack={() => setScreen('entry')} />
@@ -157,17 +202,19 @@ function MobileBody() {
           onAspect={setStageAspect}
         />
       )}
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*,video/*"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) insertFile(f)
-          e.target.value = ''
-        }}
-      />
+      {/* Source picker overlay — labs' two-pane (From library | Upload)
+          while the inserted photo layer has no pixels yet. Back unwinds
+          the empty layer entirely. */}
+      {screen === 'live' && active?.type === 'photo' && !active.src && (
+        <div className="fixed inset-0 z-10 flex flex-col bg-black/60 backdrop-blur-sm">
+          <div className="flex-1 min-h-0">
+            <LabsSourcePicker layer={active} />
+          </div>
+          <div className="flex justify-center pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <EditorButton variant="outline" size="lg" onClick={restart}>Back</EditorButton>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

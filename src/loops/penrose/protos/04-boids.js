@@ -1,5 +1,5 @@
 
-import { clear, strokeOutline, wrapLoop, sampleInside, sdfGrad } from '../common.js'
+import { clear, strokeOutline, wrapLoop, sampleInside, sdfGrad, pc } from '../common.js'
 
 
 
@@ -15,16 +15,18 @@ export const boids            = {
   helps:
     'The "motion over structure" layer — boids drift over a static packed base. Cross-layer rules (predator/prey between layers) map cleanly onto boid weights.',
   params: [
-    { key: 'N', type: 'int', min: 50, max: 1200, step: 10, default: 450, label: 'count' },
+    { key: 'N', type: 'int', min: 50, max: 1200, step: 10, default: 320, label: 'count' },
     { key: 'neighbor', type: 'int', min: 8, max: 60, default: 22, label: 'neighbor radius' },
-    { key: 'sepR', type: 'range', min: 2, max: 24, step: 0.5, default: 9, label: 'separation dist' },
+    { key: 'sepR', type: 'range', min: 2, max: 24, step: 0.5, default: 10, label: 'separation dist' },
     { key: 'sepW', type: 'range', min: 0, max: 0.6, step: 0.01, default: 0.18, label: 'separation' },
     { key: 'aliW', type: 'range', min: 0, max: 0.3, step: 0.01, default: 0.05, label: 'alignment' },
     { key: 'cohW', type: 'range', min: 0, max: 0.2, step: 0.005, default: 0.02, label: 'cohesion' },
-    { key: 'maxSpeed', type: 'range', min: 0.5, max: 6, step: 0.1, default: 2.2, label: 'max speed' },
+    { key: 'maxSpeed', type: 'range', min: 0.5, max: 6, step: 0.1, default: 2.6, label: 'max speed' },
+    { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
   ],
-  init({ ctx, sdf, W, H, rng, params }) {
+  init({ ctx, sdf, W, H, rng, params, pointer }) {
     const sx = W / sdf.w, sy = H / sdf.h
+    const U = Math.max(1, Math.min(W, H) / 320) // size unit — marks scale with the canvas
 
     const { N, neighbor, sepR, sepW, aliW, cohW, maxSpeed } = params
 
@@ -32,17 +34,54 @@ export const boids            = {
     for (let i = 0; i < N; i++) {
       const [x, y] = sampleInside(sdf, rng)
       const a = rng() * Math.PI * 2
-      boids.push({ x, y, vx: Math.cos(a) * 0.8, vy: Math.sin(a) * 0.8 })
+      // every 7th boid is a LEADER — accent-tinted, a size up; the rest warm
+      boids.push({ x, y, vx: Math.cos(a) * 0.8, vy: Math.sin(a) * 0.8, lead: i % 7 === 0 })
     }
 
     const sdfMargin = 8
+    let prevDown = false
+
+    // PERF: neighbor grid hoisted (cell size fixed) — buckets length-reset
+    // per frame instead of reallocating gw*gh arrays
+    const cs = neighbor
+    const gw = Math.ceil(sdf.w / cs) + 1
+    const gh = Math.ceil(sdf.h / cs) + 1
+    const grid             = new Array(gw * gh)
+    for (let i = 0; i < grid.length; i++) grid[i] = []
+
+    /* ESCALATION (2026-08-09): units 3.5× — real velocity-oriented darts,
+     * speed-stretched, warm-led with accent leaders — and the canvas fades
+     * instead of clearing so every boid tows a motion trail. */
+    clear(ctx, W, H)
 
     return wrapLoop(() => {
-      const cs = neighbor
-      const gw = Math.ceil(sdf.w / cs) + 1
-      const gh = Math.ceil(sdf.h / cs) + 1
-      const grid             = new Array(gw * gh)
-      for (let i = 0; i < grid.length; i++) grid[i] = []
+      // Pointer steer — hover = seek (the swarm follows the cursor),
+      // press = flee (scatter); just a sign flip on the same force.
+      const ptr = params.interact > 0 && pointer ? pointer() : null
+
+      /* Living system (2026-08-09): the press is an EVENT, not a mode flip.
+       * Down-edge = one-frame shockwave — a strong radial velocity kick plus
+       * an instant displacement (so the burst reads through the same-frame
+       * speed clamp). Holding after the edge keeps the sustained flee. */
+      if (ptr && ptr.down && !prevDown) {
+        const reach = Math.min(sdf.w, sdf.h) * 0.5
+        const kick = maxSpeed * 6 * Math.min(2, params.interact)
+        // ANTI-STROBE: cap the same-frame displacement at ~3% of the canvas
+        const kickCap = Math.min(sdf.w, sdf.h) * 0.03
+        for (const b of boids) {
+          const dx = b.x - ptr.x, dy = b.y - ptr.y
+          const d = Math.hypot(dx, dy)
+          if (d >= reach || d < 1e-6) continue
+          const f = Math.min(kickCap, (1 - d / reach) * kick)
+          b.vx += (dx / d) * f
+          b.vy += (dy / d) * f
+          b.x += (dx / d) * f
+          b.y += (dy / d) * f
+        }
+      }
+      prevDown = !!(ptr && ptr.down)
+
+      for (let i = 0; i < grid.length; i++) grid[i].length = 0
       for (let i = 0; i < boids.length; i++) {
         const gx = Math.max(0, Math.min(gw - 1, Math.floor(boids[i].x / cs)))
         const gy = Math.max(0, Math.min(gh - 1, Math.floor(boids[i].y / cs)))
@@ -105,6 +144,15 @@ export const boids            = {
           b.vy -= (gY / m) * push
         }
 
+        // pointer steer force (before the clamp so it can't exceed maxSpeed)
+        if (ptr) {
+          const pdx = ptr.x - b.x, pdy = ptr.y - b.y
+          const pm = Math.hypot(pdx, pdy) || 1e-6
+          const pw = 0.15 * params.interact * (ptr.down ? -2 : 1)
+          b.vx += (pdx / pm) * pw
+          b.vy += (pdy / pm) * pw
+        }
+
         // clamp speed
         const sp = Math.hypot(b.vx, b.vy)
         if (sp > maxSpeed) { b.vx = (b.vx / sp) * maxSpeed; b.vy = (b.vy / sp) * maxSpeed }
@@ -113,24 +161,32 @@ export const boids            = {
         b.y += b.vy
       }
 
-      // Render
-      clear(ctx, W, H)
-      strokeOutline(ctx, sdf, W, H, 'rgba(243, 231, 207, 0.18)', 1)
+      // Render — fade wash instead of clear: motion trails for free
+      ctx.fillStyle = pc('bg', 0.24)
+      ctx.fillRect(0, 0, W, H)
+      strokeOutline(ctx, sdf, W, H, pc('fg', 0.16), 1.4)
 
-      ctx.fillStyle = '#f3c9c4'
-      for (const b of boids) {
-        // tiny triangle oriented by velocity
-        const ang = Math.atan2(b.vy, b.vx)
-        const cx = b.x * sx, cy = b.y * sy
-        const s1 = 4, s2 = 2
-        const x0 = cx + Math.cos(ang) * s1
-        const y0 = cy + Math.sin(ang) * s1
-        const x1 = cx + Math.cos(ang + 2.4) * s2
-        const y1 = cy + Math.sin(ang + 2.4) * s2
-        const x2 = cx + Math.cos(ang - 2.4) * s2
-        const y2 = cy + Math.sin(ang - 2.4) * s2
+      // PERF: darts batch into two paths (leaders / rest) — two fills total
+      // instead of a beginPath+fill per boid
+      const warm = pc('warm', 0.95)
+      const acc = pc('accent', 0.95)
+      for (let pass = 0; pass < 2; pass++) {
+        const wantLead = pass === 1
+        ctx.fillStyle = wantLead ? acc : warm
         ctx.beginPath()
-        ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x2, y2); ctx.closePath()
+        for (const b of boids) {
+          if (b.lead !== wantLead) continue
+          // velocity-oriented dart, stretched by speed — presence, not dust
+          const sp = Math.hypot(b.vx, b.vy)
+          const ang = Math.atan2(b.vy, b.vx)
+          const cx = b.x * sx, cy = b.y * sy
+          const scale = (b.lead ? 1.35 : 1) * (0.8 + 0.5 * Math.min(1, sp / maxSpeed))
+          const s1 = 4.5 * U * scale, s2 = 2.1 * U * scale
+          ctx.moveTo(cx + Math.cos(ang) * s1, cy + Math.sin(ang) * s1)
+          ctx.lineTo(cx + Math.cos(ang + 2.5) * s2, cy + Math.sin(ang + 2.5) * s2)
+          ctx.lineTo(cx + Math.cos(ang - 2.5) * s2, cy + Math.sin(ang - 2.5) * s2)
+          ctx.closePath()
+        }
         ctx.fill()
       }
     })

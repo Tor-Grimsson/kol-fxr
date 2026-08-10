@@ -27,7 +27,9 @@ import { PATTERN_SCHEMA } from '../../params/schemas/pattern'
 import { TEXT_SCHEMA } from '../../params/schemas/text'
 import { PHOTO_SCHEMA } from '../../params/schemas/photo'
 import { TEXT_TAB_KEYS } from './TextPanel'
-import { loopById, loopBgToggleable, resolveCameraKeys } from '../../../loops/registry'
+import { loopById, loopBgToggleable, resolveCameraKeys, presetsInGroup } from '../../../loops/registry'
+import { wildExpression, fitBounds } from '../../../loops/math/expression'
+import { mulberry32 } from '../../lib/rng'
 import { MISC_TREE } from '../../../loops/taxonomy'
 import { LoopPicker } from './LoopPicker'
 import KineticPanel from './KineticPanel'
@@ -214,6 +216,17 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
     if (lookKeys && Object.keys(rollPatch).some((k) => lookKeys.has(k))) rollPatch._lookPreset = 'custom'
     updateLayer(layer.id, rollPatch)
   }
+  /* ⌥-click on a scope button = RESET that scope (labs' R semantics, scoped):
+   * each key back to the preset's pinned value, schema default otherwise. */
+  const resetScope = (params) => {
+    const base = presetsInGroup(layer.loopGroup).find((p) => p.id === layer.presetId)?.params ?? {}
+    const patch = {}
+    for (const p of params) {
+      const v = base[p.key] !== undefined ? base[p.key] : p.default
+      if (v !== undefined) patch[p.key] = v
+    }
+    updateLayer(layer.id, patch)
+  }
 
   /* ── Animation: Frame/Form quick-select presets (labs ScanlineEditor /
    * PatternControls model). Picking patches only that axis; editing any
@@ -318,24 +331,40 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
               weight/seed) — pickers above the randomize block, labs order. */}
           <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="generate" inline={inline} />
 
-          <EditorButton variant="primary" size="sm" className="w-full" onClick={() => roll(allScopeParams(schema, layer))}>
+          <EditorButton variant="primary" size="sm" className="w-full" onClick={(e) => (e.altKey ? resetScope(allScopeParams(schema, layer)) : roll(allScopeParams(schema, layer)))}>
             Randomize all
           </EditorButton>
           {scopes.length > 0 && (
+            /* Odd counts keep the lone half-width cell — labs' own grids do
+             * (Pattern's 5, Penrose's 6-plus-reset), verified 2026-08-09. */
             <div className="grid grid-cols-2 gap-2">
-              {scopes.map((s, i) => (
-                <EditorButton
-                  key={s.id} variant="primary" size="sm"
-                  /* An odd count leaves a lone half-width cell — span it. */
-                  className={scopes.length % 2 === 1 && i === scopes.length - 1 ? 'col-span-2' : undefined}
-                  onClick={() => roll(s.params, s)}
-                >
+              {scopes.map((s) => (
+                <EditorButton key={s.id} variant="primary" size="sm" onClick={(e) => (e.altKey ? resetScope(s.params) : roll(s.params, s))}>
                   {s.label}
                 </EditorButton>
               ))}
+              {/* Wild — the oscilloscope's second expression button: the
+                  procedural compositor (nested/gated DSL), where the
+                  Expression chip draws from the curated pool. Seeded through
+                  the same _rollSeed flow; ⌥-click resets like the chip. */}
+              {layer.loopId === 'math-expression' && (
+                <EditorButton
+                  variant="primary"
+                  size="sm"
+                  onClick={(e) => {
+                    if (e.altKey) return resetScope(scopes.find((s) => s.id === 'Expression')?.params ?? [])
+                    const s = seed.take()
+                    updateLayer(layer.id, { expr: wildExpression(mulberry32(s >>> 0)), _rollSeed: s })
+                  }}
+                >
+                  Wild
+                </EditorButton>
+              )}
             </div>
           )}
-          <SeedField seed={seed} />
+          {/* labs keeps seed off the rail (info overlay only) — the labs
+              skin (`inline`) hides it; the editor keeps its field. */}
+          {!inline && <SeedField seed={seed} />}
           {/* Pattern-rules tiles: the rule-stack editor (labs Rules section) —
               seeded rolls share the SeedField above. */}
           {layer.loopId === 'pattern-rules' && (layer.render ?? 'tiles') === 'tiles' && (
@@ -352,6 +381,18 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
           {layer.loopId === 'pattern-rules' && <OrganicProfileEditor layer={layer} patch={patch} />}
           {/* Math curves: kind/epicycle-term authoring (forks stock clips). */}
           {layer.loopId === 'math-curves' && <CurveEditor layer={layer} patch={patch} />}
+          {/* Oscilloscope viewport (labs View panel's Fit/Reset): Fit snaps
+              min/max to the curve; Reset restores the View section. */}
+          {layer.loopId === 'math-expression' && (
+            <div className="grid grid-cols-2 gap-2">
+              <EditorButton variant="primary" size="sm" onClick={() => updateLayer(layer.id, fitBounds(layer))}>
+                Fit
+              </EditorButton>
+              <EditorButton variant="primary" size="sm" onClick={() => resetScope(scopes.find((s) => s.id === 'View')?.params ?? [])}>
+                Reset
+              </EditorButton>
+            </div>
+          )}
         </>
       )}
 

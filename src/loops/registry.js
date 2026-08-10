@@ -25,7 +25,7 @@ import { MATH_LOOPS, MATH_PRESETS } from './math/presets.js'
 import { PARATYPE_LOOPS, PARATYPE_PRESETS } from './paratype/presets.js'
 /* GL catalog is DATA ONLY (groups/defs/presets/schemas) — the three.js
  * engines behind it load lazily via gl/host.js when a layer renders. */
-import { GL_GROUPS, GL_LOOPS, GL_PRESETS_BY_GROUP } from './gl/catalog.js'
+import { GL_GROUPS, GL_LOOPS, GL_PRESETS_BY_GROUP, MESH_PRESETS } from './gl/catalog.js'
 
 export const GROUPS = [
   { id: 'shape', label: 'Simple' },
@@ -54,7 +54,9 @@ const PRESETS_BY_GROUP = {
   penrose: PENROSE_PRESETS,
   field: FIELD_PRESETS,
   scanline: SCANLINE_PRESETS,
-  optic: OPTIC_PRESETS,
+  /* optic = labs' EFFECTS > Pattern generator pages; the mesh-gradient GL
+   * family is its fourth page (Moiré · Mesh Gradient · Reaction · Halftone). */
+  optic: [...OPTIC_PRESETS, ...MESH_PRESETS],
   abstract: ABSTRACT_PRESETS,
   math: MATH_PRESETS,
   paratype: PARATYPE_PRESETS,
@@ -63,7 +65,7 @@ const PRESETS_BY_GROUP = {
 export const PRESETS = [
   ...SHAPE_PRESETS, ...PATTERN_PRESETS, ...PATTERNLOOP_PRESETS, ...PENROSE_PRESETS,
   ...FIELD_PRESETS,
-  ...SCANLINE_PRESETS, ...OPTIC_PRESETS, ...ABSTRACT_PRESETS,
+  ...SCANLINE_PRESETS, ...OPTIC_PRESETS, ...MESH_PRESETS, ...ABSTRACT_PRESETS,
   ...MATH_PRESETS, ...PARATYPE_PRESETS,
   ...Object.values(GL_PRESETS_BY_GROUP).flat(),
 ]

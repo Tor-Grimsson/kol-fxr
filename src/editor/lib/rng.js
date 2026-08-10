@@ -40,6 +40,9 @@ export function randomizeSchema(params, rng) {
   if (!Array.isArray(params)) return out
   for (const p of params) {
     if (!p || p.noRandom) continue
+    /* Schema-authored roll — a param that can't be rolled from its type
+     * (e.g. a text expression) supplies its own seeded generator. */
+    if (p.roll) { out[p.key] = p.roll(rng); continue }
     if (p.type === 'range') {
       const min = p.min ?? 0
       const max = p.max ?? 1

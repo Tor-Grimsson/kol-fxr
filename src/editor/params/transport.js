@@ -57,12 +57,18 @@ function tick(ts) {
 function ensureRaf() { if (raf == null) { lastTs = null; raf = requestAnimationFrame(tick) } }
 
 /* Live pointer → normalized 0..1 over the window. Notifies so mouse-bound
- * params update even when the transport is paused (modulation is live). */
+ * params update even when the transport is paused (modulation is live).
+ * Pointer events, not mousemove: one API covers mouse, touch, and pen —
+ * touch devices never fire mousemove, so the mouse source was dead on the
+ * randomizer. pointerdown makes a bare tap/click set the position too
+ * (touch has no hover). */
 if (typeof window !== 'undefined') {
-  window.addEventListener('mousemove', (e) => {
+  const trackPointer = (e) => {
     mouse = { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight }
     if (pointerInterest && subs.size > 0) notify()
-  })
+  }
+  window.addEventListener('pointermove', trackPointer)
+  window.addEventListener('pointerdown', trackPointer)
 }
 
 export const transport = {
@@ -80,10 +86,13 @@ export const transport = {
   getT() { return t },
   getEpoch() { return epoch },
   getCtx() { return { t, mouse, stage, epoch } },
-  /* Stage pointer in virtual px — feeds the layer-local pointer sources.
-   * Notifies like mousemove so paused-but-bound layers track it. */
-  setStagePointer(x, y) {
-    stage = x == null ? null : { x, y }
+  /* Stage pointer in virtual px — feeds the layer-local pointer sources and
+   * sim pointer forces. `down` carries the button/touch-contact state so
+   * sims can distinguish hover-repel from grab-drag (2026-08-09); existing
+   * callers that omit it read as up. Notifies like mousemove so
+   * paused-but-bound layers track it. */
+  setStagePointer(x, y, down = false) {
+    stage = x == null ? null : { x, y, down: !!down }
     if (pointerInterest && subs.size > 0) notify()
   },
   /* See `pointerInterest` above — compose state scans layers for pointer

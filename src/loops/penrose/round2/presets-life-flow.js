@@ -85,5 +85,5 @@ export const LIFE_FLOW_PRESETS = PROTOS.map(({ proto, sub, mask }) => ({
   label: proto.name,
   loop: `penrose-${proto.id}`,
   sub,
-  params: { ...mask },
+  params: {},  /* mask pins retired from boot — generation-first ruling 2026-08-09; the authored mask stays in the table above for a future authored-form mode */
 }))

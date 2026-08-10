@@ -152,9 +152,10 @@ const IRIDESCENT_LOOP = {
     range('speed', 'Speed', 0, 3, 0.05, 1, ANIM),
   ],
 }
-/* cat 0=field / 1=pole / 2=volume; type indexes the shader branch. */
+/* cat 0=field / 1=pole / 2=volume; type indexes the shader branch. The cat
+ * IS labs' sidebar category (gradients/registry.js), so `sub` derives. */
 const IP = (id, label, cat, type, extra = {}) =>
-  ({ id: `irid-${id}`, label, loop: 'iridescent', params: { cat, type, ...extra } })
+  ({ id: `irid-${id}`, label, loop: 'iridescent', sub: ['Field', 'Pole', 'Volume'][cat], params: { cat, type, ...extra } })
 /* Extras on the labs-ported presets pin that type's labs registry defaults
  * where they differ from the engine's (blobs-centric) uniform defaults. */
 const IRIDESCENT_PRESETS = [
@@ -293,12 +294,12 @@ const SCENE_PRESETS = [
   SP('wire', 'Wire grid', { primitive: 'octahedron', pose: 'tumble', count: 9, arrangement: 'grid', spread: 2.8, wireframe: true, objectSize: 0.45, stagger: 0.5 }),
 ]
 
-/* ── Mesh gradient (GradientEngine, single tile) — second loop in the
- * 'gradients' group; presets switch loopId within the group. Free-running
- * (dt) — the one engine the audit flagged as non-seamless; fine as an
- * ambient generator. */
+/* ── Mesh gradient (GradientEngine, single tile) — labs parks this page
+ * under EFFECTS > Pattern, so it lives in the 'optic' group (the four
+ * generator pages), not Gradients. Free-running (dt) — the one engine the
+ * audit flagged as non-seamless; fine as an ambient generator. */
 const MESH_LOOP = {
-  id: 'meshgradient', label: 'Mesh gradient', group: 'gradients', kind: 'engine', engine: 'mesh', orbit: true,
+  id: 'meshgradient', label: 'Mesh gradient', group: 'optic', kind: 'engine', engine: 'mesh', orbit: true,
   drive: 'dt', duration: 8,
   params: [
     /* engine update({mode}) — 'grid' renders the seed's whole tile sheet
@@ -318,8 +319,10 @@ const MESH_LOOP = {
     range('speed', 'Speed', 0.2, 3, 0.05, 1, ANIM),
   ],
 }
-const MP = (id, label, params) => ({ id: `mesh-${id}`, label, loop: 'meshgradient', sub: 'Mesh', params })
-const MESH_PRESETS = [
+const MP = (id, label, params) => ({ id: `mesh-${id}`, label, loop: 'meshgradient', sub: 'Mesh Gradient', params })
+/* Registered under 'optic' by registry.js (labs EFFECTS > Pattern), not here
+ * — GL_PRESETS_BY_GROUP's optic key would shadow OPTIC_PRESETS in the merge. */
+export const MESH_PRESETS = [
   MP('spectrum', 'Spectrum orb', { seed: 7, shape: 'sphere', palette: 'spectrum' }),
   MP('heat', 'Heat plane', { seed: 12, shape: 'plane', palette: 'heat', distort: 0.6 }),
   MP('iris', 'Iris orb', { seed: 3, shape: 'sphere', palette: 'iris', glow: 0.8 }),
@@ -449,7 +452,7 @@ export const GL_LOOPS = [
 ]
 export const GL_PRESETS_BY_GROUP = {
   drift: DRIFT_PRESETS,
-  gradients: [...IRIDESCENT_PRESETS, ...MESH_PRESETS],
+  gradients: IRIDESCENT_PRESETS,
   softforms: SOFTFORMS_PRESETS,
   softforms3d: SOFTFORMS3D_PRESETS,
   scene: SCENE_PRESETS,

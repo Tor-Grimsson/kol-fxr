@@ -9,13 +9,14 @@
 
 
 import { num } from '../knobs.js'
-import { clear, strokeOutline, wrapLoop, rampRGB, roleRGB } from '../common.js'
+import { clear, strokeOutline, wrapLoop, rampRGB, roleRGB, stampGrid } from '../common.js'
 
 const PARAMS          = [
   { key: 'res',   type: 'int',   min: 64,  max: 128, default: 96,  step: 16,   label: 'grid res (2ⁿ)' },
   { key: 'dt',    type: 'range', min: 0.1, max: 0.8, default: 0.3, step: 0.05, label: 'Δt' },
   { key: 'scale', type: 'range', min: 0.5, max: 4.0, default: 1.5, step: 0.1,  label: 'domain scale' },
   { key: 'steps', type: 'int',   min: 1,   max: 6,   default: 2,   step: 1,    label: 'steps/frame' },
+  { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]
 
 // Minimal real-valued 2D FFT via repeated 1D DFT (Cooley-Tukey, power-of-2).
@@ -59,7 +60,7 @@ export const r2_wave_04_kuramoto_sivashinsky            = {
   summary: 'Fourth-order PDE producing sustained spatiotemporal chaos. Energy injected at intermediate scales, damped at small scales, cascaded by the nonlinear ∇²u·∇u term. Cells crawl and merge indefinitely — never repeats.',
   helps: 'Best choice for an endlessly looping fill texture with no transient settling — the chaos is intrinsic, not decaying.',
   params: PARAMS,
-  init({ ctx, sdf, W, H, rng, params }) {
+  init({ ctx, sdf, W, H, rng, params, pointer }) {
     let G     = num(params, 'res', 96)
     let dt    = num(params, 'dt', 0.3)
     let scale = num(params, 'scale', 1.5)
@@ -93,8 +94,10 @@ export const r2_wave_04_kuramoto_sivashinsky            = {
     // Precompute wavenumbers and integrating factor exp(−(k²−k⁴)Δt)
     // L(k) = −k² − k⁴  (linear part of KS in Fourier space)
     // Integrating factor: E = exp(L·dt)
+    // Edt filled in place — buildFactors runs per frame while the pointer lerps
+    // scaleMod, so no fresh N-array per rebuild.
+    const Edt = new Float64Array(N)
     const buildFactors = (dtVal        , scaleVal        ) => {
-      const Edt = new Float64Array(N)
       for (let ky = 0; ky < G; ky++) {
         for (let kx = 0; kx < G; kx++) {
           // frequency in [-G/2, G/2)
@@ -106,9 +109,8 @@ export const r2_wave_04_kuramoto_sivashinsky            = {
           Edt[ky * G + kx] = Math.exp((-k2 - k2 * k2) * dtVal)
         }
       }
-      return Edt
     }
-    let Edt = buildFactors(dt, scale)
+    buildFactors(dt, scale)
 
     // Row/col FFT buffers (Float64)
     const rowRe = new Float64Array(G), rowIm = new Float64Array(G)
@@ -138,13 +140,41 @@ export const r2_wave_04_kuramoto_sivashinsky            = {
     tmpC.width = G; tmpC.height = G
     const tctx = tmpC.getContext('2d')
 
+    let prevDown = false
+    let scaleMod = 1  // pointer-commanded multiplier on the domain scale
+
     return wrapLoop(() => {
       const newDt    = num(params, 'dt', 0.3)
       const newScale = num(params, 'scale', 1.5)
-      steps = num(params, 'steps', 2)
-      if (newDt !== dt || newScale !== scale) {
-        dt = newDt; scale = newScale
-        Edt = buildFactors(dt, scale)
+      // capped at 3: each step is 5 full 2D FFTs (~11M flops at G=128) — 6 steps can't share 60fps
+      steps = Math.min(3, num(params, 'steps', 2))
+
+      // Pointer: hover = continuous disturbance, held = sustained pour,
+      // down-EDGE = one strong WIDE kick. While the pointer is present its
+      // x position subtly commands the effective domain scale (lerped);
+      // idle relaxes back to the authored knob.
+      const ptr = params.interact > 0 && pointer ? pointer() : null
+      const edge = !!(ptr && ptr.down) && !prevDown
+      prevDown = !!(ptr && ptr.down)
+      const modTarget = ptr ? 0.85 + 0.3 * Math.max(0, Math.min(1, ptr.x / sdf.w)) : 1
+      scaleMod += (modTarget - scaleMod) * 0.04
+      const effScale = newScale * scaleMod
+      if (newDt !== dt || Math.abs(effScale - scale) > 1e-3) {
+        dt = newDt; scale = effScale
+        buildFactors(dt, scale)   /* fills Edt in place — no reassignment */
+      }
+
+      if (ptr) {
+        const gp = { x: (ptr.x / sdf.w) * G, y: (ptr.y / sdf.h) * G }
+        const rad = G * 0.06 * (0.5 + params.interact * 0.5)
+        stampGrid(G, G, gp, rad, (i, w) => {
+          u[i] += w * (ptr.down ? 1 : 0.5) * params.interact * mask[i]
+        })
+        if (edge) {
+          stampGrid(G, G, gp, rad * 5, (i, w) => {
+            u[i] += w * 6 * params.interact * mask[i]
+          })
+        }
       }
 
       for (let s = 0; s < steps; s++) {
@@ -184,8 +214,12 @@ export const r2_wave_04_kuramoto_sivashinsky            = {
         fft2d(uRe, uIm, true)
         u.set(uRe)
 
-        // Apply smooth mask
-        for (let i = 0; i < N; i++) u[i] *= mask[i]
+        // Apply smooth mask + clamp: KS blowups (or a non-finite mode) decay to
+        // range instead of NaN-ing the whole spectrum; normal chaos sits at O(1).
+        for (let i = 0; i < N; i++) {
+          const ui = u[i] * mask[i]
+          u[i] = ui > 50 ? 50 : ui < -50 ? -50 : Number.isFinite(ui) ? ui : 0
+        }
       }
 
       // Render: map u to brightness (auto-normalize)
@@ -193,18 +227,25 @@ export const r2_wave_04_kuramoto_sivashinsky            = {
       for (let i = 0; i < N; i++) { if (mask[i] > 0) { if (u[i] < uMin) uMin = u[i]; if (u[i] > uMax) uMax = u[i] } }
       const uRange = uMax - uMin || 1
 
+      // theme ramp LUT with an S-curve — cell crests hit full brightness
+      const rampLUT = new Uint8Array(64 * 3)
+      for (let k = 0; k < 64; k++) {
+        const [rr, gg, bb] = rampRGB(k / 63)
+        rampLUT[k * 3] = rr; rampLUT[k * 3 + 1] = gg; rampLUT[k * 3 + 2] = bb
+      }
+      const [bgR0, bgG0, bgB0] = roleRGB('bg')
       for (let i = 0; i < N; i++) {
         const j = i * 4
         if (mask[i] === 0) {
-          const [br, bg, bb] = roleRGB('bg')
-          img.data[j] = br; img.data[j+1] = bg; img.data[j+2] = bb; img.data[j+3] = 255
+          img.data[j] = bgR0; img.data[j+1] = bgG0; img.data[j+2] = bgB0; img.data[j+3] = 255
           continue
         }
-        const v = (u[i] - uMin) / uRange  // 0..1
-        const [r, g, b] = rampRGB(v)
-        img.data[j]   = r
-        img.data[j+1] = g
-        img.data[j+2] = b
+        const v0 = (u[i] - uMin) / uRange  // 0..1
+        const v = v0 * v0 * (3 - 2 * v0)   // smoothstep contrast boost
+        const ki = (v * 63) | 0
+        img.data[j]   = rampLUT[ki * 3]
+        img.data[j+1] = rampLUT[ki * 3 + 1]
+        img.data[j+2] = rampLUT[ki * 3 + 2]
         img.data[j+3] = 255
       }
 
@@ -212,7 +253,7 @@ export const r2_wave_04_kuramoto_sivashinsky            = {
       tctx.putImageData(img, 0, 0)
       ctx.imageSmoothingEnabled = true
       ctx.drawImage(tmpC, 0, 0, W, H)
-      strokeOutline(ctx, sdf, W, H)
+      strokeOutline(ctx, sdf, W, H, 'rgba(240, 230, 210, 0.35)', 2)
     })
   },
 }

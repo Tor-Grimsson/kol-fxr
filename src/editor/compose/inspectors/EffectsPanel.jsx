@@ -16,7 +16,7 @@ import {
   SWEEP_PRESETS, SWEEP_SHAPE_OPTIONS, SWEEP_TARGET_OPTIONS, ANGLED_SHAPES, makeSweep,
 } from '../../../filters/sweeps'
 import { MAX_FILTERS, resolvedChain } from '../filterChain'
-import { effectCategories, categoryOf, presetParamOf, presetPatchFor } from './effectCategories'
+import { effectCategories, categoryOf, presetParamOf, presetPatchFor, FX_RACK_GROUPS, rackGroupFilters } from './effectCategories'
 
 /**
  * EffectsPanel — the Effects tab of the right rail, now hosting the labs
@@ -140,7 +140,14 @@ function LayerEffects({ layer }) {
   const stageIsEngine = stage?.def?.kind === 'engine'
   const engineOk = engineHost && (stage ? (stageIsEngine || (!hasEngine && selIdx === chain.length - 1)) : !hasEngine)
   const available = FILTERS.filter((f) => f.kind !== 'engine' || engineOk)
-  const categories = effectCategories(available)
+  /* The nav-model rack stub expands to its granular categories here — the
+   * editor's Type dropdown lists them flat (labs' /effects/<group> set). */
+  const categories = effectCategories(available).flatMap((c) => (
+    c.rack
+      ? FX_RACK_GROUPS.map((g) => ({ id: g.id, label: g.label, filters: rackGroupFilters(g, available) }))
+        .filter((g) => g.filters.length > 0)
+      : [c]
+  ))
   const catOptions = categories.map((c) => ({ value: c.id, label: c.label }))
   const catId = categories.some((x) => x.id === cat) ? cat : categories[0]?.id
   const catFilters = categories.find((c) => c.id === catId)?.filters ?? []

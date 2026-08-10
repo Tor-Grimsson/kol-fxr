@@ -8,7 +8,7 @@
 
 
 import { num } from '../knobs.js'
-import { clear, strokeOutline, wrapLoop, sampleInside, roleRGB } from '../common.js'
+import { clear, strokeOutline, wrapLoop, sampleInside, stampGrid, roleRGB } from '../common.js'
 
 const PARAMS          = [
   { key: 'agents',   type: 'int',   min: 200,  max: 2000, default: 800,  step: 100,  label: 'agents/species' },
@@ -17,6 +17,7 @@ const PARAMS          = [
   { key: 'deposit',  type: 'range', min: 0.01, max: 0.3,  default: 0.09, step: 0.01, label: 'deposit' },
   { key: 'decay',    type: 'range', min: 0.85, max: 0.99, default: 0.95, step: 0.005, label: 'decay' },
   { key: 'repel',    type: 'range', min: 0.0,  max: 1.5,  default: 0.7,  step: 0.05, label: 'cross-repel' },
+  { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]
 
 const GS = 160
@@ -30,7 +31,7 @@ export const r2_phys_03_multispecies            = {
   helps: 'High visual dynamism throughout territorial formation; two-tone color makes species borders immediately legible.',
   params: PARAMS,
 
-  init({ ctx, sdf, W, H, rng, params }) {
+  init({ ctx, sdf, W, H, rng, params, pointer }) {
     const N_EACH = num(params, 'agents',   800)
     const SA     = num(params, 'sensAng',  0.45)
     const SD     = num(params, 'sensDist', 9)
@@ -44,6 +45,7 @@ export const r2_phys_03_multispecies            = {
     // One trail buffer per species
     const trails = [new Float32Array(GS * GS), new Float32Array(GS * GS)]
     const isIn   = new Uint8Array(GS * GS)
+    const diffScratch = new Float32Array(GS * GS) // reused — was allocated per frame per species
     for (let y = 0; y < GS; y++)
       for (let x = 0; x < GS; x++)
         isIn[y * GS + x] = sdf.sample((x / GS) * sdf.w, (y / GS) * sdf.h) < 0 ? 1 : 0
@@ -53,8 +55,14 @@ export const r2_phys_03_multispecies            = {
       const iy = Math.max(0, Math.min(GS - 1, Math.round(y)))
       return trails[sp][iy * GS + ix]
     }
-    const score = (sp        , x        , y        )         =>
-      tSample(sp, x, y) - REPEL * tSample(1 - sp, x, y)
+    // Pointer state (set per frame, GRID coords) — the cursor attracts
+    // species 0 and repels species 1 (× interact): a legible two-tone chase.
+    let pgx = 0, pgy = 0, pW = 0
+    const score = (sp        , x        , y        )         => {
+      let s = tSample(sp, x, y) - REPEL * tSample(1 - sp, x, y)
+      if (pW !== 0) s += (sp === 0 ? pW : -pW) * Math.exp(-Math.hypot(x - pgx, y - pgy) / (GS * 0.25))
+      return s
+    }
 
     // Agents per species
     const ax = [new Float32Array(N_EACH), new Float32Array(N_EACH)]
@@ -82,7 +90,31 @@ export const r2_phys_03_multispecies            = {
     tmp.width = GS; tmp.height = GS
     const tc = tmp.getContext('2d')
 
+    let prevDown = false
+
     return wrapLoop(() => {
+      // pointer → GRID space (agents live in 0..GS, ptr arrives in sdf space)
+      const interact = num(params, 'interact', 1)
+      const ptr = interact > 0 && pointer ? pointer() : null
+      if (ptr) {
+        pgx = (ptr.x / sdf.w) * GS
+        pgy = (ptr.y / sdf.h) * GS
+        pW = 0.5 * interact
+      } else pW = 0
+
+      // down-EDGE = trail flood for BOTH species at the cursor — each is
+      // drawn to its own flooded trail and repelled by the other's, so a
+      // tap detonates a territorial battle on the spot (trails decay it out)
+      const downEdge = !!(ptr && ptr.down) && !prevDown
+      prevDown = !!(ptr && ptr.down)
+      if (downEdge) {
+        stampGrid(GS, GS, { x: pgx, y: pgy }, GS * 0.13, (i, w) => {
+          if (!isIn[i]) return
+          trails[0][i] = Math.min(1, trails[0][i] + w * 2 * interact)
+          trails[1][i] = Math.min(1, trails[1][i] + w * 2 * interact)
+        })
+      }
+
       for (let sp = 0; sp < N_SPECIES; sp++) {
         for (let i = 0; i < N_EACH; i++) {
           const ang = aa[sp][i]
@@ -115,7 +147,8 @@ export const r2_phys_03_multispecies            = {
         }
 
         // Decay + diffuse
-        const tmp2 = new Float32Array(trails[sp])
+        const tmp2 = diffScratch
+        tmp2.set(trails[sp])
         for (let y = 1; y < GS - 1; y++) {
           for (let x = 1; x < GS - 1; x++) {
             if (!isIn[y * GS + x]) continue
@@ -138,8 +171,8 @@ export const r2_phys_03_multispecies            = {
           img.data[j] = bgr; img.data[j+1] = bgg; img.data[j+2] = bgb; img.data[j+3] = 255
           continue
         }
-        const a = Math.min(1, trails[0][i] * 2.5)
-        const b = Math.min(1, trails[1][i] * 2.5)
+        const a = Math.min(1, trails[0][i] * 4.5)
+        const b = Math.min(1, trails[1][i] * 4.5)
         // additive blend from bg toward each species' role colour
         img.data[j]   = Math.min(255, (bgr + (w0r - bgr) * a + (a1r - bgr) * b)) | 0
         img.data[j+1] = Math.min(255, (bgg + (w0g - bgg) * a + (a1g - bgg) * b)) | 0
@@ -150,7 +183,7 @@ export const r2_phys_03_multispecies            = {
       tc.putImageData(img, 0, 0)
       ctx.imageSmoothingEnabled = true
       ctx.drawImage(tmp, 0, 0, W, H)
-      strokeOutline(ctx, sdf, W, H)
+      strokeOutline(ctx, sdf, W, H, 'rgba(240, 230, 210, 0.35)', 2)
     })
   },
 }

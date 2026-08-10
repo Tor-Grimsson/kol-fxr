@@ -70,7 +70,44 @@ export const VECTOR_SHAPES = [
 export const shapeById = (id) => VECTOR_SHAPES.find((s) => s.id === id)
 
 // Shape-source picker options: the glyph (typographic substrate) + every vector.
-export const SHAPE_SOURCES = [{ id: 'glyph', label: 'Glyph' }, ...VECTOR_SHAPES.map((s) => ({ id: s.id, label: s.label }))]
+/* 'none' = the full frame (generation-first, the 2026-08-09 ruling: the sims
+ * own the canvas by default; a glyph/shape mask is the opt-in that makes the
+ * form interact with the generation). */
+export const SHAPE_SOURCES = [{ id: 'none', label: 'None' }, { id: 'glyph', label: 'Glyph' }, { id: 'custom', label: 'Custom SVG' }, ...VECTOR_SHAPES.map((s) => ({ id: s.id, label: s.label }))]
+
+/* Custom SVG → mask: pasted markup rendered via <img> (script-inert by
+ * construction — SVG in an image context executes nothing) and thresholded
+ * on ALPHA, so any drawn pixel is inside: paths, rects, groups, strokes,
+ * fills all work — unlike the pattern tool's path-extraction. Contain-fit
+ * like the glyph bake. xmlns injected when the paste lacks it (blob-img
+ * SVGs without a namespace render as nothing). */
+export function rasterizeSvg(code, w, h = w) {
+  return new Promise((resolve, reject) => {
+    let src = String(code ?? '').trim()
+    if (!src.includes('<svg')) { reject(new Error('not svg')); return }
+    if (!/<svg[^>]*xmlns=/.test(src)) src = src.replace(/<svg/, '<svg xmlns="http://www.w3.org/2000/svg"')
+    const url = URL.createObjectURL(new Blob([src], { type: 'image/svg+xml' }))
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const cv = document.createElement('canvas')
+      cv.width = w; cv.height = h
+      const ctx = cv.getContext('2d', { willReadFrequently: true })
+      const iw = img.width || 100
+      const ih = img.height || 100
+      const k = Math.min(w / iw, h / ih) * 0.9
+      const dw = iw * k
+      const dh = ih * k
+      ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh)
+      const px = ctx.getImageData(0, 0, w, h).data
+      const mask = new Uint8Array(w * h)
+      for (let i = 0; i < mask.length; i++) mask[i] = px[i * 4 + 3] > 127 ? 1 : 0
+      resolve(mask)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('svg failed to render')) }
+    img.src = url
+  })
+}
 
 // Vector shape → white-on-black w×h mask (1 = inside), same shape/units as
 // rasterizeGlyph's output so it drops into the existing computeSDF bake.
@@ -82,6 +119,17 @@ export function rasterizeShape(shapeId, w, h = w) {
   const ctx = cv.getContext('2d', { willReadFrequently: true })
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h)
   ctx.fillStyle = '#fff'
+  /* 'none' — full-bleed rect (NOT the centered square): the whole frame is
+   * inside. The small margin keeps a real SDF boundary so containment
+   * forces / respawn checks still have an edge to work against. */
+  if (shapeId === 'none') {
+    const m = Math.max(2, Math.round(Math.min(w, h) * 0.025))
+    ctx.fillRect(m, m, w - m * 2, h - m * 2)
+    const px = ctx.getImageData(0, 0, w, h).data
+    const mask = new Uint8Array(w * h)
+    for (let i = 0; i < mask.length; i++) mask[i] = px[i * 4] > 127 ? 1 : 0
+    return mask
+  }
   if (s) {
     const side = Math.min(w, h)
     ctx.save()

@@ -15,7 +15,6 @@ import LabsParams from './LabsParams'
 import LabsShortcuts from './LabsShortcuts'
 import LabsSourcePicker from './LabsSourcePicker'
 import { transport } from '../params/transport'
-import { applyThemeMode, getThemeMode } from '../theme'
 import { getAppSettings } from '../lib/appSettings'
 import { groupOfPreset, presetById, presetLayerPatch } from '../../loops/registry'
 import { useLabsLayer } from './useLabsLayer'
@@ -74,10 +73,19 @@ function LabsStage() {
   const clampZoom = (z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z))
   const step = (dir) => setZoom((z) => clampZoom(z * (dir > 0 ? 1.25 : 0.8)))
 
+  /* Orbit owns the wheel while armed — the camera rig zooms over the frame
+   * (its own listener) and stage-zooming from the margin mid-orbit would
+   * read as the camera jumping. Chips and digit keys keep working. */
+  const { tool } = useTool()
+  const orbitArmed = tool === 'orbit'
+  const orbitRef = useRef(orbitArmed)
+  orbitRef.current = orbitArmed
+
   useEffect(() => {
     const el = cellRef.current
     if (!el) return
     const onWheel = (e) => {
+      if (orbitRef.current) return
       e.preventDefault()
       setZoom((z) => clampZoom(z * (e.deltaY > 0 ? 0.94 : 1.06)))
     }
@@ -172,7 +180,8 @@ function LabsBody() {
   useEffect(() => {
     if (bootedRef.current) return
     bootedRef.current = true
-    applyThemeMode(getThemeMode())
+    /* UI theme: the topbar ThemeToggle's framework store applies it on
+     * mount — labs no longer boots the editor's theme store. */
     const s = getAppSettings()
     if (s.defaultAspect && s.defaultAspect !== 'custom') setAspect(s.defaultAspect)
     if (s.defaultLoopSeconds) transport.setLoopSeconds(s.defaultLoopSeconds)

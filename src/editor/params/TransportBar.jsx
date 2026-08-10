@@ -25,22 +25,6 @@ const SIZES = {
   lg: { cell: 'px-4 py-2.5', icon: 20, mono: 'kol-mono-16' },
 }
 
-/* stop / rewind are absent from kol-icons 0.10.0 (TransportIcons filed in the
- * kol-ds-ui lobby) — local glyphs bridge the gap so the cells aren't blank.
- * Delete when the set ships the names. */
-const FALLBACK_GLYPHS = {
-  stop: (size) => (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="3.75" y="3.75" width="8.5" height="8.5" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  ),
-  rewind: (size) => (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M8 4 4.5 8 8 12M12 4 8.5 8 12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
-}
-
 function Cell({ name, title, active, onClick, divider, cfg }) {
   return (
     <button
@@ -52,10 +36,16 @@ function Cell({ name, title, active, onClick, divider, cfg }) {
       className={[
         `${cfg.cell} inline-flex items-center cursor-pointer transition-colors`,
         divider ? 'border-l border-fg-08' : '',
-        active ? 'text-emphasis' : 'text-meta hover:text-emphasis',
+        /* Icons paint OPAQUE (oq-* — the baked-grey mirror of the fg alpha
+         * scale): multi-path glyphs (rewind's two triangles) compound where
+         * shapes overlap if the ink carries alpha. Text keeps fg tokens;
+         * this rule is for icons. */
+        /* hover via the raw token — kol-opaque ships bg-* hovers only (its
+         * header promises text/border hovers; DS gap, ticket-worthy). */
+        active ? 'text-oq-96' : 'text-oq-48 hover:text-[var(--kol-oq-96)]',
       ].filter(Boolean).join(' ')}
     >
-      {FALLBACK_GLYPHS[name] ? FALLBACK_GLYPHS[name](cfg.icon) : <Icon name={name} size={cfg.icon} />}
+      <Icon name={name} size={cfg.icon} />
     </button>
   )
 }

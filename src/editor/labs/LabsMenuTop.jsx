@@ -1,6 +1,6 @@
 import { MenuItem, MenuDropdownItem, MenuDropdownDivider, MenuDropdownNest } from '@kolkrabbi/kol-component'
+import { ThemeToggle } from '@kolkrabbi/kol-framework'
 import EditorIcon from '../icons/EditorIcon'
-import { useThemeMode } from '../theme'
 import { useAppSettings, setAppSetting } from '../lib/appSettings'
 import { transport } from '../params/transport'
 import { THEME_OPTIONS } from '../../loops/lib/themes'
@@ -20,7 +20,6 @@ import { goEditor, goRandomiser, goChooser } from '../mode'
  * theme, plus the two appSettings defaults that seed a labs layer.
  */
 export default function LabsMenuTop() {
-  const [themeMode, setThemeMode] = useThemeMode()
   const appSettings = useAppSettings()
 
   return (
@@ -40,24 +39,10 @@ export default function LabsMenuTop() {
 
         <MenuItem label="Settings" panelClassName="z-[1000]">
           <div className="py-1 w-56">
-            <MenuDropdownNest label="Theme">
-              {[
-                { value: 'light', label: 'Light' },
-                { value: 'dark', label: 'Dark' },
-                { value: 'system', label: 'System' },
-              ].map((opt) => (
-                <MenuDropdownItem
-                  key={opt.value}
-                  onClick={() => setThemeMode(opt.value)}
-                  shortcut={themeMode === opt.value ? <EditorIcon name="check" size={11} /> : undefined}
-                >
-                  {opt.label}
-                </MenuDropdownItem>
-              ))}
-            </MenuDropdownNest>
-            <MenuDropdownDivider />
             {/* Global defaults (appSettings), same store the editor writes.
-                Loop theme is the generative palette theme, NOT the UI theme. */}
+                Loop theme is the generative palette theme, NOT the UI theme.
+                UI theme lives on the topbar's ThemeToggle (framework store:
+                click light↔dark, alt-click hands back to the OS). */}
             <MenuDropdownNest label="Default aspect">
               {ASPECTS.filter((a) => a.id !== 'custom').map((a) => (
                 <MenuDropdownItem
@@ -103,6 +88,10 @@ export default function LabsMenuTop() {
             </MenuDropdownItem>
           </div>
         </MenuItem>
+
+        {/* The DS glyph-roll toggle, icon geometry — labs' UI theme runs on
+            the framework store (light↔dark, alt-click = back to OS). */}
+        <ThemeToggle variant="icon" size="sm" />
       </div>
     </div>
   )

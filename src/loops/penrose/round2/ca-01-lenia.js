@@ -5,7 +5,7 @@
 
 
 import { num } from '../knobs.js'
-import { clear, strokeOutline, wrapLoop, rampRGB, roleRGB } from '../common.js'
+import { clear, strokeOutline, wrapLoop, rampRGB, roleRGB, stampGrid } from '../common.js'
 
 const PARAMS          = [
   { key: 'res',   type: 'int',   min: 80,   max: 200, default: 128, step: 16, label: 'grid res' },
@@ -13,6 +13,7 @@ const PARAMS          = [
   { key: 'mu',    type: 'range', min: 0.1,  max: 0.5, default: 0.15, step: 0.005, label: 'growth mean' },
   { key: 'sigma', type: 'range', min: 0.01, max: 0.12, default: 0.017, step: 0.001, label: 'growth sigma' },
   { key: 'dt',    type: 'range', min: 0.05, max: 0.5,  default: 0.15, step: 0.01,  label: 'timestep' },
+  { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]
 
 export const r2_ca_01_lenia            = {
@@ -22,7 +23,7 @@ export const r2_ca_01_lenia            = {
   summary: 'Continuous cellular automaton with Gaussian shell kernel and bell-curve growth function producing stable Orbium-like solitons.',
   helps: 'Self-moving gliders trapped inside the glyph — literal living forms orbiting the letterform interior.',
   params: PARAMS,
-  init({ ctx, sdf, W, H, rng, params }) {
+  init({ ctx, sdf, W, H, rng, params, pointer }) {
     const G = num(params, 'res', 128)
     const R = num(params, 'R', 12)
     const mu = num(params, 'mu', 0.15)
@@ -60,14 +61,8 @@ export const r2_ca_01_lenia            = {
 
     // Seed: scatter blobs of Orbium-like size inside the glyph
     const A = new Float32Array(G * G)
-    for (let i = 0; i < 6; i++) {
-      let sx        , sy        , tries = 0
-      do {
-        sx = (rng() * G) | 0
-        sy = (rng() * G) | 0
-        tries++
-      } while (!isIn[sy * G + sx] && tries < 200)
-      const blobR = Math.max(3, R * 0.7) | 0
+    const blobR = Math.max(3, R * 0.7) | 0
+    const nucleate = (sx        , sy        ) => {
       for (let dy = -blobR; dy <= blobR; dy++) {
         for (let dx = -blobR; dx <= blobR; dx++) {
           const nx = sx + dx, ny = sy + dy
@@ -78,6 +73,18 @@ export const r2_ca_01_lenia            = {
         }
       }
     }
+    const randomNucleate = () => {
+      let sx        , sy        , tries = 0
+      do {
+        sx = (rng() * G) | 0
+        sy = (rng() * G) | 0
+        tries++
+      } while (!isIn[sy * G + sx] && tries < 200)
+      nucleate(sx, sy)
+    }
+    for (let i = 0; i < 6; i++) randomNucleate()
+    let nIn = 0
+    for (let i = 0; i < G * G; i++) nIn += isIn[i]
 
     const U = new Float32Array(G * G)
     const img = ctx.createImageData(G, G)
@@ -85,19 +92,49 @@ export const r2_ca_01_lenia            = {
     offCanvas.width = G; offCanvas.height = G
     const offCtx = offCanvas.getContext('2d')
 
+    let prevDown = false
+
     return wrapLoop(() => {
+      // Pointer: inject mass at the cursor (scaled by `interact`, 0 = inert),
+      // before the convolution so this frame's kernel consumes it. Hover =
+      // continuous injection, held = sustained pour, down-EDGE = a multi-blob
+      // FLOOD of kernel-scaled creatures around the press.
+      const ptr = params.interact > 0 && pointer ? pointer() : null
+      const edge = !!(ptr && ptr.down) && !prevDown
+      prevDown = !!(ptr && ptr.down)
+      if (ptr) {
+        const gp = { x: (ptr.x / sdf.w) * G, y: (ptr.y / sdf.h) * G }
+        const rad = G * 0.07 * (0.5 + params.interact * 0.5)
+        stampGrid(G, G, gp, rad, (i, w) => {
+          if (isIn[i]) A[i] = Math.min(1, A[i] + w * (ptr.down ? 1.2 : 0.8) * params.interact)
+        })
+        if (edge) {
+          const spread = rad * 5
+          const blobs = 10 + Math.round(4 * params.interact)
+          nucleate(Math.round(gp.x), Math.round(gp.y))
+          for (let bIdx = 0; bIdx < blobs; bIdx++) {
+            const a = rng() * Math.PI * 2
+            const d = rng() * spread
+            nucleate(Math.round(gp.x + Math.cos(a) * d), Math.round(gp.y + Math.sin(a) * d))
+          }
+        }
+      }
+
       // Convolution: U = K * A
       for (let y = 0; y < G; y++) {
         for (let x = 0; x < G; x++) {
           if (!isIn[y * G + x]) { U[y * G + x] = 0; continue }
           let acc = 0
-          for (let ky = -R; ky <= R; ky++) {
-            const ny = y + ky
-            if (ny < 0 || ny >= G) continue
-            for (let kx = -R; kx <= R; kx++) {
-              const nx = x + kx
-              if (nx < 0 || nx >= G) continue
-              acc += kernel[(ky + R) * kw + (kx + R)] * A[ny * G + nx]
+          // hoisted: kernel bounds clamped once per cell — no per-tap branches/index math
+          const ky0 = y < R ? -y : -R
+          const ky1 = y > G - 1 - R ? G - 1 - y : R
+          const kx0 = x < R ? -x : -R
+          const kx1 = x > G - 1 - R ? G - 1 - x : R
+          for (let ky = ky0; ky <= ky1; ky++) {
+            const kRow = (ky + R) * kw + R
+            const aRow = (y + ky) * G + x
+            for (let kx = kx0; kx <= kx1; kx++) {
+              acc += kernel[kRow + kx] * A[aRow + kx]
             }
           }
           U[y * G + x] = acc
@@ -110,7 +147,26 @@ export const r2_ca_01_lenia            = {
         A[i] = Math.max(0, Math.min(1, A[i] + dt * growth(U[i])))
       }
 
-      // Render
+      // LIFE: creatures die out or the field saturates — both fossilize.
+      // Keep total mass in a healthy band, in Lenia's own chemistry: on
+      // die-out re-nucleate kernel-scaled blobs; on saturation cull the
+      // field and re-nucleate structure.
+      let massA = 0
+      for (let i = 0; i < G * G; i++) massA += A[i]
+      if (massA < nIn * 0.01) {
+        for (let s = 0; s < 4; s++) randomNucleate()
+      } else if (massA > nIn * 0.6) {
+        for (let i = 0; i < G * G; i++) A[i] *= 0.5
+        randomNucleate()
+        randomNucleate()
+      }
+
+      // Render — theme ramp LUT, boosted so live creatures hit full brightness
+      const rampLUT = new Uint8Array(64 * 3)
+      for (let k = 0; k < 64; k++) {
+        const [rr, gg, bb] = rampRGB(k / 63)
+        rampLUT[k * 3] = rr; rampLUT[k * 3 + 1] = gg; rampLUT[k * 3 + 2] = bb
+      }
       const [bgR, bgG, bgB] = roleRGB('bg')
       for (let i = 0; i < G * G; i++) {
         const j = i * 4
@@ -118,11 +174,11 @@ export const r2_ca_01_lenia            = {
           img.data[j] = bgR; img.data[j + 1] = bgG; img.data[j + 2] = bgB; img.data[j + 3] = 255
           continue
         }
-        const v = Math.max(0, Math.min(1, A[i]))
-        const [r, g, b] = rampRGB(v)
-        img.data[j]     = r
-        img.data[j + 1] = g
-        img.data[j + 2] = b
+        const v = Math.min(1, Math.max(0, A[i]) * 1.35)
+        const ki = (v * 63) | 0
+        img.data[j]     = rampLUT[ki * 3]
+        img.data[j + 1] = rampLUT[ki * 3 + 1]
+        img.data[j + 2] = rampLUT[ki * 3 + 2]
         img.data[j + 3] = 255
       }
       clear(ctx, W, H)
@@ -130,7 +186,7 @@ export const r2_ca_01_lenia            = {
       ctx.imageSmoothingEnabled = false
       ctx.drawImage(offCanvas, 0, 0, W, H)
       ctx.imageSmoothingEnabled = true
-      strokeOutline(ctx, sdf, W, H)
+      strokeOutline(ctx, sdf, W, H, 'rgba(240, 230, 210, 0.35)', 2)
     })
   },
 }

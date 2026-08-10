@@ -89,9 +89,12 @@ function RangeField({ param: p, layer, setProp }) {
   const live = bound ? resolveValue(raw, ctx, layer) : raw
   const numVal = typeof live === 'number' ? live : (p.default ?? 0)
 
+  /* labs' decimals rule: digits after the point in `step` itself
+   * (0.025 → 3, 0.05 → 2, ≥1 → 0) — Slider.jsx:129, verified 2026-08-09. */
+  const stepDecimals = p.step && p.step < 1 ? (String(p.step).split('.')[1]?.length ?? 2) : 0
   const shown = boundExpr
     ? (raw.transform?.expr ?? 'wave(t)')
-    : (p.format ? String(p.format(numVal)) : (p.step && p.step < 1 ? numVal.toFixed(2) : String(Math.round(numVal))))
+    : (p.format ? String(p.format(numVal)) : (stepDecimals ? numVal.toFixed(stepDecimals) : String(Math.round(numVal))))
   const [draft, setDraft] = useState(shown)
   const [editing, setEditing] = useState(false)
   useEffect(() => { if (!editing) setDraft(shown) }, [shown, editing])
@@ -102,7 +105,10 @@ function RangeField({ param: p, layer, setProp }) {
     if (s === '') { setDraft(shown); return }
     const n = Number(s)
     if (Number.isFinite(n)) {                       /* a number → constant */
-      setProp(p.key, Math.max(p.min ?? n, Math.min(p.max ?? n, n)))
+      /* UNCLAMPED — the slider range is drag ergonomics, never a validity
+       * ceiling; typed input outranks the rail (user law 2026-08-09). The
+       * thumb pins at the rail end for out-of-range values. */
+      setProp(p.key, n)
       return
     }
     const compiled = compileExpr(s)                 /* else → expression binding */
@@ -235,9 +241,11 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
     }
   } else if (p.type === 'text') {
     rowInline = false
+    /* filled, NEVER ghost/outline — ghost resolves to outline since the
+     * 2026-07-08 chrome law, and text inputs are filled in this app. */
     control = (
       <Textarea
-        variant="ghost" size="sm" rows={p.rows ?? 2}
+        variant="filled" size="sm" rows={p.rows ?? 2}
         value={value ?? ''}
         onChange={(e) => setProp(p.key, e.target.value)}
         placeholder={p.placeholder}

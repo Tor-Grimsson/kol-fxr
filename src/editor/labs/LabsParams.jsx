@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { SegmentedToggle, Divider, Dropdown } from '@kolkrabbi/kol-component'
+import { SegmentedToggle, ToggleSwitch, Divider, Dropdown } from '@kolkrabbi/kol-component'
 import EditorButton from '../components/EditorButton'
 import EditorIcon from '../icons/EditorIcon'
 import { useComposeState } from '../compose/state'
@@ -11,14 +11,14 @@ import { PHOTO_SCHEMA } from '../params/schemas/photo'
 import { mulberry32, randomSeed, randomizeSchema, mergeRoll } from '../lib/rng'
 import { FILTERS } from '../../filters'
 import { resolvedChain, MAX_FILTERS } from '../compose/filterChain'
-import { effectCategories, categoryOf, presetParamOf } from '../compose/inspectors/effectCategories'
+import { effectCategories, categoryOf, presetParamOf, FX_RACK_GROUPS, rackGroupFilters, postProcessingFilters } from '../compose/inspectors/effectCategories'
 import { SweepStack } from '../compose/inspectors/EffectsPanel'
 import { LoopFields } from '../compose/inspectors/ParametersPanel'
 import KineticPanel from '../compose/inspectors/KineticPanel'
-import { KINETIC_PRESETS, presetComp } from '../../kinetic/presets'
+import { KINETIC_TREE, KINETIC_PRESETS, presetComp } from '../../kinetic/presets'
 import { randomiseComp } from '../../kinetic/knobs'
 import { MISC_TREE } from '../../loops/taxonomy'
-import { loopById, presetsInGroup, presetsInSub, presetLayerPatch } from '../../loops/registry'
+import { groupById, loopById, presetsInGroup, presetsInSub, presetLayerPatch } from '../../loops/registry'
 import { computeRoll, allScopeParams } from '../params/rolls'
 import { useAppSettings, getAppSettings, setAppSetting } from '../lib/appSettings'
 import { useLabsLayer } from './useLabsLayer'
@@ -63,20 +63,49 @@ const LABS_TABS = [
   { value: 'effect', label: 'Effect' },
   { value: 'anim',   label: 'Motion' },
 ]
+/* Generative pages keep labs' three-tab strip — Effect·Motion is the
+ * EFFECT-page shape only (the labs page survey, 2026-08-09). */
+const GEN_TABS = [
+  { value: 'generate', label: 'Generate' },
+  { value: 'style',    label: 'Style' },
+  { value: 'anim',     label: 'Animation' },
+]
 const ANIM_HINT = 'Animate any parameter via its bind dot.'
 
-/* The active leaf's siblings — text chips, active one lit (labs' rail top). */
-function ChipsRow({ options, active, onPick }) {
+/* The trio row — labs' RailVariantNav: BARE kol-helper-12 text links,
+ * authored case (never uppercased), justify-between, active = emphasis.
+ * `pills` is the para-type variant (labs ChipsRow): bordered pill chips. */
+function ChipsRow({ options, active, onPick, spread = false, pills = false }) {
   if (!options?.length) return null
+  if (pills) {
+    return (
+      <div className="flex items-center gap-1 flex-wrap">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onPick(o.value)}
+            className={`px-2 py-0.5 rounded kol-helper-10 tracking-widest border transition-colors cursor-pointer ${
+              o.value === active
+                ? 'bg-fg-16 border-fg-24 text-emphasis'
+                : 'bg-transparent border-fg-08 text-meta hover:border-fg-16 hover:text-body'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    )
+  }
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1.5">
+    <div className={`flex flex-wrap items-center gap-x-5 gap-y-1.5${spread ? ' justify-between' : ''}`}>
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onPick(o.value)}
           className={[
-            'kol-mono-12 uppercase tracking-[0.06em] cursor-pointer',
+            'kol-helper-12 cursor-pointer',
             o.value === active ? 'text-emphasis' : 'text-meta hover:text-emphasis',
           ].join(' ')}
         >
@@ -87,12 +116,16 @@ function ChipsRow({ options, active, onPick }) {
   )
 }
 
-/* Shared frame: chips over the Effect · Motion strip over the tab body. */
-function Surface({ chips, active, onPick, tab, setTab, children }) {
+/* Shared frame — labs' rail header zone: a RailHeader line (title, trio
+ * links, or pills) over the page's tab strip over the body. Body gap = 20px
+ * (labs' rail gap-5); the tab strip is the caller's (Effect·Motion on
+ * effect pages, Generate·Style·Animation on generative ones). */
+function Surface({ chips, active, onPick, spread, pills, title, tabStrip, fx = false, children }) {
   return (
-    <div className="flex flex-col gap-4">
-      <ChipsRow options={chips} active={active} onPick={onPick} />
-      <SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size="sm" />
+    <div className={`flex flex-col gap-5${fx ? ' kol-labs-fx' : ''}`}>
+      {title && <span className="kol-helper-12 text-emphasis">{title}</span>}
+      {chips && <ChipsRow options={chips} active={active} onPick={onPick} spread={spread} pills={pills} />}
+      {tabStrip}
       {children}
     </div>
   )
@@ -103,14 +136,26 @@ function Surface({ chips, active, onPick, tab, setTab, children }) {
  * repo's own effect-group taxonomy). Same nested-param plumbing as
  * EffectsPanel: stage params spread over a layer-shaped bag, writes rebuild
  * `filters` through coalesced history. Labs is one-effect, so stage 0. */
-function EffectSurface({ layer, tab, setTab, showMod }) {
+function EffectSurface({ layer, showMod }) {
+  const [tab, setTab] = useState('effect')
+  /* The nav's effect pick flips back to the Effect tab. */
+  useEffect(() => {
+    const toEffect = () => setTab('effect')
+    window.addEventListener('kol:open-effects', toEffect)
+    return () => window.removeEventListener('kol:open-effects', toEffect)
+  }, [])
   const { addFilter, replaceFilter, removeFilter, toggleFilter, updateLayer, palette } = useComposeState()
   const edit = useLayerEdit(layer.id, { history: 'coalesce' })
   const chain = resolvedChain(layer)
   const stage = chain[0] ?? null
 
+  /* Chips only for the halftone TRIO (labs' one chipped effect family —
+   * Dither · ASCII · Bitmap are modes of one page there). Every other
+   * effect page carries a title; its siblings already live in the sidebar. */
   const cat = effectCategories(FILTERS).find((c) => c.id === categoryOf(stage?.id))
-  const chips = (cat?.filters ?? []).map((f) => ({ value: f.id, label: f.label }))
+  const isTrio = cat?.id === 'halftone'
+  const chips = isTrio ? (cat?.filters ?? []).map((f) => ({ value: f.id, label: f.label })) : null
+  const title = !isTrio && stage ? stage.def.label : null
   const onChip = (id) => {
     if (!stage) { addFilter(layer.id, id); return }
     if (id !== stage.id) replaceFilter(layer.id, 0, id)
@@ -138,10 +183,59 @@ function EffectSurface({ layer, tab, setTab, showMod }) {
     roll,
   )
 
+  /* ── FX RACK mode (labs /radar/effects/<group>): the layer IS a stack.
+   * Title "Effects", the whole chain as cards, the category's adder. ── */
+  const rackGroup = layer.fxGroup ? FX_RACK_GROUPS.find((g) => g.id === layer.fxGroup) : null
+  if (rackGroup) {
+    const stackProps = { chain, layer, hostView: paramsView, toggleFilter, removeFilter, setStagePropAt, palette, showMod }
+    const rackOptions = [
+      { value: '', label: 'Add effect…' },
+      ...rackGroupFilters(rackGroup, FILTERS).map((f) => ({
+        value: f.id,
+        label: `${f.label ?? f.id}${f.kind === 'pixi' ? ' · GPU' : ''}`,
+      })),
+    ]
+    return (
+      <Surface title="Effects" fx tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size="sm" />}>
+        {tab === 'effect' && (
+          <>
+            <div className="kol-params-section flex flex-col gap-4">
+              <span className="kol-helper-10 text-meta">Effect Stack</span>
+              {chain.length === 0 && <p className="kol-mono-10 text-meta">No effects yet — add one below.</p>}
+              <StackCards {...stackProps} from={0} />
+            </div>
+            <Divider />
+            <div className="kol-params-section flex flex-col gap-4">
+              <span className="kol-helper-10 text-meta">{rackGroup.label}</span>
+              <Dropdown
+                variant="subtle" size="sm" className="w-full"
+                options={rackOptions}
+                value=""
+                disabled={chain.length >= MAX_FILTERS}
+                onChange={(id) => { if (id) addFilter(layer.id, id) }}
+              />
+            </div>
+          </>
+        )}
+        {tab === 'anim' && (
+          stage?.def?.sweeps ? (
+            <SweepStack
+              sweeps={Array.isArray(stage.params.sweeps) ? stage.params.sweeps : []}
+              onChange={(sweeps) => setStageProp('sweeps', sweeps)}
+              inline
+            />
+          ) : (
+            <p className="kol-mono-12 text-meta">{ANIM_HINT}</p>
+          )
+        )}
+      </Surface>
+    )
+  }
+
   /* Bare photo (uploaded, no effect picked yet): fit params, nothing else. */
   if (!stage) {
     return (
-      <Surface chips={chips} active={null} onPick={onChip} tab={tab} setTab={setTab}>
+      <Surface chips={chips} active={null} onPick={onChip} spread={isTrio} fx tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size="sm" />}>
         <AutoControls schema={PHOTO_SCHEMA} layer={layer} setProp={edit.setProp} palette={palette} renderAnimate={(p) => <BindDot layer={layer} param={p} setProp={edit.setProp} />} tab={tab === 'anim' ? 'anim' : 'style'} emptyHint="Pick an effect from the nav." />
       </Surface>
     )
@@ -169,7 +263,7 @@ function EffectSurface({ layer, tab, setTab, showMod }) {
 
   const auto = { layer: paramsView, setProp: setStageProp, palette, renderAnimate, inline: true }
   return (
-    <Surface chips={chips} active={stage.id} onPick={onChip} tab={tab} setTab={setTab}>
+    <Surface chips={chips} active={stage.id} onPick={onChip} spread={isTrio} title={title} fx tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size="sm" />}>
       {tab === 'effect' && (
         <>
           {head.length > 0 && <AutoControls schema={head} {...auto} />}
@@ -212,60 +306,62 @@ function EffectSurface({ layer, tab, setTab, showMod }) {
   )
 }
 
-/* ── Post-Processing (labs "Add FX…"): the chain's stages past the page's
- * own effect — add from the full catalog, toggle/remove per stage, each
- * stage's params editable in place. Engine stages stay single-and-last
- * (the chain contract), so the picker drops engines once one exists. ── */
+/* labs' FX cards: p-2 rounded bg-fg-04, ToggleSwitch header (the fx name IS
+ * the enable label), ghost cross pushed right, params inline while enabled.
+ * `from` slices the chain — 0 for the rack (the stack IS the page), 1 for a
+ * page's Post-Processing block. */
+function StackCards({ chain, from = 0, layer, hostView, toggleFilter, removeFilter, setStagePropAt, palette, showMod }) {
+  return chain.slice(from).map((s, i) => {
+    const idx = i + from
+    const enabled = s.enabled !== false
+    const view = { ...hostView, ...s.params, id: layer.id }
+    const setProp = setStagePropAt(idx)
+    return (
+      <div key={s.key ?? idx} className="flex flex-col gap-2 p-2 rounded bg-fg-04">
+        <div className="flex items-center gap-2">
+          <ToggleSwitch
+            size="sm" checked={enabled}
+            onChange={() => toggleFilter(layer.id, idx)}
+            label={s.def?.label ?? s.id}
+          />
+          <button
+            type="button"
+            aria-label="Remove effect"
+            onClick={() => removeFilter(layer.id, idx)}
+            className="ml-auto inline-flex items-center justify-center w-5 h-5 shrink-0 text-body hover:text-emphasis cursor-pointer"
+            style={{ border: 'none', background: 'transparent' }}
+          >
+            <EditorIcon name="close" size={12} />
+          </button>
+        </div>
+        {enabled && s.def && (
+          <AutoControls
+            schema={s.def.params.filter((p) => paramTab(p) !== 'anim')}
+            layer={view} setProp={setProp} palette={palette} inline
+            renderAnimate={showMod ? (p) => <BindDot layer={view} param={p} setProp={setProp} /> : undefined}
+          />
+        )}
+      </div>
+    )
+  })
+}
+
+/* ── Post-Processing (labs "Add FX..."): the stages past the page's own
+ * effect. The adder draws from labs' CANVAS_FX_DEFS equivalent — the rack's
+ * Post-Processing category — never the whole catalog. ── */
 function PostProcessing({ chain, layer, hostView, addFilter, removeFilter, toggleFilter, setStagePropAt, palette, showMod }) {
-  const hasEngine = chain.some((s) => s.def?.kind === 'engine')
   const options = [
-    { value: '', label: 'Add FX…' },
-    ...FILTERS.filter((f) => f.kind !== 'engine' || !hasEngine).map((f) => ({ value: f.id, label: f.label ?? f.id })),
+    { value: '', label: 'Add FX...' },
+    ...postProcessingFilters(FILTERS).map((f) => ({ value: f.id, label: f.label ?? f.id })),
   ]
-  const post = chain.slice(1)
   return (
     <div className="kol-params-section flex flex-col gap-4">
       <span className="kol-helper-10 text-meta">Post-Processing</span>
-      {post.map((s, i) => {
-        const idx = i + 1
-        const enabled = s.enabled !== false
-        const view = { ...hostView, ...s.params, id: layer.id }
-        const setProp = setStagePropAt(idx)
-        return (
-          <div key={s.key ?? idx} className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                aria-label={enabled ? 'Disable effect' : 'Enable effect'}
-                onClick={() => toggleFilter(layer.id, idx)}
-                className="inline-flex items-center justify-center w-5 h-5 shrink-0 text-body hover:text-emphasis cursor-pointer"
-                style={{ border: 'none', background: 'transparent' }}
-              >
-                <EditorIcon name={enabled ? 'eye-on' : 'eye-off'} size={12} />
-              </button>
-              <span className={`kol-helper-12 flex-1 truncate ${enabled ? 'text-emphasis' : 'text-meta'}`}>
-                {s.def?.label ?? s.id}
-              </span>
-              <button
-                type="button"
-                aria-label="Remove effect"
-                onClick={() => removeFilter(layer.id, idx)}
-                className="inline-flex items-center justify-center w-5 h-5 shrink-0 text-body hover:text-emphasis cursor-pointer"
-                style={{ border: 'none', background: 'transparent' }}
-              >
-                <EditorIcon name="close" size={11} />
-              </button>
-            </div>
-            {enabled && s.def && (
-              <AutoControls
-                schema={s.def.params.filter((p) => paramTab(p) !== 'anim')}
-                layer={view} setProp={setProp} palette={palette} inline
-                renderAnimate={showMod ? (p) => <BindDot layer={view} param={p} setProp={setProp} /> : undefined}
-              />
-            )}
-          </div>
-        )
-      })}
+      <StackCards
+        chain={chain} from={1} layer={layer} hostView={hostView}
+        toggleFilter={toggleFilter} removeFilter={removeFilter}
+        setStagePropAt={setStagePropAt} palette={palette} showMod={showMod}
+      />
       <Dropdown
         variant="subtle" size="sm" className="w-full"
         options={options}
@@ -277,27 +373,25 @@ function PostProcessing({ chain, layer, hostView, addFilter, removeFilter, toggl
   )
 }
 
-/* ── Generative (loop + misc): chips = the group's presets (the nav's own
- * leaves), body = the shared LoopFields — labs-effect folds Generate+Style
- * into the Effect tab; the chips row replaces the Category/Preset stack. ── */
-function GenerativeSurface({ layer, tab, setTab, showMod, tree }) {
+/* ── Generative (loop + misc): labs' page shape — TITLE (the type label),
+ * the three-tab Generate·Style·Animation strip, and the Category/Preset
+ * dropdown pair (LoopPicker = labs' Section "Preset"). No chips — the one
+ * exception is Para Type's glyph set, labs' own pill ChipsRow. ── */
+function GenerativeSurface({ layer, showMod, tree }) {
+  const [tab, setTab] = useState('generate')
   const { updateLayer, palette } = useComposeState()
   const { setOnly } = useLabsLayer()
   const edit = useLayerEdit(layer.id, { history: 'coalesce' })
 
-  /* Chips = the active CATEGORY's presets (hierarchy law: nav picks the
-   * category, the rail's chips are its preset selector — Para Type's Glyphs
-   * category makes this the letter selector). Sub-less legacy groups fall
-   * back to the whole group, capped so a 55-preset flood can't wall the rail. */
   const current = presetsInGroup(layer.loopGroup).find((p) => p.id === layer.presetId)
-  const presets = current?.sub
-    ? presetsInSub(layer.loopGroup, current.sub)
-    : presetsInGroup(layer.loopGroup)
-  const chips = current?.sub || presets.length <= 12
-    ? presets.map((p) => ({ value: p.id, label: p.label }))
-    : null
+  const groupLabel = groupById(layer.loopGroup)?.label ?? ''
+
+  /* Para Type's letter selector — single-glyph presets as labs pills. */
+  const isGlyphs = layer.loopGroup === 'paratype' && current?.sub === 'Glyphs'
+  const pillsList = isGlyphs ? presetsInSub('paratype', 'Glyphs') : null
+  const chips = pillsList ? pillsList.map((p) => ({ value: p.id, label: p.label })) : null
   const onChip = (id) => {
-    const p = presets.find((x) => x.id === id)
+    const p = pillsList?.find((x) => x.id === id)
     if (p && id !== layer.presetId) setOnly(layer.type, presetLayerPatch(p, layer.loopGroup))
   }
 
@@ -310,30 +404,29 @@ function GenerativeSurface({ layer, tab, setTab, showMod, tree }) {
   )
 
   return (
-    <Surface chips={chips} active={layer.presetId} onPick={onChip} tab={tab} setTab={setTab}>
+    <Surface
+      title={groupLabel} chips={chips} active={layer.presetId} onPick={onChip} pills
+      tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={GEN_TABS} size="sm" />}
+    >
       <LoopFields
         layer={layer} setProp={edit.setProp} patch={edit.patch} updateLayer={updateLayer}
         palette={palette} renderAnimate={showMod ? (p) => <BindDot layer={layer} param={p} setProp={edit.setProp} /> : undefined}
-        tab={tab === 'effect' ? 'labs-effect' : 'anim'} tabStrip={null} picker={false} tree={tree} inline
+        tab={tab} tabStrip={null} tree={tree} inline
       />
     </Surface>
   )
 }
 
-/* ── Kinetic: chips = the preset's sub-group siblings (KINETIC_PRESETS),
- * body = the shared KineticPanel (Elements editing intact, picker off). ── */
-function KineticSurface({ layer, tab, setTab, showMod }) {
+/* ── Kinetic: labs' composition shape — title, three tabs, the TreePicker
+ * stack restored (labs picks kinetic scenes via nav + pickers, no chips). ── */
+function KineticSurface({ layer, showMod }) {
+  const [tab, setTab] = useState('generate')
   const { updateLayer, palette } = useComposeState()
   const { setOnly } = useLabsLayer()
   const edit = useLayerEdit(layer.id, { history: 'coalesce' })
 
   const current = KINETIC_PRESETS.find((p) => p.id === layer.presetId)
-  const sibs = current ? KINETIC_PRESETS.filter((p) => p.sub === current.sub) : []
-  const chips = sibs.map((p) => ({ value: p.id, label: p.label }))
-  const onChip = (id) => {
-    const p = sibs.find((x) => x.id === id)
-    if (p && id !== layer.presetId) setOnly('kinetic', { presetId: p.id, presetLabel: p.label, comp: presetComp(p) })
-  }
+  const title = KINETIC_TREE.find((e) => e.subs.includes(current?.sub))?.label ?? 'Kinetic'
 
   useLabsKeys(
     () => { if (current) setOnly('kinetic', { presetId: current.id, presetLabel: current.label, comp: presetComp(current) }) },
@@ -347,12 +440,12 @@ function KineticSurface({ layer, tab, setTab, showMod }) {
   )
 
   return (
-    <Surface chips={chips} active={layer.presetId} onPick={onChip} tab={tab} setTab={setTab}>
+    <Surface title={title} tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={GEN_TABS} size="sm" />}>
       <KineticPanel
         layer={layer} setProp={edit.setProp} updateLayer={updateLayer} palette={palette}
         /* noop, not undefined — MorphBlendKnob calls it unconditionally */
         renderAnimate={showMod ? (p) => <BindDot layer={layer} param={p} setProp={edit.setProp} /> : () => null}
-        tab={tab === 'effect' ? 'labs-effect' : 'anim'} tabStrip={null} picker={false}
+        tab={tab} tabStrip={null}
       />
     </Surface>
   )
@@ -360,16 +453,11 @@ function KineticSurface({ layer, tab, setTab, showMod }) {
 
 export default function LabsParams() {
   const { layer } = useLabsLayer()
-  const [tab, setTab] = useState('effect')
   /* Modulation dots hide by default (labs has none) — M or Settings →
    * Modulation dots brings them back. */
   const showMod = !!useAppSettings().labsModDots
 
-  /* A nav pick lands on the Effect tab — both events the nav dispatches. */
   useEffect(() => {
-    const toEffect = () => setTab('effect')
-    window.addEventListener('kol:open-params', toEffect)
-    window.addEventListener('kol:open-effects', toEffect)
     const onKey = (e) => {
       if (e.key !== 'm' && e.key !== 'M') return
       if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -378,18 +466,13 @@ export default function LabsParams() {
       setAppSetting('labsModDots', !getAppSettings().labsModDots)
     }
     window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('kol:open-params', toEffect)
-      window.removeEventListener('kol:open-effects', toEffect)
-      window.removeEventListener('keydown', onKey)
-    }
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const shared = { tab, setTab, showMod }
   if (!layer) return <p className="kol-mono-12 text-meta">Pick an effect or generator from the nav.</p>
-  if (layer.type === 'photo') return <EffectSurface key={layer.id} layer={layer} {...shared} />
-  if (layer.type === 'loop') return <GenerativeSurface key={layer.id} layer={layer} {...shared} />
-  if (layer.type === 'misc') return <GenerativeSurface key={layer.id} layer={layer} {...shared} tree={MISC_TREE} />
-  if (layer.type === 'kinetic') return <KineticSurface key={layer.id} layer={layer} {...shared} />
+  if (layer.type === 'photo') return <EffectSurface key={layer.id} layer={layer} showMod={showMod} />
+  if (layer.type === 'loop') return <GenerativeSurface key={layer.id} layer={layer} showMod={showMod} />
+  if (layer.type === 'misc') return <GenerativeSurface key={layer.id} layer={layer} showMod={showMod} tree={MISC_TREE} />
+  if (layer.type === 'kinetic') return <KineticSurface key={layer.id} layer={layer} showMod={showMod} />
   return <p className="kol-mono-12 text-meta">This layer has no labs surface.</p>
 }

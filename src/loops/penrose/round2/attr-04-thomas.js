@@ -1,7 +1,7 @@
 
 
 import { num } from '../knobs.js'
-import { clear, strokeOutline, wrapLoop } from '../common.js'
+import { clear, strokeOutline, wrapLoop, roleRGB } from '../common.js'
 
 // Thomas' Cyclically Symmetric Attractor (René Thomas, 1999).
 // 3-fold symmetric; projected down [1,1,1] axis + slow orbit rotation.
@@ -13,7 +13,16 @@ const PARAMS          = [
   { key: 'trails', type: 'int', min: 1, max: 6, default: 3, label: 'trail count' },
   { key: 'tail', type: 'int', min: 200, max: 4000, default: 1500, label: 'tail length' },
   { key: 'spin', type: 'range', min: 0, max: 0.5, default: 0.08, step: 0.01, label: 'cam spin' },
+  { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]
+
+// shortest-arc angular difference, for lerping accumulating angles
+function angDiff(a        , b        )         {
+  let d = (a - b) % (Math.PI * 2)
+  if (d > Math.PI) d -= Math.PI * 2
+  if (d < -Math.PI) d += Math.PI * 2
+  return d
+}
 
 function rk4Thomas(x        , y        , z        , b        , dt        )                           {
   const F = (x        , y        , z        )                           => [
@@ -52,7 +61,7 @@ export const r2_attr_04_thomas            = {
   summary: '3D Thomas cyclically symmetric attractor; RK4-integrated trails projected onto the [1,1,1] perpendicular plane with slow camera precession revealing 3-fold symmetry.',
   helps: 'The 3-lobe rotation is visually interpretable as a spinning object — clean rhythmic motion for the letterform.',
   params: PARAMS,
-  init({ ctx, sdf, W, H, rng, params, clock }) {
+  init({ ctx, sdf, W, H, rng, params, clock, pointer }) {
     const maxTail = 4000
     const maxTrails = 6
     const bufs = Array.from({ length: maxTrails }, (_, i) => ({
@@ -75,6 +84,19 @@ export const r2_attr_04_thomas            = {
     const SC = Math.min(W, H) * 0.115
     const OX = W * 0.5, OY = H * 0.5
 
+    /* Law 2 (2026-08-09): pointer x commands the camera rotation (lerped) —
+     * the 3-lobe object turns under the hand; idle auto-spin continues.
+     * Press = perturbation kick to every trail's phase point; the attractor
+     * re-converges by nature. */
+    let camA = 0
+    let prevT = null
+    let prevDown = false
+
+    // depth×alpha buckets for batched trail strokes (hoisted — no per-frame alloc)
+    const DB = 4, ABK = 8
+    const DMID = [0.125, 0.375, 0.625, 0.875]
+    const buckets = Array.from({ length: DB * ABK }, () => [])
+
     return wrapLoop(() => {
       const b = num(params, 'b', 0.19)
       const dt = num(params, 'dt', 0.05)
@@ -83,10 +105,36 @@ export const r2_attr_04_thomas            = {
       const spin = num(params, 'spin', 0.08)
       const STEPS = 6
 
-      clear(ctx, W, H, 'rgba(10,11,20,0.18)')
-      strokeOutline(ctx, sdf, W, H)
+      clear(ctx, W, H, 'rgba(10,11,20,0.12)')
+      strokeOutline(ctx, sdf, W, H, 'rgba(240, 230, 210, 0.35)', 2)
 
-      const angle = clock.nowSeconds() * spin
+      const now = clock.nowSeconds()
+      const interact = num(params, 'interact', 1)
+      const ptr = interact > 0 && pointer ? pointer() : null
+      if (prevT == null) prevT = now
+      const dtF = Math.min(0.1, Math.max(0, now - prevT))
+      prevT = now
+      if (ptr) {
+        camA += angDiff((ptr.x / sdf.w) * Math.PI * 2, camA) * 0.08 * Math.min(1, interact)
+      } else {
+        camA += spin * dtF
+      }
+      const downEdge = !!(ptr && ptr.down) && !prevDown
+      prevDown = !!(ptr && ptr.down)
+      if (downEdge) {
+        const k = 2.4 * Math.min(2, interact)
+        for (const tr of bufs) {
+          tr.cx += (rng() - 0.5) * 2 * k
+          tr.cy += (rng() - 0.5) * 2 * k
+          tr.cz += (rng() - 0.5) * 2 * k
+          // safety — Thomas is bounded, but a wild kick resets to a seed
+          if (!isFinite(tr.cx + tr.cy + tr.cz) ||
+              Math.abs(tr.cx) + Math.abs(tr.cy) + Math.abs(tr.cz) > 40) {
+            tr.cx = 0.1; tr.cy = 0; tr.cz = 0.05
+          }
+        }
+      }
+      const angle = camA
 
       for (let ti = 0; ti < nTrails; ti++) {
         const tr = bufs[ti]
@@ -102,19 +150,51 @@ export const r2_attr_04_thomas            = {
           tr.head = (tr.head + 1) % maxTail
           if (tr.len < maxTail) tr.len++
         }
+        // NaN hygiene — non-finite state resets to seed (guarded every frame)
+        if (!isFinite(tr.cx + tr.cy + tr.cz)) { tr.cx = 0.1; tr.cy = 0; tr.cz = 0.05 }
         const drawLen = Math.min(tr.len, tail)
-        const hue = 255 + ti * 35
+        // rotate the lead role per trail — warm / accent / fg
+        // (batched: depth+alpha quantized to buckets → ≤32 strokes per trail
+        // instead of one beginPath/stroke per segment)
+        const [cr, cg, cb] = roleRGB(['warm', 'accent', 'fg'][ti % 3])
+        for (const b of buckets) b.length = 0
         for (let i = 0; i < drawLen - 1; i++) {
           const age = i / drawLen
           const i0 = (tr.head - 1 - i + maxTail) % maxTail
-          const i1 = (tr.head - 2 - i + maxTail) % maxTail
-          const px0 = OX + tr.pxs[i0]*SC, py0 = OY + tr.pys[i0]*SC
-          const px1 = OX + tr.pxs[i1]*SC, py1 = OY + tr.pys[i1]*SC
           const d = Math.max(0, Math.min(1, tr.zs[i0] * 0.5 + 0.5))
-          const alpha = (1 - age) * (0.3 + d * 0.55)
-          ctx.strokeStyle = `hsla(${hue},80%,${50+d*30}%,${alpha.toFixed(3)})`
-          ctx.lineWidth = 0.5 + d * 0.9
-          ctx.beginPath(); ctx.moveTo(px0, py0); ctx.lineTo(px1, py1); ctx.stroke()
+          const db = Math.min(DB - 1, Math.floor(d * DB))
+          const alpha = (1 - age) * (0.45 + d * 0.55)
+          const abkt = Math.min(ABK - 1, Math.floor(alpha * ABK))
+          buckets[db * ABK + abkt].push(i0)
+        }
+        for (let bi = 0; bi < buckets.length; bi++) {
+          const seg = buckets[bi]
+          if (!seg.length) continue
+          const alpha = ((bi % ABK) + 0.5) / ABK
+          ctx.strokeStyle = `rgba(${cr},${cg},${cb},${alpha.toFixed(3)})`
+          ctx.lineWidth = 1.8 + DMID[(bi / ABK) | 0] * 2.2
+          ctx.beginPath()
+          for (const i0 of seg) {
+            const i1 = (i0 - 1 + maxTail) % maxTail
+            ctx.moveTo(OX + tr.pxs[i0]*SC, OY + tr.pys[i0]*SC)
+            ctx.lineTo(OX + tr.pxs[i1]*SC, OY + tr.pys[i1]*SC)
+          }
+          ctx.stroke()
+        }
+
+        // glowing head per trail
+        if (tr.len > 0) {
+          const hi = (tr.head - 1 + maxTail) % maxTail
+          const hx = OX + tr.pxs[hi]*SC, hy = OY + tr.pys[hi]*SC
+          // fake glow — halo fill replaces the shadowBlur pass
+          ctx.fillStyle = `rgba(${cr},${cg},${cb},0.3)`
+          ctx.beginPath()
+          ctx.arc(hx, hy, 11, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.fillStyle = `rgba(${cr},${cg},${cb},0.95)`
+          ctx.beginPath()
+          ctx.arc(hx, hy, 5, 0, Math.PI * 2)
+          ctx.fill()
         }
       }
     })
