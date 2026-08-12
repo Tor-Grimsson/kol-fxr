@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { ModalProvider } from '@kolkrabbi/kol-component'
 import EditorErrorBoundary from './EditorErrorBoundary'
 import { ToolProvider }       from './state/tools'
 import { GeneratorLibraryProvider } from './library/LibraryProvider'
@@ -64,19 +65,24 @@ function EditorBody() {
 export function EditorProviders({ children, persistDraft = true, draftKey }) {
   return (
     <EditorErrorBoundary>
-      <GeneratorLibraryProvider>
-        <ToolProvider>
-          <ComposeStateProvider persistDraft={persistDraft} draftKey={draftKey}>
-            <PaletteStateProvider>
-              <PatternStateProvider>
-                <TypeStateProvider>
-                  {children}
-                </TypeStateProvider>
-              </PatternStateProvider>
-            </PaletteStateProvider>
-          </ComposeStateProvider>
-        </ToolProvider>
-      </GeneratorLibraryProvider>
+      {/* ModalProvider outermost of the state stack — WITHOUT it every
+        * useModal() (draft restore, discard confirms, save prompts) silently
+        * falls back to the NATIVE browser dialog. */}
+      <ModalProvider>
+        <GeneratorLibraryProvider>
+          <ToolProvider>
+            <ComposeStateProvider persistDraft={persistDraft} draftKey={draftKey}>
+              <PaletteStateProvider>
+                <PatternStateProvider>
+                  <TypeStateProvider>
+                    {children}
+                  </TypeStateProvider>
+                </PatternStateProvider>
+              </PaletteStateProvider>
+            </ComposeStateProvider>
+          </ToolProvider>
+        </GeneratorLibraryProvider>
+      </ModalProvider>
     </EditorErrorBoundary>
   )
 }

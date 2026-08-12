@@ -1,5 +1,4 @@
-import { Dropdown, LabeledControl } from '@kolkrabbi/kol-component'
-import EditorButton from '../../components/EditorButton'
+import { Button, Dropdown, LabeledControl } from '@kolkrabbi/kol-component'
 import { useComposeState } from '../state'
 import { visibleParams } from '../../params/schema'
 import { loopById } from '../../../loops/registry'
@@ -31,13 +30,13 @@ function FlattenAction({ layer }) {
   const { flattenParatype } = useComposeState()
   if (!flattenParatype) return null
   return (
-    <EditorButton
+    <Button
       variant="primary" size="sm" className="w-full"
       onClick={() => flattenParatype(layer.id)}
       title="Flatten the glyph(s) to vector shape layers (one-way)"
     >
       Flatten to vector
-    </EditorButton>
+    </Button>
   )
 }
 

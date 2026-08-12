@@ -21,3 +21,4 @@ LLM_RULES.md
 
 # Ephemeral agent loop state (kol-goal)
 .kol/llm-context/.active-goal.md
+_tmp/

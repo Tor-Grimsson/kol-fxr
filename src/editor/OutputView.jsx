@@ -18,15 +18,11 @@ import { OUTPUT_SNAPSHOT_KEY } from './compose/useComposeFile'
  */
 
 /* Frame fill with opacity — mirrors CanvasArea's bgColor derivation.
+ * color-mix so themed `var(--kol-*)` fills take alpha too.
  * ponytail: tiny pure copy, not worth a shared util just for this. */
-function hexWithAlpha(hex, alpha) {
-  if (!hex || typeof hex !== 'string') return hex
-  const m = hex.replace('#', '')
-  if (m.length !== 6) return hex
-  const r = parseInt(m.slice(0, 2), 16)
-  const g = parseInt(m.slice(2, 4), 16)
-  const b = parseInt(m.slice(4, 6), 16)
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+function fillWithAlpha(fill, alpha) {
+  if (!fill || typeof fill !== 'string') return fill
+  return `color-mix(in srgb, ${fill} ${Math.round(alpha * 100)}%, transparent)`
 }
 
 /* The composition itself — the same `Canvas` letterbox CanvasArea uses, with
@@ -39,7 +35,7 @@ export function OutputCanvas({ fit = 'contain' }) {
   const { aspect, canvasW, canvasH, layers, palette, canvasFill, canvasFillOpacity } = useComposeState()
   const fillHex = resolveColor(canvasFill, palette)
   const bgColor = fillHex
-    ? (canvasFillOpacity < 1 ? hexWithAlpha(fillHex, canvasFillOpacity) : fillHex)
+    ? (canvasFillOpacity < 1 ? fillWithAlpha(fillHex, canvasFillOpacity) : fillHex)
     : null
   return (
     <Canvas

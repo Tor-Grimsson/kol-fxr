@@ -4,6 +4,7 @@ import { getSources, getSource } from './sources'
 import { isGamepadSource } from './gamepad'
 import { isBinding, resolveValue } from './resolve'
 import { transport } from './transport'
+import { useBindDots } from './dotVisibility'
 
 /**
  * BindDot — the per-field modulate affordance. A tiny dot beside an animatable
@@ -22,10 +23,16 @@ import { transport } from './transport'
 export default function BindDot({ layer, param, setProp }) {
   const [open, setOpen] = useState(false)
   const popover = usePopover({ open, onOpenChange: setOpen, placement: 'bottom-end', offset: 4, role: 'menu' })
+  const dotsOn = useBindDots()
 
   const value = layer[param.key]
   const bound = isBinding(value)
   const mode = bound ? (value.bind === 'track' ? 'track' : value.source) : 'none'
+
+  /* Global gate (user ruling 2026-08-12): dots are hidden chrome until the
+   * modulate mode is toggled (keymap `M`, set-and-forget) — except a BOUND
+   * param's dot, which stays visible so an animated value is never mute. */
+  if (!dotsOn && !bound) return null
 
   /* Current concrete value — the base a new binding starts from, and the
    * constant an unbind freezes to. */

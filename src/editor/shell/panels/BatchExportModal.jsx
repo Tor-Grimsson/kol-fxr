@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import EditorButton from '../../components/EditorButton'
+import { Button } from '@kolkrabbi/kol-component'
 import EditorIcon from '../../icons/EditorIcon'
 import { ASPECTS, PRESET_SIZES } from '../aspects'
 
@@ -81,7 +81,7 @@ export default function BatchExportModal({ open, onClose, runBatchExport, baseAs
       >
         <div className="flex items-center justify-between px-5 h-12 border-b border-fg-08">
           <span className="kol-helper-12 text-emphasis">Batch export</span>
-          <EditorButton variant="primary" size="sm" quiet iconOnly="close" iconSize={14} aria-label="Close" onClick={close} />
+          <Button iconComponent={EditorIcon} variant="primary" size="sm" quiet iconOnly="close" iconSize={14} aria-label="Close" onClick={close} />
         </div>
 
         <div className="overflow-y-auto p-5 flex flex-col gap-4">
@@ -122,7 +122,7 @@ export default function BatchExportModal({ open, onClose, runBatchExport, baseAs
               ? `Exporting ${progress.done}/${progress.total}…`
               : `${jobs.length} file${jobs.length === 1 ? '' : 's'}`}
           </span>
-          <EditorButton
+          <Button iconComponent={EditorIcon}
             variant="primary"
             size="sm"
             iconLeft="download"
@@ -131,7 +131,7 @@ export default function BatchExportModal({ open, onClose, runBatchExport, baseAs
             onClick={onExport}
           >
             Export all
-          </EditorButton>
+          </Button>
         </div>
       </div>
     </div>

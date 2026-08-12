@@ -110,7 +110,9 @@ const DRIFT_PRESETS = Object.entries(SUBPAGES).flatMap(([family, pages]) =>
  * blobs) — several knobs only exist in some shader branches, so they gate on
  * the preset-set cat/type the same way scene3d gates on count. */
 const iCat = (l) => Math.round(l.cat ?? 2)
-const iType = (l) => Math.round(l.type ?? 0)
+/* `form` (né `type`) — the key collided with the core layer.type field once
+ * flattened onto the layer (the "Media" wreck, 2026-08-12). */
+const iType = (l) => Math.round(l.form ?? 0)
 /* Manual colour knobs act only while look === 'custom' — a named look is a
  * GRAD_LOOKS recipe the engine overlays on every setParams. */
 const iCustom = (l) => (l.look ?? 'custom') === 'custom'
@@ -155,7 +157,7 @@ const IRIDESCENT_LOOP = {
 /* cat 0=field / 1=pole / 2=volume; type indexes the shader branch. The cat
  * IS labs' sidebar category (gradients/registry.js), so `sub` derives. */
 const IP = (id, label, cat, type, extra = {}) =>
-  ({ id: `irid-${id}`, label, loop: 'iridescent', sub: ['Field', 'Pole', 'Volume'][cat], params: { cat, type, ...extra } })
+  ({ id: `irid-${id}`, label, loop: 'iridescent', sub: ['Field', 'Pole', 'Volume'][cat], params: { cat, form: type, ...extra } })
 /* Extras on the labs-ported presets pin that type's labs registry defaults
  * where they differ from the engine's (blobs-centric) uniform defaults. */
 const IRIDESCENT_PRESETS = [

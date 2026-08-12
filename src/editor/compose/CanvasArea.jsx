@@ -16,6 +16,7 @@ import { useColorTarget } from '../color/useColorTarget'
 import { useLayerEdit } from './useLayerEdit'
 import { computeSnapTargets, findSnap } from './snap'
 import { transport } from '../params/transport'
+import { toggleDots } from '../params/dotVisibility'
 import { saveClip } from '../lib/clipStore'
 
 /* Per-tool cursor on the canvas stage. Using system cursors directly —
@@ -58,16 +59,12 @@ const SOCIAL_ASPECTS = ['1:1', '4:5', '9:16']
  * theme token: it must pop against any canvas fill in either theme. */
 const SNAP_GUIDE_COLOR = '#FF00C8'
 
-/* hex (#RRGGBB) + alpha (0..1) → rgba() string. Used to apply canvas fill
- * opacity at render time without storing alpha in the color value. */
-function hexWithAlpha(hex, alpha) {
-  if (!hex || typeof hex !== 'string') return hex
-  const m = hex.replace('#', '')
-  if (m.length !== 6) return hex
-  const r = parseInt(m.slice(0, 2), 16)
-  const g = parseInt(m.slice(2, 4), 16)
-  const b = parseInt(m.slice(4, 6), 16)
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+/* Fill + alpha (0..1) → CSS color. color-mix so it works for hex AND the
+ * themed `var(--kol-*)` fills — the old hex-only rgba() path silently
+ * dropped the alpha on the DEFAULT (themed) canvas fill. */
+function fillWithAlpha(fill, alpha) {
+  if (!fill || typeof fill !== 'string') return fill
+  return `color-mix(in srgb, ${fill} ${Math.round(alpha * 100)}%, transparent)`
 }
 
 export default function CanvasArea() {
@@ -78,7 +75,7 @@ export default function CanvasArea() {
     selectedId, selectedIds, select, toggleSelection, selectMany,
     addLayer,
     updateLayer, removeLayer, deleteSelected, duplicateLayer, toggleLayer, toggleLayerLock,
-    flipSelected,
+    flipSelected, flattenSelected, releaseBoolean, flattenText,
     groupLayers, ungroupLayer,
     insertFromLibrary,
     activePaint, setActivePaint,
@@ -117,7 +114,7 @@ export default function CanvasArea() {
   const legacyBgHex  = legacyBg ? resolveColor(legacyBg.color, palette) : null
   const fillHex      = resolveColor(canvasFill, palette) ?? legacyBgHex
   const bgColor      = fillHex
-    ? (canvasFillOpacity < 1 ? hexWithAlpha(fillHex, canvasFillOpacity) : fillHex)
+    ? (canvasFillOpacity < 1 ? fillWithAlpha(fillHex, canvasFillOpacity) : fillHex)
     : null
 
   /* Infinite backdrop (area around the frame). `null` = None → transparent,
@@ -216,6 +213,10 @@ export default function CanvasArea() {
    * SoftformsLayers' "Edit forms on canvas" (kol:softform-edit, a toggle);
    * exited on Escape / Enter / deselect / tool switch (kinetic precedent). */
   const [softformsEdit, setSoftformsEdit] = useState(null)
+
+  /* Right-click context menu — { x, y, layerId } in client coords, or null.
+   * Closed by any action, click-away, Escape, or a new right-click. */
+  const [ctxMenu, setCtxMenu] = useState(null)
 
   /* Enter crop on a photo. First entry initializes the crop window
    * {imgX,imgY,imgW,imgH} (frame-local px) from the layer's current fit —
@@ -1164,6 +1165,11 @@ export default function CanvasArea() {
           window.dispatchEvent(new CustomEvent('kol:show-shortcuts'))
           return
 
+        case 'toggle-dots':
+          e.preventDefault()
+          toggleDots()
+          return
+
         case 'tool-select':  e.preventDefault(); setNodeEditId(null); setTool('select'); return
         /* A = direct-select: drop into node-edit on the selected path. */
         case 'node-edit': {
@@ -1270,6 +1276,17 @@ export default function CanvasArea() {
           detail: { clientX: e.clientX, clientY: e.clientY, factor: e.altKey ? 0.5 : 2 },
         }))
       } : undefined}
+      /* Right-click → the selection-aware context menu (T7 2026-08-12).
+       * The system menu is suppressed over the canvas area ONLY — the rails
+       * and menus keep the browser default. A layer under the cursor gets
+       * selected first (Figma behavior); empty canvas gets the global ops. */
+      onContextMenu={(e) => {
+        e.preventDefault()
+        const hit = e.target.closest?.('[data-layer-id]')
+        const layerId = hit?.dataset?.layerId ?? null
+        if (layerId && !selectedIds.includes(layerId)) select(layerId)
+        setCtxMenu({ x: e.clientX, y: e.clientY, layerId })
+      }}
     >
       <Canvas
         aspect={aspect}
@@ -1476,6 +1493,105 @@ export default function CanvasArea() {
           )}
         </div>
       </Canvas>
+      {ctxMenu && (
+        <CanvasContextMenu
+          menu={ctxMenu}
+          layer={ctxMenu.layerId ? findLayerDeep(layers, ctxMenu.layerId) : null}
+          onClose={() => setCtxMenu(null)}
+          ops={{
+            select, duplicateLayer, removeLayer, toggleLayer, toggleLayerLock,
+            flattenSelected, releaseBoolean, flattenText, enterCrop,
+            undo, redo, canUndo, canRedo,
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ── right-click context menu (T7 2026-08-12) ────────────────────────────
+ * Selection-aware ops for the layer under the cursor; global undo/redo on
+ * empty canvas. Fixed at the pointer, clamped to the viewport; closes on
+ * any action, click-away (mousedown capture), Escape, scroll. Row idiom =
+ * the menubar's (kol-helper-12 + leading-normal so descenders survive). */
+function CanvasContextMenu({ menu, layer, onClose, ops }) {
+  useEffect(() => {
+    const away = (e) => { if (!e.target.closest?.('[data-kol-ctxmenu]')) onClose() }
+    const key = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('mousedown', away, true)
+    window.addEventListener('keydown', key)
+    window.addEventListener('wheel', onClose, { passive: true })
+    return () => {
+      window.removeEventListener('mousedown', away, true)
+      window.removeEventListener('keydown', key)
+      window.removeEventListener('wheel', onClose)
+    }
+  }, [onClose])
+
+  const run = (fn) => () => { onClose(); fn() }
+  const open = (event, detail) => () => { onClose(); window.dispatchEvent(new CustomEvent(event, detail !== undefined ? { detail } : undefined)) }
+
+  const items = []
+  if (layer) {
+    const t = layer.type
+    if (t === 'text') {
+      items.push({ label: 'Morph…', act: () => {
+        onClose()
+        window.dispatchEvent(new CustomEvent('kol:open-params'))
+        window.dispatchEvent(new CustomEvent('kol:params-subtab', { detail: { tab: 'style' } }))
+      } })
+      items.push({ label: 'Flatten text', act: run(() => ops.flattenText(layer.id)) })
+    }
+    if (t === 'bool') {
+      items.push({ label: 'Flatten shape', act: run(() => ops.flattenSelected()) })
+      items.push({ label: 'Release boolean', act: run(() => ops.releaseBoolean()) })
+    }
+    if (t === 'photo') {
+      items.push({ label: 'Crop image', act: run(() => ops.enterCrop(layer)) })
+      items.push({ label: 'Replace image', act: open('kol:photo-replace', layer.id) })
+    }
+    if (t === 'pattern') items.push({ label: 'Pattern parameters', act: open('kol:open-pattern') })
+    if (['shape', 'loop', 'kinetic', 'misc', 'path'].includes(t)) {
+      items.push({ label: 'Parameters', act: open('kol:open-params') })
+    }
+    if (['shape', 'text', 'pattern', 'path', 'loop', 'photo'].includes(t)) {
+      items.push({ label: 'Add effect', act: open('kol:open-effects') })
+    }
+    items.push({ divider: true })
+    items.push({ label: 'Duplicate', act: run(() => ops.duplicateLayer(layer.id)) })
+    items.push({ label: layer.visible === false ? 'Show' : 'Hide', act: run(() => ops.toggleLayer(layer.id)) })
+    items.push({ label: layer.locked ? 'Unlock' : 'Lock', act: run(() => ops.toggleLayerLock(layer.id)) })
+    items.push({ label: 'Delete', act: run(() => ops.removeLayer(layer.id)) })
+  } else {
+    items.push({ label: 'Undo', act: run(() => ops.undo()), disabled: !ops.canUndo })
+    items.push({ label: 'Redo', act: run(() => ops.redo()), disabled: !ops.canRedo })
+  }
+
+  /* Clamp so the panel never leaves the viewport (estimate row height). */
+  const H = items.length * 32 + 8
+  const x = Math.min(menu.x, (window.innerWidth ?? 0) - 200)
+  const y = Math.min(menu.y, (window.innerHeight ?? 0) - H)
+
+  return (
+    <div
+      data-kol-ctxmenu
+      className="bg-surface-secondary border border-fg-08 rounded shadow-lg py-1"
+      style={{ position: 'fixed', left: x, top: y, zIndex: 1200, width: 192 }}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {items.map((it, i) => it.divider
+        ? <div key={`d${i}`} className="border-t border-fg-08 my-1" />
+        : (
+          <button
+            key={it.label}
+            type="button"
+            disabled={it.disabled}
+            onClick={it.act}
+            className="w-full kol-helper-12 px-3 h-8 inline-flex items-center text-body hover:text-emphasis disabled:opacity-40 text-left"
+          >
+            <span className="flex-1 truncate leading-normal">{it.label}</span>
+          </button>
+        ))}
     </div>
   )
 }

@@ -146,7 +146,7 @@ function ShapeDropdown({ tool, setTool }) {
               <span className="shrink-0 w-4 inline-flex items-center justify-center">
                 <EditorIcon name={v.icon} size={14} />
               </span>
-              <span className="flex-1 truncate">{v.label}</span>
+              <span className="flex-1 truncate leading-normal">{v.label}</span>
               <span className="kol-helper-10 text-emphasis shrink-0">{isActive ? '✓' : v.shortcut}</span>
             </button>
           )
@@ -225,6 +225,80 @@ function BooleanDropdown({ disabled, onApply }) {
   )
 }
 
+/* Text dropdown — the type family's one front door (same fold pattern as
+ * ShapeDropdown). "Text" arms the drag-create text tool; "Kinetic type" is a
+ * one-shot insert (full-frame kinetic layer — presets, fonts and morph live
+ * in its Parameters panel), so the morph engine stops being reachable only
+ * through the layer-stack + menu. */
+function TextDropdown({ tool, setTool, addLayer }) {
+  const [open, setOpen] = useState(false)
+  const popover = usePopover({
+    open,
+    onOpenChange: setOpen,
+    placement: 'bottom-start',
+    offset: 4,
+    role: 'menu',
+  })
+  const active = tool === 'text'
+  return (
+    <>
+      <button
+        ref={popover.refs.setReference}
+        {...popover.getReferenceProps({
+          onClick: (e) => {
+            setTool('text')
+            e.currentTarget.blur()
+          },
+        })}
+        aria-label="Text"
+        aria-pressed={active}
+        data-kol-tip="Text (T)"
+        className={`relative inline-flex items-center justify-center rounded text-emphasis ${active ? '' : 'kol-btn-quiet'}`}
+        style={{ width: BTN, height: BTN, padding: 7 }}
+      >
+        <EditorIcon name="tool-text" size={ICON} />
+        <EditorIcon
+          name="tool-fold-indicator"
+          size={5}
+          className="absolute opacity-70"
+          style={{ right: 3, bottom: 3 }}
+        />
+      </button>
+      <PopoverPanel popover={popover} panel={false} focus={false} className="z-50 bg-surface-secondary border border-fg-08 rounded shadow-lg">
+        <button
+          type="button"
+          onClick={(e) => {
+            setTool('text')
+            setOpen(false)
+            e.currentTarget.blur()
+          }}
+          className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-body hover:text-emphasis text-left"
+        >
+          <span className="shrink-0 w-4 inline-flex items-center justify-center">
+            <EditorIcon name="tool-text" size={14} />
+          </span>
+          <span className="flex-1 truncate leading-normal">Text</span>
+          <span className="kol-helper-10 text-emphasis shrink-0">{active ? '✓' : 'T'}</span>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            addLayer('kinetic')
+            setOpen(false)
+            e.currentTarget.blur()
+          }}
+          className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-body hover:text-emphasis text-left"
+        >
+          <span className="shrink-0 w-4 inline-flex items-center justify-center">
+            <EditorIcon name="layer-kinetic" size={14} />
+          </span>
+          <span className="flex-1 truncate leading-normal">Kinetic type</span>
+        </button>
+      </PopoverPanel>
+    </>
+  )
+}
+
 export default function ToolPalette() {
   const { tool, setTool } = useTool()
   const {
@@ -276,9 +350,12 @@ export default function ToolPalette() {
   }
 
   return (
-    <div className="flex items-center gap-1 px-3 h-12">
+    /* min-w-0 + overflow-x-auto: at narrow widths the fixed button row used
+     * to paint OVER the right rail (no fold, no clip). Scrolling inside its
+     * own box stops the bleed; a real overflow-fold ("…" menu) can follow. */
+    <div className="flex items-center gap-1 px-3 h-12 min-w-0 overflow-x-auto">
       <ToolButton id="select"  active={tool === 'select'}  onClick={() => setTool('select')} />
-      <ToolButton id="text"    active={tool === 'text'}    onClick={() => setTool('text')} />
+      <TextDropdown tool={tool} setTool={setTool} addLayer={addLayer} />
       <ToolButton id="pen"     active={tool === 'pen'}     onClick={() => setTool('pen')} />
       <ShapeDropdown tool={tool} setTool={setTool} />
       <ToolButton id="pattern" active={tool === 'pattern'} onClick={() => setTool('pattern')} />

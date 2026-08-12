@@ -9,6 +9,7 @@ import { groupById, presetsInGroup, presetsInSub, presetLayerPatch } from '../..
 import { KINETIC_TREE, KINETIC_PRESETS, presetComp } from '../../kinetic/presets'
 import { FILTERS } from '../../filters'
 import { effectCategories, categoryOf, FX_RACK_GROUPS } from '../compose/inspectors/effectCategories'
+import { MODES, goMode } from '../mode'
 
 /**
  * LabsNav — labs mode's left rail (plan.md Phase 11.3): the persistent,
@@ -48,7 +49,7 @@ import { effectCategories, categoryOf, FX_RACK_GROUPS } from '../compose/inspect
  * not minted and map to shipped drawings: target-lock→target,
  * monitor→desktop, phone→mobile, cycle→refresh. Drift renders dith-flow
  * (the rack wave — user call; the labs dash drawing is dith-drift). */
-const GROUP_ICONS = {
+export const GROUP_ICONS = {
   'fx:halftone': 'ptrn-dot',
   'fx:scanline': 'grid-horizontal',
   'fx:crt': 'desktop',
@@ -70,6 +71,10 @@ const GROUP_ICONS = {
   'kin:Kinetic': 'font-01',
   'misc:Para Type': 'aa',
 }
+
+/* Mode-door rows (mode.js MODES) — shipped drawings only: desktop is the
+ * compositor chrome, globe the labs output, refresh the randomiser. */
+export const MODE_ICONS = { editor: 'desktop', labs: 'globe', randomiser: 'refresh' }
 
 /* Section eyebrow — labs' method labels (Effects · Generative · …), the
  * SAME treatment as the right rail's section headers (kol-helper-10
@@ -438,6 +443,26 @@ export default function LabsNav() {
               </button>
             </li>
           )}
+
+          {/* The three-way mode door (mode.js MODES) — same hop idiom as
+              Modulation. Labs is this chrome; Editor / Randomiser navigate
+              via goMode (remembers the pick, then sets the ?view= URL). */}
+          <NavSection label="Mode" open={openSection === 'mode'} onToggle={() => toggleSection('mode')} />
+          {sectionOpen('mode') && MODES.map((m) => (
+            <li key={m.id}>
+              <button
+                type="button"
+                onClick={collapsed ? expandRail : () => { if (m.id !== 'labs') goMode(m.id) }}
+                className="kol-sidenav-hop kol-helper-12 bg-transparent border-0 cursor-pointer text-left"
+              >
+                <span className="kol-sidenav-hop-icon inline-flex items-center justify-center w-5 h-5 shrink-0" aria-hidden="true">
+                  <Icon name={MODE_ICONS[m.id]} size={16} />
+                </span>
+                <span className="kol-sidenav-hop-label flex-1 min-w-0 truncate">{m.label}</span>
+                {m.id === 'labs' && <span className="kol-helper-10 text-emphasis shrink-0">✓</span>}
+              </button>
+            </li>
+          ))}
         </ul>
       </nav>
 

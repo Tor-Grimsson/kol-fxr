@@ -171,6 +171,9 @@ export default {
   id: 'math-expression',
   label: 'Oscilloscope',
   group: 'math',
+  /* An instrument, not a visual — the randomiser's Generate flow skips
+   * tool presets (registry isToolPreset). Labs/desktop still list it. */
+  tool: true,
   kind: '2d',
   duration: 5,
   params: [

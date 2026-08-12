@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Dropdown, LabeledControl, ViewToggle } from '@kolkrabbi/kol-component'
-import EditorButton from '../components/EditorButton'
+import { Button, Dropdown, LabeledControl, ViewToggle } from '@kolkrabbi/kol-component'
 import EditorIcon from '../icons/EditorIcon'
 import SwatchRow from '../compose/SwatchRow'
 import { useComposeState } from '../compose/state'
@@ -215,22 +214,22 @@ function PaletteModalBody({ onClose, layoutId, setLayoutId, harmonyId, setHarmon
             <PalettePreview layoutId={layoutId} palette={palette} bgOn={bgOn} />
 
             <div className="flex gap-2 border-t border-fg-08 pt-2">
-              <EditorButton variant="primary" size="sm" className="flex-1" onClick={randomize}>
+              <Button variant="primary" size="sm" className="flex-1" onClick={randomize}>
                 Randomize
-              </EditorButton>
-              <EditorButton variant="secondary" size="sm" className="flex-1" onClick={reset}>
+              </Button>
+              <Button variant="primary" size="sm" className="flex-1" onClick={reset}>
                 Reset
-              </EditorButton>
+              </Button>
             </div>
 
-            <EditorButton
+            <Button
               variant="primary"
               size="sm"
               className="w-full"
               onClick={() => savePalette({ colors, bgEnabled: bgOn, poolId, modeId })}
             >
               Save palette to library
-            </EditorButton>
+            </Button>
           </div>
         </div>
       </div>

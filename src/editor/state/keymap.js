@@ -68,7 +68,8 @@ export const SHORTCUTS = [
   { id: 'opacity-zero',   combo: '00',    label: 'Layer opacity 0%',        section: 'Layer', passive: true },
 
   /* View */
-  { id: 'show-shortcuts', combo: 'S',     label: 'Show shortcuts',          section: 'View' },
+  { id: 'show-shortcuts', combo: 'S',     label: 'Show / hide shortcuts',   section: 'View' },
+  { id: 'toggle-dots',    combo: 'M',     label: 'Show / hide modulation dots', section: 'View' },
   { id: 'toggle-rulers',  combo: 'Shift+R', label: 'Show / hide rulers',    section: 'View' },
   { id: 'pan',            combo: 'Space', label: 'Play / pause · hold + drag to pan', section: 'View', passive: true },
   /* Handled inside the canvas viewport (window keydown, input-guarded) —

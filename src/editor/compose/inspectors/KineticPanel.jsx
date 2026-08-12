@@ -1,7 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import EditorButton from '../../components/EditorButton'
 import EditorIcon from '../../icons/EditorIcon'
-import {
+import { Button,
   Dropdown, LabeledControl, Slider, Textarea, SegmentedToggle, ViewToggle,
   ToggleCheckbox, usePopover, PopoverPanel, MenuDropdownItem,
 } from '@kolkrabbi/kol-component'
@@ -232,13 +231,13 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
           insts={insts} idx={idx} onSelect={selectElement} onWrite={writeInstances}
           marked={marked} onMark={toggleMark} onGroup={groupMarked} onUngroup={ungroupMarked}
         />
-        <EditorButton
+        <Button
           variant="primary" size="sm" className="w-full"
           title="Edit elements on the canvas (click to select, drag to move, corners to scale)"
           onClick={() => window.dispatchEvent(new CustomEvent('kol:kinetic-edit', { detail: { id: layer.id, index: idx } }))}
         >
           Edit on canvas
-        </EditorButton>
+        </Button>
       </div>
 
       {tabStrip}
@@ -247,7 +246,7 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
         <>
           <LabeledControl label="Text">
             <Textarea
-              variant="ghost" size="sm" rows={2}
+              variant="filled" size="sm" rows={2} axis="y"
               value={insts[idx]?.text ?? ''}
               onChange={(e) => patchInstance(idx, { text: e.target.value })}
             />
@@ -276,12 +275,12 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
             palette={palette}
           />
           <div className="grid grid-cols-2 gap-2">
-            <EditorButton variant="primary" size="sm" onClick={onRandomise}>
+            <Button variant="primary" size="sm" onClick={onRandomise}>
               Randomise
-            </EditorButton>
-            <EditorButton variant="primary" size="sm" onClick={onRandomiseAll}>
+            </Button>
+            <Button variant="primary" size="sm" onClick={onRandomiseAll}>
               All elements
-            </EditorButton>
+            </Button>
           </div>
           <SeedField seed={seed} />
         </>
@@ -414,12 +413,12 @@ function ElementList({ insts, idx, onSelect, onWrite, marked, onMark, onGroup, o
               <span className="kol-helper-10 text-meta shrink-0">{i + 1}</span>
               <span className="truncate flex-1 min-w-0">{ins.text || '—'}</span>
               {tag && <span className="shrink-0 kol-helper-10 text-meta">grp {tag}</span>}
-              <EditorButton
+              <Button iconComponent={EditorIcon}
                 variant="ghost" size="sm" quiet iconOnly="duplicate" iconSize={12}
                 aria-label="Duplicate element" title="Duplicate element"
                 onClick={(e) => { e.stopPropagation(); duplicate(i) }}
               />
-              <EditorButton
+              <Button iconComponent={EditorIcon}
                 variant="ghost" size="sm" quiet iconOnly="close" iconSize={10}
                 aria-label="Remove element" title="Remove element"
                 disabled={insts.length <= 1}
@@ -430,31 +429,31 @@ function ElementList({ insts, idx, onSelect, onWrite, marked, onMark, onGroup, o
         })}
       </div>
       <div className="grid grid-cols-2 gap-1">
-        <EditorButton variant="primary" size="sm" disabled={marked.length < 2} onClick={onGroup}>
+        <Button variant="primary" size="sm" disabled={marked.length < 2} onClick={onGroup}>
           Group
-        </EditorButton>
-        <EditorButton variant="primary" size="sm" disabled={!marked.length} onClick={onUngroup}>
+        </Button>
+        <Button variant="primary" size="sm" disabled={!marked.length} onClick={onUngroup}>
           Ungroup
-        </EditorButton>
+        </Button>
       </div>
       <div className="flex items-center gap-1">
-        <EditorButton variant="primary" size="sm" className="flex-1" iconLeft="plus" iconSize={12} onClick={add}>
+        <Button iconComponent={EditorIcon} variant="primary" size="sm" className="flex-1" iconLeft="plus" iconSize={12} onClick={add}>
           Add element
-        </EditorButton>
-        <EditorButton
+        </Button>
+        <Button
           variant="ghost" size="sm" quiet style={iconBtnStyle}
           aria-label="Move element up" title="Move element up"
           disabled={idx <= 0} onClick={() => move(-1)}
         >
           <EditorIcon name="chevron-down" size={12} style={{ transform: 'rotate(180deg)' }} />
-        </EditorButton>
-        <EditorButton
+        </Button>
+        <Button
           variant="ghost" size="sm" quiet style={iconBtnStyle}
           aria-label="Move element down" title="Move element down"
           disabled={idx >= insts.length - 1} onClick={() => move(1)}
         >
           <EditorIcon name="chevron-down" size={12} />
-        </EditorButton>
+        </Button>
       </div>
     </>
   )
@@ -502,11 +501,11 @@ function MotionStack({ motions, mIdx, onSelect, onAdd, onRemove }) {
         <div className="flex-1 min-w-0">
           <SegmentedToggle value={String(mIdx)} onChange={(v) => onSelect(Number(v))} options={options} />
         </div>
-        <EditorButton
+        <Button iconComponent={EditorIcon}
           variant="ghost" size="sm" quiet iconOnly="plus" iconSize={12}
           aria-label="Add motion layer" title="Add motion layer" onClick={onAdd}
         />
-        <EditorButton
+        <Button iconComponent={EditorIcon}
           variant="ghost" size="sm" quiet iconOnly="close" iconSize={10}
           aria-label="Remove motion layer" title="Remove motion layer (the primary can only be set to None)"
           disabled={mIdx === 0} onClick={onRemove}
@@ -633,12 +632,12 @@ function CustomPathPoints({ inst, layer, onPoints }) {
         ))}
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <EditorButton variant="primary" size="sm" onClick={() => onPoints([...points, [0.5, 0.5]])}>
+        <Button variant="primary" size="sm" onClick={() => onPoints([...points, [0.5, 0.5]])}>
           Add point
-        </EditorButton>
-        <EditorButton variant="primary" size="sm" disabled={points.length <= 2} onClick={() => onPoints(points.slice(0, -1))}>
+        </Button>
+        <Button variant="primary" size="sm" disabled={points.length <= 2} onClick={() => onPoints(points.slice(0, -1))}>
           Remove point
-        </EditorButton>
+        </Button>
       </div>
     </div>
   )

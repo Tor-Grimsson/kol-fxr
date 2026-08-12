@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Dropdown, Section, SegmentedToggle } from '@kolkrabbi/kol-component'
-import EditorButton from '../../components/EditorButton'
+import { Button, Dropdown, Section, SegmentedToggle } from '@kolkrabbi/kol-component'
+import EditorIcon from '../../icons/EditorIcon'
 import MediaPicker from '../../library/MediaPicker'
 import { proxied, isVideoType } from '../../library/mediaLibrary'
 import TransportBar from '../../params/TransportBar'
@@ -88,22 +88,22 @@ function PhotoFileTab({ layer }) {
     <div className="flex flex-col gap-2">
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
       <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={onPickVideo} />
-      <EditorButton variant="primary" size="sm" className="w-full" iconLeft="upload" iconSize={12} onClick={() => fileRef.current?.click()}>
+      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="upload" iconSize={12} onClick={() => fileRef.current?.click()}>
         Upload image
-      </EditorButton>
-      <EditorButton variant="primary" size="sm" className="w-full" iconLeft="upload" iconSize={12} onClick={() => videoRef.current?.click()}>
+      </Button>
+      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="upload" iconSize={12} onClick={() => videoRef.current?.click()}>
         Upload video
-      </EditorButton>
-      <EditorButton variant="primary" size="sm" className="w-full" iconLeft="image" iconSize={12} onClick={() => setPickerOpen(true)}>
+      </Button>
+      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="image" iconSize={12} onClick={() => setPickerOpen(true)}>
         From library
-      </EditorButton>
-      <EditorButton variant="primary" size="sm" className="w-full" iconLeft="camera" iconSize={12} onClick={onWebcam}>
+      </Button>
+      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="camera" iconSize={12} onClick={onWebcam}>
         Webcam
-      </EditorButton>
+      </Button>
       {(layer.src || layer.srcType === 'webcam') && (
-        <EditorButton variant="primary" size="sm" className="w-full" iconLeft="trash" iconSize={12} onClick={onClear}>
+        <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="trash" iconSize={12} onClick={onClear}>
           Clear image
-        </EditorButton>
+        </Button>
       )}
       <MediaPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onPick={onLibraryPick} />
     </div>
@@ -125,23 +125,23 @@ function SettingsFileTab({ onSaveSettings, onLoadSettings, onSave, onSaveAs, cur
   }
   return (
     <div className="flex flex-col gap-2">
-      <EditorButton variant="primary" size="sm" className="w-full" iconLeft="download" iconSize={12} onClick={onSaveSettings}>
+      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="download" iconSize={12} onClick={onSaveSettings}>
         Save to file
-      </EditorButton>
-      <EditorButton variant="primary" size="sm" className="w-full" iconLeft="upload" iconSize={12} onClick={() => fileRef.current?.click()}>
+      </Button>
+      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="upload" iconSize={12} onClick={() => fileRef.current?.click()}>
         Load from file
-      </EditorButton>
+      </Button>
       <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onPick} />
       {err && <span className="kol-helper-10 text-ui-error">{err}</span>}
       {/* kol Divider's h-px never generates (Tailwind skips node_modules) —
           use the footer's own border-t divider idiom instead. */}
       <div className="border-t border-fg-08 my-1" />
-      <EditorButton variant="primary" size="sm" className="w-full" onClick={onSave}>
+      <Button variant="primary" size="sm" className="w-full" onClick={onSave}>
         {currentPresetId ? 'Save' : 'Save…'}
-      </EditorButton>
-      <EditorButton variant="primary" size="sm" className="w-full" onClick={onSaveAs}>
+      </Button>
+      <Button variant="primary" size="sm" className="w-full" onClick={onSaveAs}>
         Save as…
-      </EditorButton>
+      </Button>
     </div>
   )
 }
@@ -212,28 +212,28 @@ export default function EditorFooter() {
               <Dropdown size="sm" variant="subtle" className="flex-1 w-full" options={scaleOptions} value={pngScale} onChange={setPngScale} />
               <span className="kol-helper-10 text-meta whitespace-nowrap">{canvasW * pngScale} × {canvasH * pngScale} px</span>
             </div>
-            <EditorButton variant="primary" size="sm" className="w-full" iconLeft="download" iconSize={12} onClick={() => onExportPng(pngScale)}>
+            <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="download" iconSize={12} onClick={() => onExportPng(pngScale)}>
               Export PNG
-            </EditorButton>
-            <EditorButton variant="primary" size="sm" className="w-full" iconLeft="download" iconSize={12} onClick={exportWebm}>
+            </Button>
+            <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="download" iconSize={12} onClick={exportWebm}>
               Export loop (webm)
-            </EditorButton>
+            </Button>
             {/* Live capture — records the composed frame in real time (transport
                 running, params being tweaked), complementing the deterministic
                 loop bake above. */}
-            <EditorButton variant={recording ? 'secondary' : 'primary'} size="sm" className="w-full" iconLeft={recording ? 'eye-on' : 'download'} iconSize={12} onClick={toggleRecord}>
+            <Button iconComponent={EditorIcon} variant={recording ? 'secondary' : 'primary'} size="sm" className="w-full" iconLeft={recording ? 'eye-on' : 'download'} iconSize={12} onClick={toggleRecord}>
               {recording ? 'Stop recording' : 'Record'}
-            </EditorButton>
+            </Button>
             {/* Chromeless output in its own tab — a clean surface to screen-
                 record with OS / tab capture (bypasses the in-app Record path). */}
-            <EditorButton variant="primary" size="sm" className="w-full" iconLeft="maximize" iconSize={12} onClick={openOutputWindow}>
+            <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="maximize" iconSize={12} onClick={openOutputWindow}>
               Open output window
-            </EditorButton>
+            </Button>
             {/* Multi-size matrix — tick aspects × scales, bundle every PNG into
                 one .zip. */}
-            <EditorButton variant="primary" size="sm" className="w-full" iconLeft="duplicate" iconSize={12} onClick={() => setBatchOpen(true)}>
+            <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="duplicate" iconSize={12} onClick={() => setBatchOpen(true)}>
               Batch export
-            </EditorButton>
+            </Button>
           </Section>
         </div>
       )}

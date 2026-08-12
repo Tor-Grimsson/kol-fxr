@@ -81,6 +81,9 @@ export async function computeFrameGlyphs(frame) {
   const mode    = frame.axisMode ?? 'morph'
   const trackPx = (frame.tracking ?? -0.01) * size
   const denom   = Math.max(1, drawable - 1)
+  /* Frame model says `blend`; compose text layers carry `axisBlend` (the
+   * layer's `blend` is the compositing mode) — accept both. */
+  const blendVal = frame.blend ?? frame.axisBlend ?? 0.5
 
   /* Line metrics — textOutline.js's half-leading model. */
   const emScale = size / a.unitsPerEm
@@ -89,7 +92,11 @@ export async function computeFrameGlyphs(frame) {
   const lineH   = (frame.lineHeight ?? 1.05) * size
   const lines   = display.split('\n')
   const blockH  = Math.max(lines.length * lineH, size)   /* min-height: 1em */
-  const top     = ((frame.h ?? blockH) - blockH) / 2
+  const boxH    = frame.h ?? blockH
+  /* Vertical align mirrors the live flex wrapper (top | middle | bottom). */
+  const top     = frame.verticalAlign === 'top' ? 0
+    : frame.verticalAlign === 'bottom' ? (boxH - blockH)
+    : (boxH - blockH) / 2
 
   const glyphs = []
   let totalW = 0
@@ -110,7 +117,7 @@ export async function computeFrameGlyphs(frame) {
       let bbox
 
       if (frame.axisOn && mode === 'morph') {
-        const bl = curveBlend(t, frame.axisCurve ?? 'flat', frame.blend, frame.curveCp1 ?? { x: 0.33, y: 0.33 }, frame.curveCp2 ?? { x: 0.66, y: 0.66 })
+        const bl = curveBlend(t, frame.axisCurve ?? 'flat', blendVal, frame.curveCp1 ?? { x: 0.33, y: 0.33 }, frame.curveCp2 ?? { x: 0.66, y: 0.66 })
         const pA = a.getPath(ch, 0, 0, size)
         const pB = b.getPath(ch, 0, 0, size)
         const lerped = commandsMatch(pA.commands, pB.commands)
@@ -122,7 +129,7 @@ export async function computeFrameGlyphs(frame) {
         const advB = b.charToGlyph(ch).advanceWidth * (size / b.unitsPerEm)
         advance = advA * (1 - bl) + advB * bl + trackPx
       } else if (frame.axisOn && mode === 'random') {
-        const seed = seedFromBlend(frame.blend)
+        const seed = seedFromBlend(blendVal)
         const [w, wt] = pickCutFor(gi, seed, {
           widthLock:  frame.randomWidthLock,
           weightLock: frame.randomWeightLock,

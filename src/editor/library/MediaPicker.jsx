@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Input } from '@kolkrabbi/kol-component'
-import EditorButton from '../components/EditorButton'
+import { Button, Input } from '@kolkrabbi/kol-component'
+import EditorIcon from '../icons/EditorIcon'
 import { listMedia, mediaUrl, isImageType, isVideoType, formatSize } from './mediaLibrary'
 
 /**
@@ -123,13 +123,13 @@ function MediaLightbox({ files, index, onClose, onPrev, onNext, onUse, accept })
         <span className="kol-mono-10 text-meta">{index + 1} / {files.length}</span>
         <div className="flex items-center gap-2 mt-1">
           {pickable && (
-            <EditorButton variant="primary" size="sm" onClick={() => onUse(o)}>
+            <Button variant="primary" size="sm" onClick={() => onUse(o)}>
               Use
-            </EditorButton>
+            </Button>
           )}
-          <EditorButton variant="secondary" size="sm" onClick={copyUrl}>
+          <Button variant="primary" size="sm" onClick={copyUrl}>
             {copied ? 'Copied' : 'Copy URL'}
-          </EditorButton>
+          </Button>
         </div>
       </div>
 
@@ -142,7 +142,7 @@ function MediaLightbox({ files, index, onClose, onPrev, onNext, onUse, accept })
         <Chevron dir="right" />
       </button>
 
-      <EditorButton
+      <Button iconComponent={EditorIcon}
         variant="primary" size="sm" quiet
         iconOnly="close" iconSize={14}
         aria-label="Close preview"
@@ -224,7 +224,7 @@ export default function MediaPicker({ open, onClose, onPick, accept = 'all' }) {
               placeholder="Filter by name"
               className="flex-1"
             />
-            <EditorButton
+            <Button iconComponent={EditorIcon}
               variant="primary" size="sm" quiet
               iconOnly="close" iconSize={14}
               aria-label="Close"

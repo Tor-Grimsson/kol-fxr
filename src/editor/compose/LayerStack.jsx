@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
 import EditorIcon from '../icons/EditorIcon'
-import EditorButton from '../components/EditorButton'
-import { Input } from '@kolkrabbi/kol-component'
+import { Button, Input } from '@kolkrabbi/kol-component'
 import { Dropdown, MenuDropdownItem, MenuDropdownNest, usePopover, PopoverPanel } from '@kolkrabbi/kol-component'
 import { useComposeState, LAYER_TYPES } from './state'
 import { rowLabelForLayer } from './labels'
@@ -234,7 +233,7 @@ export function AddLayerButton() {
         {...popover.getReferenceProps()}
         className="inline-flex"
       >
-        <EditorButton
+        <Button iconComponent={EditorIcon}
           variant="primary"
           size="sm"
           animateIcon
@@ -567,7 +566,7 @@ export function LayerStackBody() {
         * lives in the tab row (LayersAssetsPanel), delete is Del/Backspace. */}
       {layerSelectionCount >= 2 && (
         <div className="mt-auto flex items-center gap-2 px-3 h-10 border-t border-fg-08">
-          <EditorButton
+          <Button iconComponent={EditorIcon}
             variant="primary"
             size="sm"
             iconLeft="component"
@@ -576,7 +575,7 @@ export function LayerStackBody() {
             title={`Group ${layerSelectionCount} selected layers`}
           >
             Group {layerSelectionCount}
-          </EditorButton>
+          </Button>
         </div>
       )}
     </div>

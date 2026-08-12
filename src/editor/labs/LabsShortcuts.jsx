@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import EditorButton from '../components/EditorButton'
+import { Button } from '@kolkrabbi/kol-component'
+import EditorIcon from '../icons/EditorIcon'
 
 /**
  * LabsShortcuts — labs' "Animate any value" card (the reference overlay on
@@ -80,7 +81,7 @@ export default function LabsShortcuts() {
             <p className="kol-helper-10 uppercase tracking-widest text-meta mb-1">Shortcuts</p>
             <p className="kol-mono-16 text-emphasis">Animate any value</p>
           </div>
-          <EditorButton
+          <Button iconComponent={EditorIcon}
             variant="primary" size="sm" quiet iconOnly="close" iconSize={14}
             aria-label="Close"
             onClick={() => setOpen(false)}

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { LabeledControl, SegmentedToggle, ToggleSwitch, ViewToggle, Slider, Input } from '@kolkrabbi/kol-component'
+import { Button, LabeledControl, SegmentedToggle, ToggleSwitch, ViewToggle, Slider, Input } from '@kolkrabbi/kol-component'
 import EditorIcon from '../../icons/EditorIcon'
-import EditorButton from '../../components/EditorButton'
 import { PickerRow, PickerDropdown } from './TreePicker'
 import { useComposeState } from '../state'
 import { findLayerDeep } from '../helpers'
@@ -86,6 +85,11 @@ function LayerEffects({ layer }) {
    * null = add mode (the pickers append a new stage). NOT layer state. */
   const [selIdx, setSelIdx] = useState(chain.length ? 0 : null)
   const stage = selIdx != null ? chain[selIdx] ?? null : null
+
+  /* Empty state (user ruling 2026-08-12): an empty chain shows ONLY the
+   * Add-effect button — no pre-opened pickers claiming "Halftone". */
+  const [adding, setAdding] = useState(false)
+  useEffect(() => { if (chain.length > 0) setAdding(false) }, [chain.length])
 
   const [tab, setTab] = useState('effect')
 
@@ -219,26 +223,37 @@ function LayerEffects({ layer }) {
         </div>
       )}
       {chain.length > 0 && selIdx != null && (
-        <EditorButton
-          variant="secondary" size="sm" className="w-full"
+        <Button
+          variant="primary" size="sm" className="w-full"
           onClick={() => setSelIdx(null)}
           disabled={chain.length >= MAX_FILTERS}
           title={chain.length >= MAX_FILTERS ? `Chain is full (${MAX_FILTERS} effects)` : 'Add another effect'}
         >
           Add effect
-        </EditorButton>
+        </Button>
+      )}
+
+      {/* ── empty chain: just the button (Figma's add-first flow) ── */}
+      {chain.length === 0 && !adding && (
+        <Button variant="primary" size="sm" className="w-full" onClick={() => setAdding(true)}>
+          Add effect
+        </Button>
       )}
 
       {/* ── Type/Category pickers — add a stage, or show/replace the selected one ── */}
-      <PickerRow label="Type" options={catOptions} value={catId} onChange={setCat} />
-      <PickerRow label="Category" options={fxOptions} value={fxValue} onChange={onPick} />
-      {presetParam && (
-        <PickerRow
-          label="Preset"
-          options={presetParam.options}
-          value={stage.params[presetParam.key] ?? presetParam.default}
-          onChange={(v) => setStageParams(presetPatchFor(stage.def, v))}
-        />
+      {(chain.length > 0 || adding) && (
+        <>
+          <PickerRow label="Type" options={catOptions} value={catId} onChange={setCat} />
+          <PickerRow label="Category" options={fxOptions} value={fxValue} onChange={onPick} />
+          {presetParam && (
+            <PickerRow
+              label="Preset"
+              options={presetParam.options}
+              value={stage.params[presetParam.key] ?? presetParam.default}
+              onChange={(v) => setStageParams(presetPatchFor(stage.def, v))}
+            />
+          )}
+        </>
       )}
 
       {chain.length > 0 && layer.imgW != null && (
@@ -350,7 +365,7 @@ function RandomizeRow({ def: _def, onRoll }) {
           onBlur={(e) => commitDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
         />
-        <EditorButton
+        <Button iconComponent={EditorIcon}
           variant="primary" size="sm" iconLeft="refresh" iconSize={12}
           onClick={() => {
             const s = randomSeed()
@@ -360,7 +375,7 @@ function RandomizeRow({ def: _def, onRoll }) {
           }}
         >
           Randomize
-        </EditorButton>
+        </Button>
       </div>
     </LabeledControl>
   )
@@ -460,9 +475,9 @@ export function SweepStack({ sweeps, onChange, inline = false }) {
           </div>
         )
       })}
-      <EditorButton variant="primary" size="sm" className="w-full" iconLeft="plus" iconSize={12} onClick={() => add()}>
+      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="plus" iconSize={12} onClick={() => add()}>
         Add custom sweep
-      </EditorButton>
+      </Button>
     </div>
   )
 }

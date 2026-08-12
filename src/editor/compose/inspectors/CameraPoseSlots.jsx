@@ -1,4 +1,4 @@
-import EditorButton from '../../components/EditorButton'
+import { Button } from '@kolkrabbi/kol-component'
 
 /**
  * CameraPoseSlots — labs CameraPanel's save/recall pose slots + Reset
@@ -44,7 +44,7 @@ export default function CameraPoseSlots({ layer, patch, camParams, isEngine, sho
       {showHeader && <span className="kol-helper-10 text-meta">Camera</span>}
       <div className="flex items-center gap-1">
         {camParams.length > 0 && slots.map((s, i) => (
-          <EditorButton
+          <Button
             key={i}
             variant={s ? 'secondary' : 'ghost'}
             size="sm"
@@ -52,11 +52,11 @@ export default function CameraPoseSlots({ layer, patch, camParams, isEngine, sho
             onClick={(e) => ((e.shiftKey || !s) ? save(i) : recall(i))}
           >
             {i + 1}
-          </EditorButton>
+          </Button>
         ))}
-        <EditorButton variant="primary" size="sm" className="ml-auto" onClick={reset}>
+        <Button variant="primary" size="sm" className="ml-auto" onClick={reset}>
           Reset
-        </EditorButton>
+        </Button>
       </div>
     </>
   )

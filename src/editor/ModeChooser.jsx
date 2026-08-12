@@ -1,4 +1,4 @@
-import EditorButton from './components/EditorButton'
+import { Button } from '@kolkrabbi/kol-component'
 import { MODES, goMode } from './mode'
 
 /**
@@ -16,7 +16,7 @@ export default function ModeChooser() {
       style={{ background: 'var(--kol-surface-primary)' }}>
       <div className="w-full max-w-md flex flex-col gap-3">
         {MODES.map((m) => (
-          <EditorButton
+          <Button
             key={m.id}
             variant="primary"
             size="lg"
@@ -24,7 +24,7 @@ export default function ModeChooser() {
             onClick={() => goMode(m.id)}
           >
             {m.label}
-          </EditorButton>
+          </Button>
         ))}
       </div>
     </div>

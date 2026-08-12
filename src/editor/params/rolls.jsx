@@ -73,6 +73,19 @@ export function allScopeParams(schema, layer) {
 export function computeRoll(layer, params, seed, { stripNoRandom = false } = {}) {
   const src = stripNoRandom ? params.map((p) => (p.noRandom ? { ...p, noRandom: false } : p)) : params
   const rolled = randomizeSchema(src, mulberry32(seed >>> 0))
+  /* A roll must not leave any in-scope range param outside its slider.
+   * Typed input may sit beyond the range by design (the input-outranks-
+   * slider law), and noRandom params keep it through a roll — which reads
+   * as "hectic randoms" (penrose, user 2026-08-12). Clamp the unrolled. */
+  for (const p of src) {
+    if (p.type !== 'range' || p.key in rolled) continue
+    const v = layer[p.key]
+    if (typeof v !== 'number') continue
+    const min = p.min ?? 0
+    const max = p.max ?? 1
+    if (v < min) rolled[p.key] = min
+    else if (v > max) rolled[p.key] = max
+  }
   const current = {}
   for (const k of Object.keys(rolled)) current[k] = layer[k]
   return { ...mergeRoll(current, rolled), _rollSeed: seed }

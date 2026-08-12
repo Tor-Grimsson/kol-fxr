@@ -26,6 +26,8 @@
 
 import { loadFont } from './fontLoader'
 import { applyCase } from './cuts'
+import { layerFamily, isOutlineFamily } from './families'
+import { computeFrameGlyphs } from './buildTypeSvg'
 
 /* Resolved (not promised) Fonts, keyed like fontLoader's promise cache. */
 const warm = new Map()
@@ -44,10 +46,23 @@ export async function warmTextFonts(layers) {
       if (l.type === 'group') { walk(l.children); continue }
       if (l.type !== 'text') continue
       const width = l.width ?? 'Tight'
-      /* mono → JetBrains Mono, which ships woff2-only (no TTF under
-       * /fonts/Right-Grotesk-ttf and opentype.js can't parse woff2) —
-       * never warms, always exports via the foreignObject fallback. */
-      if (width === 'mono') continue
+      /* Only outline families (Right Grotesk TTFs) warm — JetBrains ships
+       * woff2-only and Google families serve woff2 (opentype.js parses
+       * neither), so those export via the foreignObject fallback. */
+      if (!isOutlineFamily(layerFamily(l))) continue
+      /* Axis text (morph/random/fade) needs PER-GLYPH paths only the async
+       * computeFrameGlyphs can produce — precompute the pack here so the
+       * sync builder can pick it up (axisTextGlyphs below). */
+      if (l.axisOn) {
+        const akey = axisKey(l)
+        if (!axisWarm.has(akey)) {
+          jobs.push(
+            computeFrameGlyphs({ ...l, x: 0, y: 0 })
+              .then(({ glyphs }) => { axisWarm.set(akey, glyphs) })
+              .catch(() => {}),
+          )
+        }
+      }
       const key = keyOf(width, l.weight ?? 600, !!l.italic)
       if (warm.has(key)) continue
       jobs.push(
@@ -57,14 +72,30 @@ export async function warmTextFonts(layers) {
       )
     }
   }
+  if (axisWarm.size > 64) axisWarm.clear()  /* ponytail: crude cap, no LRU */
   walk(layers)
   await Promise.all(jobs)
+}
+
+/* ── axis-text glyph packs (morph export parity, T6 2026-08-12) ────────── */
+const axisWarm = new Map()  /* signature → glyphs from computeFrameGlyphs */
+const axisKey = (l) => JSON.stringify([
+  l.text, l.case, l.width, l.weight, l.italic, l.width2, l.weight2,
+  l.axisMode, l.axisBlend ?? l.blend, l.axisCurve, l.curveCp1, l.curveCp2,
+  l.randomWidthLock, l.randomWeightLock,
+  l.size, l.tracking, l.lineHeight, l.textAlign, l.verticalAlign, l.w, l.h,
+])
+
+/** Sync lookup for an axis layer's precomputed glyph pack (null = cold —
+ * builder falls back to the basic outline / foreignObject path). */
+export function axisTextGlyphs(layer) {
+  return axisWarm.get(axisKey(layer)) ?? null
 }
 
 /** Sync lookup for a text layer's parsed Font. Null = use the fallback. */
 export function textLayerFont(layer) {
   const width = layer.width ?? 'Tight'
-  if (width === 'mono') return null
+  if (!isOutlineFamily(layerFamily(layer))) return null
   return warm.get(keyOf(width, layer.weight ?? 600, !!layer.italic)) ?? null
 }
 
@@ -124,7 +155,10 @@ export function textOutlinePaths(layer, font) {
   const descent = -font.descender * scale        /* hhea descender is negative */
   const lineH   = lh * size
   const blockH  = Math.max(lines.length * lineH, size)  /* min-height: 1em */
-  const top     = (h - blockH) / 2
+  /* Vertical align mirrors the live flex wrapper (top | middle | bottom). */
+  const top     = layer.verticalAlign === 'top' ? 0
+    : layer.verticalAlign === 'bottom' ? (h - blockH)
+    : (h - blockH) / 2
 
   const paths = []
   lines.forEach((line, i) => {

@@ -1,13 +1,12 @@
 import { useState } from 'react'
-import { SegmentedToggle } from '@kolkrabbi/kol-component'
-import EditorButton from '../components/EditorButton'
+import { Button, SegmentedToggle } from '@kolkrabbi/kol-component'
 import EditorIcon from '../icons/EditorIcon'
 import TransportBar from '../params/TransportBar'
 import { useComposeState } from '../compose/state'
 import { useComposeFile } from '../compose/useComposeFile'
 import { transport } from '../params/transport'
-import { groupById, loopById, presetsInGroup, presetLayerPatch } from '../../loops/registry'
-import { GENERATIVE_TREE } from '../../loops/taxonomy'
+import { groupById, loopById, presetsInGroup, presetLayerPatch, isToolPreset } from '../../loops/registry'
+import CategoryScreen from './CategoryScreen'
 import { deriveScopes, allScopeParams, computeRoll, useRollSeed } from '../params/rolls'
 import { mulberry32 } from '../lib/rng'
 
@@ -29,8 +28,7 @@ import { mulberry32 } from '../lib/rng'
  */
 
 const PANEL_STYLE = {
-  background: 'color-mix(in srgb, var(--kol-surface-primary) 35%, transparent)',
-  borderRadius: 'var(--kol-radius-sm)',
+  background: 'var(--kol-surface-primary)',
 }
 
 const TABS_LOOP  = [
@@ -56,7 +54,7 @@ const ASPECT_ROW_2 = [
   { value: 'fill', label: 'Fill' },
 ]
 
-export default function MobileOverlay({ layer, onSwitchCategory, onRestart, aspectValue, onAspect }) {
+export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRestart, aspectValue, onAspect }) {
   const { updateLayer } = useComposeState()
   const { onExportPng } = useComposeFile()
   const [uiHidden, setUiHidden] = useState(false)
@@ -87,7 +85,7 @@ export default function MobileOverlay({ layer, onSwitchCategory, onRestart, aspe
   /* Seeded like every other roll (the _rollSeed flow), and the patch is the
    * registry's canonical one — not a hand-rolled subset. */
   const shufflePreset = () => {
-    const pool = presetsInGroup(layer.loopGroup).filter((p) => p.id !== layer.presetId)
+    const pool = presetsInGroup(layer.loopGroup).filter((p) => p.id !== layer.presetId && !isToolPreset(p))
     if (!pool.length) return
     const s = seed.take()
     const p = pool[Math.floor(mulberry32(s >>> 0)() * pool.length)]
@@ -99,14 +97,16 @@ export default function MobileOverlay({ layer, onSwitchCategory, onRestart, aspe
     return (
       <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-10 flex -translate-x-1/2 gap-2">
         {isLoop && (
-          <EditorButton variant="primary" size="lg" onClick={rollAll}>Randomize all</EditorButton>
+          <Button variant="primary" size="lg" onClick={rollAll}>Randomize all</Button>
         )}
-        <EditorButton variant="primary" size="lg" onClick={() => setOpen(true)}>
+        {/* Pill shows the preset name only — the group·preset long form
+            stays on the expanded header (user ruling 2026-08-12). */}
+        <Button variant="primary" size="lg" onClick={() => setOpen(true)}>
           <span className="flex items-center gap-2">
-            {title}
-            <EditorIcon name="chevron-down" size={12} className="rotate-180" />
+            {isLoop ? layer.presetLabel : 'Media'}
+            <EditorIcon name="chevron-down" size={16} className="rotate-180" />
           </span>
-        </EditorButton>
+        </Button>
       </div>
     )
   }
@@ -116,43 +116,37 @@ export default function MobileOverlay({ layer, onSwitchCategory, onRestart, aspe
 
   return (
     <>
-      {/* Generator switch sheet */}
+      {/* Generator switch sheet — the ONE list (CategoryScreen), identical
+          to the entry flow's: pick hops the live layer's category, Insert
+          restarts into the media picker, Back restarts to the beginning. */}
       {showCats && (
-        <div className="fixed inset-0 z-20 flex flex-col items-center overflow-y-auto bg-black/60 p-6 backdrop-blur-sm">
-          <div className="my-auto flex w-full flex-col items-center gap-2 py-6">
-            {GENERATIVE_TREE.map((entry) => (
-              <div key={entry.label} className="w-full max-w-sm">
-                <EditorButton
-                  variant="primary" size="lg"
-                  className="w-full"
-                  onClick={() => { onSwitchCategory(entry); setShowCats(false) }}
-                >
-                  {entry.label}
-                </EditorButton>
-              </div>
-            ))}
-            {/* outline, not ghost — ghost is bare oq-48 text floating on the
-                scrim, and its baked grey assumes a surface that isn't there. */}
-            <EditorButton variant="outline" size="lg" onClick={() => setShowCats(false)}>Cancel</EditorButton>
-          </div>
-        </div>
+        <CategoryScreen
+          onPick={(entry) => { onSwitchCategory(entry); setShowCats(false) }}
+          onInsert={() => { setShowCats(false); onInsert() }}
+          onBack={() => { setShowCats(false); onRestart() }}
+          onDismiss={() => setShowCats(false)}
+        />
       )}
 
-      {/* The one modal — see-through, borderless */}
+      {/* The one modal — full-bleed, square, solid surface (user 2026-08-12) */}
       <div
-        className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-10 backdrop-blur-sm"
+        className="fixed inset-x-0 bottom-0 z-10 pb-[env(safe-area-inset-bottom)]"
         style={PANEL_STYLE}
       >
-        {/* Header — one tap collapses */}
-        <button
-          className="kol-helper-12 text-meta flex w-full items-center justify-between px-3 py-2.5"
-          onClick={() => setOpen(false)}
-        >
-          <span>{title}</span>
-          {/* Real icon, opaque ink (the icons law — the header's text-meta
-              alpha stays on the TEXT only). */}
-          <EditorIcon name="chevron-down" size={12} className="text-oq-48" />
-        </button>
+        {/* Header — title tap collapses; Start over always reachable (it was
+            buried in the Output tab — "can't go back", user 2026-08-12). */}
+        <div className="flex w-full items-center px-3">
+          <button
+            className="kol-helper-12 text-meta flex flex-1 items-center gap-2 py-2.5"
+            onClick={() => setOpen(false)}
+          >
+            <span>{title}</span>
+            {/* Real icon, opaque ink (the icons law — the header's text-meta
+                alpha stays on the TEXT only). */}
+            <EditorIcon name="chevron-down" size={16} className="text-oq-48" />
+          </button>
+          <button className="kol-helper-12 text-meta py-2.5" onClick={onRestart}>Start over</button>
+        </div>
 
         <div className="px-3 pb-3">
           <SegmentedToggle value={activeTab} onChange={setTab} options={tabs} size="lg" />
@@ -160,26 +154,26 @@ export default function MobileOverlay({ layer, onSwitchCategory, onRestart, aspe
           {activeTab === 'generate' && isLoop && (
             <div className="flex flex-col gap-2 pt-3">
               <div className="grid grid-cols-2 gap-2">
-                <EditorButton variant="primary" size="lg" iconRight="refresh" onClick={shufflePreset}>Preset</EditorButton>
-                <EditorButton variant="primary" size="lg" onClick={() => setShowCats(true)}>Generator</EditorButton>
+                <Button iconComponent={EditorIcon} variant="primary" size="lg" iconRight="refresh" onClick={shufflePreset}>Preset</Button>
+                <Button variant="primary" size="lg" onClick={() => setShowCats(true)}>Generator</Button>
               </div>
-              <EditorButton variant="primary" size="lg" className="w-full" onClick={rollAll}>
+              <Button variant="primary" size="lg" className="w-full" onClick={rollAll}>
                 Randomize all
-              </EditorButton>
+              </Button>
               {scopes.length > 0 && (
                 <div className="grid grid-cols-2 gap-2">
                   {scopes.map((s) => (
-                    <EditorButton key={s.id} variant="primary" size="lg" onClick={() => rollScope(s)}>
+                    <Button key={s.id} variant="primary" size="lg" onClick={() => rollScope(s)}>
                       {s.label}
-                    </EditorButton>
+                    </Button>
                   ))}
                   {/* Re-trigger — restart the sim clock (rewind: t=0 + a new
                       reset epoch, keeps playing). Accumulative sims (penrose
                       growth, trails, diffusion) re-run from seed; pure loops
                       just restart their phase. Fills the odd grid cell. */}
-                  <EditorButton variant="primary" size="lg" onClick={() => transport.rewind()}>
+                  <Button variant="primary" size="lg" onClick={() => transport.rewind()}>
                     Re-trigger
-                  </EditorButton>
+                  </Button>
                 </div>
               )}
             </div>
@@ -196,9 +190,9 @@ export default function MobileOverlay({ layer, onSwitchCategory, onRestart, aspe
               <SegmentedToggle value={aspectValue} onChange={onAspect} options={ASPECT_ROW_1} size="lg" ariaLabel="Aspect" />
               <SegmentedToggle value={aspectValue} onChange={onAspect} options={ASPECT_ROW_2} size="lg" ariaLabel="Aspect (landscape) and fill" />
               <div className="grid grid-cols-3 gap-2">
-                <EditorButton variant="primary" size="lg" onClick={() => onExportPng(2)}>Download</EditorButton>
-                <EditorButton variant="primary" size="lg" onClick={() => setUiHidden(true)}>Hide UI</EditorButton>
-                <EditorButton variant="primary" size="lg" onClick={onRestart}>Start over</EditorButton>
+                <Button variant="primary" size="lg" onClick={() => onExportPng(2)}>Download</Button>
+                <Button variant="primary" size="lg" onClick={() => setUiHidden(true)}>Hide UI</Button>
+                <Button variant="primary" size="lg" onClick={onRestart}>Start over</Button>
               </div>
             </div>
           )}

@@ -1,5 +1,5 @@
-import { LabeledControl } from '@kolkrabbi/kol-component'
-import EditorButton from '../../components/EditorButton'
+import { Button, LabeledControl } from '@kolkrabbi/kol-component'
+import EditorIcon from '../../icons/EditorIcon'
 import ColorPicker from '../../modes/pattern/ColorPicker'
 import RuleRow, { newRule, randomRule } from '../../modes/pattern/RuleRow'
 import AutoControls from '../../params/AutoControls'
@@ -136,9 +136,9 @@ function PatternSurface({ layer }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <EditorButton variant="primary" size="sm" className="w-full" onClick={onRollAll}>
+      <Button variant="primary" size="sm" className="w-full" onClick={onRollAll}>
         Randomize all
-      </EditorButton>
+      </Button>
       <SeedField seed={seed} />
 
       <AutoControls
@@ -161,12 +161,12 @@ function PatternSurface({ layer }) {
             />
           ))}
           <div className="grid grid-cols-2 gap-2">
-            <EditorButton variant="primary" size="sm" iconLeft="plus" onClick={addRule}>
+            <Button iconComponent={EditorIcon} variant="primary" size="sm" iconLeft="plus" onClick={addRule}>
               Add rule
-            </EditorButton>
-            <EditorButton variant="primary" size="sm" onClick={randomizeRules}>
+            </Button>
+            <Button variant="primary" size="sm" onClick={randomizeRules}>
               Randomize
-            </EditorButton>
+            </Button>
           </div>
         </div>
       </LabeledControl>
@@ -180,13 +180,13 @@ function PatternSurface({ layer }) {
         />
       </LabeledControl>
 
-      <EditorButton
+      <Button
         variant="primary" size="sm" className="w-full"
         onClick={onSave}
         title="Save current pattern params to the shared library"
       >
         Save pattern to library
-      </EditorButton>
+      </Button>
     </div>
   )
 }

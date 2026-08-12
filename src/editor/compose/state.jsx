@@ -327,6 +327,7 @@ function boxFromAnchor(anchor, w, h, vh = CANVAS_H) {
  * newFrame() defaults so picking a saved type spec or starting fresh yields
  * the same baseline shape across the two surfaces. */
 const TEXT_DEFAULTS = {
+  family:     'right-grotesk',   /* the 2026-08-12 family model (families.js) */
   width:      'Tight',
   weight:     600,
   italic:     false,
@@ -335,6 +336,22 @@ const TEXT_DEFAULTS = {
   lineHeight: 1.05,
   case:       'original',
   textAlign:  'center',
+  verticalAlign: 'middle',       /* top | middle | bottom of the frame */
+  resizing:   'fixed',           /* fixed | auto-w | auto-h (Figma Layout) */
+  /* Variable axis — the brand editor's basic morph setting (Type mode frame
+   * model): Cut A is width/weight above, Cut B is width2/weight2. The blend
+   * lives as `axisBlend` on the LAYER (`blend` is taken by the compositing
+   * mode); frame-model consumers (computeFrameGlyphs) fall back to it. */
+  axisOn:           false,
+  axisMode:         'morph',
+  width2:           'Spatial',
+  weight2:          900,
+  axisBlend:        0.5,
+  axisCurve:        'flat',
+  curveCp1:         { x: 0.33, y: 0.33 },
+  curveCp2:         { x: 0.66, y: 0.66 },
+  randomWidthLock:  '',
+  randomWeightLock: '',
 }
 
 /* Defaults for a pattern layer's Pattern Lab fields. Mirrors PatternLab's
@@ -1284,16 +1301,19 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
       const located = ids
         .map((id) => locateLayer(prev, id))
         .filter((f) => f && typeof f.layer.x === 'number' && typeof f.layer.y === 'number' && !f.layer.locked)
-      if (located.length < 2) return prev
+      if (located.length < 1) return prev
 
       const xs  = located.map((f) => f.originX + f.layer.x)
       const ys  = located.map((f) => f.originY + f.layer.y)
       const xs2 = located.map((f, i) => xs[i] + (f.layer.w ?? 0))
       const ys2 = located.map((f, i) => ys[i] + (f.layer.h ?? 0))
-      const bx = Math.min(...xs)
-      const by = Math.min(...ys)
-      const bw = Math.max(...xs2) - bx
-      const bh = Math.max(...ys2) - by
+      /* One layer aligns to the CANVAS (the Figma parent-align model —
+       * inspector's Position/Alignment row); ≥2 align to their common bbox. */
+      const single = located.length === 1
+      const bx = single ? 0 : Math.min(...xs)
+      const by = single ? 0 : Math.min(...ys)
+      const bw = single ? CANVAS_W : Math.max(...xs2) - bx
+      const bh = single ? virtualHRef.current : Math.max(...ys2) - by
 
       let next = prev
       located.forEach((f, i) => {
@@ -1602,6 +1622,9 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
         visible: true, opacity: 1, blend: 'normal',
         ...pos, w, h,
         text:       item.text       ?? 'New text',
+        /* family model: legacy specs carry no family — layerFamily()'s
+         * read-time migration resolves them (mono width → JetBrains). */
+        family:     item.family     ?? (item.width === 'mono' ? 'jetbrains-mono' : 'right-grotesk'),
         width:      item.width      ?? 'Tight',
         weight:     item.weight     ?? 600,
         italic:     item.italic     ?? false,
@@ -1658,7 +1681,8 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
       return
     }
     ;(async () => {
-      const ok = await modal.confirm('Restore your last canvas? You had unsaved work from your previous session.')
+      /* ModalConfirmLabels shipped (0.35.0) — the buttons say the outcome. */
+      const ok = await modal.confirm('Restore your last canvas?', { okLabel: 'Restore', cancelLabel: 'New file' })
       if (ok) {
         /* Raw setters, not the smart setAspect — a saved 'custom' canvas
          * must keep its stored W/H, not snap back to a preset table entry. */

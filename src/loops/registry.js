@@ -71,6 +71,11 @@ export const PRESETS = [
 ]
 
 export const loopById = (id) => LOOPS.find((l) => l.id === id) || LOOPS[0]
+
+// Tool loops (loop def `tool: true`) are instruments, not visuals — the
+// randomiser's Generate/shuffle flows exclude their presets.
+const TOOL_LOOP_IDS = new Set(LOOPS.filter((l) => l.tool).map((l) => l.id))
+export const isToolPreset = (p) => TOOL_LOOP_IDS.has(p.loop)
 export const presetsInGroup = (group) => PRESETS_BY_GROUP[group] || []
 export const presetsInSub = (group, sub) => presetsInGroup(group).filter((p) => p.sub === sub)
 export const presetById = (id) => PRESETS.find((p) => p.id === id) || PRESETS[0]
@@ -104,13 +109,28 @@ const loopOffSchemaKeys = (loopId) => {
   return keys
 }
 
+// Core layer fields no loop param may shadow — params live FLAT on the layer
+// by design, so these are the one namespace presets are barred from. The
+// iridescent presets' `type` pin flattened onto layer.type and turned every
+// Gradients layer into "Media" with a blank stage (2026-08-12).
+const RESERVED_LAYER_KEYS = ['id', 'type', 'x', 'y', 'w', 'h', 'src']
+
 // A preset's full param object = the loop's defaults overlaid with the preset's
 // overrides; off-schema keys the preset doesn't set itself clear to undefined.
-export const presetParams = (preset) => ({
-  ...Object.fromEntries(loopOffSchemaKeys(preset.loop).map((k) => [k, undefined])),
-  ...loopDefaults(loopById(preset.loop)),
-  ...(preset.params || {}),
-})
+export const presetParams = (preset) => {
+  const params = {
+    ...Object.fromEntries(loopOffSchemaKeys(preset.loop).map((k) => [k, undefined])),
+    ...loopDefaults(loopById(preset.loop)),
+    ...(preset.params || {}),
+  }
+  for (const k of RESERVED_LAYER_KEYS) {
+    if (k in params) {
+      console.warn(`[loops] preset "${preset.id}" param "${k}" shadows a core layer field — dropped`)
+      delete params[k]
+    }
+  }
+  return params
+}
 
 // The full loop-layer patch a preset pick applies — a preset is a full param
 // RESET, not a diff (LoopPicker's applyPreset shape). Shared by every "put
@@ -127,7 +147,7 @@ export const presetLayerPatch = (preset, group) => ({
 // me this generative type" entry point. Null when the group is empty.
 export const firstPresetPatch = (entry) => {
   const group = entry.groups[0]
-  const preset = presetsInGroup(group)[0]
+  const preset = presetsInGroup(group).find((p) => !isToolPreset(p))
   return preset ? presetLayerPatch(preset, group) : null
 }
 

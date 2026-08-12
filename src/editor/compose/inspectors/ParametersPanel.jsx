@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import EditorButton from '../../components/EditorButton'
-import { Dropdown } from '@kolkrabbi/kol-component'
+import { useEffect, useState } from 'react'
+import { Button, Dropdown } from '@kolkrabbi/kol-component'
 import { LabeledControl } from '@kolkrabbi/kol-component'
 import { SegmentedToggle } from '@kolkrabbi/kol-component'
 import { ViewToggle } from '@kolkrabbi/kol-component'
@@ -26,7 +25,8 @@ import { SHAPE_SCHEMA } from '../../params/schemas/shape'
 import { PATTERN_SCHEMA } from '../../params/schemas/pattern'
 import { TEXT_SCHEMA } from '../../params/schemas/text'
 import { PHOTO_SCHEMA } from '../../params/schemas/photo'
-import { TEXT_TAB_KEYS } from './TextPanel'
+import { TEXT_TAB_KEYS, VariableBlock } from './TextPanel'
+import { layerFamily, isOutlineFamily } from '../../modes/type/families'
 import { loopById, loopBgToggleable, resolveCameraKeys, presetsInGroup } from '../../../loops/registry'
 import { wildExpression, fitBounds } from '../../../loops/math/expression'
 import { mulberry32 } from '../../lib/rng'
@@ -67,8 +67,8 @@ const SUBTAB_OPTIONS = [
 ]
 const ANIM_HINT = 'Modulate any parameter via its bind dot (Time · LFO · Expression · Audio · MIDI · Joystick …). Pick a source at the dot; its controls appear here.'
 
-/* Text params minus the styling keys the Text tab owns (one home per
- * control) — leaves Content plus any future non-styling params. */
+/* Text params minus the keys the Inspector's TextSurface owns (one home per
+ * control) — leaves any future non-styling params. */
 const TEXT_PARAMS_SCHEMA = TEXT_SCHEMA.filter((p) => !TEXT_TAB_KEYS.has(p.key))
 
 export default function ParametersPanel() {
@@ -92,6 +92,12 @@ function LayerParameters({ layer }) {
   const edit = useLayerEdit(layer.id, { history: 'coalesce' })
   const setProp = edit.setProp
   const [tab, setTab] = useState('style')
+  /* Deep-link a subtab (context menu's "Morph" lands on Style). */
+  useEffect(() => {
+    const onSubtab = (e) => { if (e.detail?.tab) setTab(e.detail.tab) }
+    window.addEventListener('kol:params-subtab', onSubtab)
+    return () => window.removeEventListener('kol:params-subtab', onSubtab)
+  }, [])
   const renderAnimate = (p) => <BindDot layer={layer} param={p} setProp={setProp} />
   const shared = { layer, setProp, patch: edit.patch, updateLayer, palette, renderAnimate, tab }
   const tabStrip = <SegmentedToggle value={tab} onChange={setTab} options={SUBTAB_OPTIONS} />
@@ -103,13 +109,13 @@ function LayerParameters({ layer }) {
     body = (
       <>
         {tab === 'generate' && ['rect', 'ellipse', 'triangle', 'polygon', 'star', 'line'].includes(layer.kind) && (
-          <EditorButton
-            variant="secondary" size="sm" className="w-full"
+          <Button
+            variant="primary" size="sm" className="w-full"
             onClick={() => convertShapeToPath(layer.id)}
             title="Convert the shape to an editable bezier path (one-way)"
           >
             Convert to path
-          </EditorButton>
+          </Button>
         )}
         {tab === 'style' && <AutoControls schema={SHAPE_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="style" />}
         {tab === 'anim' && (
@@ -331,24 +337,24 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
               weight/seed) — pickers above the randomize block, labs order. */}
           <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="generate" inline={inline} />
 
-          <EditorButton variant="primary" size="sm" className="w-full" onClick={(e) => (e.altKey ? resetScope(allScopeParams(schema, layer)) : roll(allScopeParams(schema, layer)))}>
+          <Button variant="primary" size="sm" className="w-full" onClick={(e) => (e.altKey ? resetScope(allScopeParams(schema, layer)) : roll(allScopeParams(schema, layer)))}>
             Randomize all
-          </EditorButton>
+          </Button>
           {scopes.length > 0 && (
             /* Odd counts keep the lone half-width cell — labs' own grids do
              * (Pattern's 5, Penrose's 6-plus-reset), verified 2026-08-09. */
             <div className="grid grid-cols-2 gap-2">
               {scopes.map((s) => (
-                <EditorButton key={s.id} variant="primary" size="sm" onClick={(e) => (e.altKey ? resetScope(s.params) : roll(s.params, s))}>
+                <Button key={s.id} variant="primary" size="sm" onClick={(e) => (e.altKey ? resetScope(s.params) : roll(s.params, s))}>
                   {s.label}
-                </EditorButton>
+                </Button>
               ))}
               {/* Wild — the oscilloscope's second expression button: the
                   procedural compositor (nested/gated DSL), where the
                   Expression chip draws from the curated pool. Seeded through
                   the same _rollSeed flow; ⌥-click resets like the chip. */}
               {layer.loopId === 'math-expression' && (
-                <EditorButton
+                <Button
                   variant="primary"
                   size="sm"
                   onClick={(e) => {
@@ -358,7 +364,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
                   }}
                 >
                   Wild
-                </EditorButton>
+                </Button>
               )}
             </div>
           )}
@@ -385,12 +391,12 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
               min/max to the curve; Reset restores the View section. */}
           {layer.loopId === 'math-expression' && (
             <div className="grid grid-cols-2 gap-2">
-              <EditorButton variant="primary" size="sm" onClick={() => updateLayer(layer.id, fitBounds(layer))}>
+              <Button variant="primary" size="sm" onClick={() => updateLayer(layer.id, fitBounds(layer))}>
                 Fit
-              </EditorButton>
-              <EditorButton variant="primary" size="sm" onClick={() => resetScope(scopes.find((s) => s.id === 'View')?.params ?? [])}>
+              </Button>
+              <Button variant="primary" size="sm" onClick={() => resetScope(scopes.find((s) => s.id === 'View')?.params ?? [])}>
                 Reset
-              </EditorButton>
+              </Button>
             </div>
           )}
         </>
@@ -495,10 +501,10 @@ function PatternFields({ layer, setProp, updateLayer, palette, renderAnimate, ta
           )}
 
           <div className="pt-2 border-t border-fg-08">
-            <EditorButton variant="secondary" size="sm" className="w-full" onClick={onFlatten}
+            <Button variant="primary" size="sm" className="w-full" onClick={onFlatten}
               title="Flatten the pattern to static SVG shapes (one-way)">
               Flatten
-            </EditorButton>
+            </Button>
           </div>
         </>
       )}
@@ -518,9 +524,9 @@ function PatternFields({ layer, setProp, updateLayer, palette, renderAnimate, ta
 }
 
 /**
- * TextFields — the text layer's NON-styling remainder. Typography styling
- * (width/weight/case/italic/align/metrics) lives in the Text tab (TextPanel)
- * — one home per control; Style here keeps the Content field.
+ * TextFields — the text layer's NON-styling remainder. Content + typography
+ * live in the Inspector's TextSurface (the 2026-08-12 inspector ruling) —
+ * one home per control; this keeps the saved-spec picker, Flatten and anim.
  *
  * Optional "Saved as" picker reads from the shared library's `type` slot
  * (saves from Type Lab). Picking a spec copies its typography fields into
@@ -570,15 +576,23 @@ function TextFields({ layer, setProp, updateLayer, palette, renderAnimate, tab }
             </LabeledControl>
           )}
 
-          <EditorButton variant="secondary" size="sm" className="w-full" onClick={onFlatten}
-            title="Flatten the text to glyph-outline shapes (one-way)">
+          <Button variant="primary" size="sm" className="w-full" onClick={onFlatten}
+            disabled={!isOutlineFamily(layerFamily(layer))}
+            title={isOutlineFamily(layerFamily(layer))
+              ? 'Flatten the text to glyph-outline shapes (one-way)'
+              : 'Flatten needs an outline font — switch the Family to Right Grotesk'}>
             Flatten
-          </EditorButton>
+          </Button>
         </>
       )}
 
       {tab === 'style' && (
-        <AutoControls schema={TEXT_PARAMS_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="style" />
+        <>
+          {/* Morph — the text layer's option surface (user ruling 2026-08-12:
+              options live in Parameters, the Inspector shows what's set). */}
+          <VariableBlock layer={layer} setProp={setProp} />
+          <AutoControls schema={TEXT_PARAMS_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="style" />
+        </>
       )}
 
       {tab === 'anim' && (

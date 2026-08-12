@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import EditorButton from '../../components/EditorButton'
-import { Dropdown, LabeledControl, Slider } from '@kolkrabbi/kol-component'
+import EditorIcon from '../../icons/EditorIcon'
+import { Button, Dropdown, LabeledControl, Slider } from '@kolkrabbi/kol-component'
 import { useComposeState } from '../state'
 import { useLayerEdit } from '../useLayerEdit'
 import { mulberry32, randomSeed } from '../../lib/rng'
@@ -213,26 +213,26 @@ export default function SoftformsLayers({ layer }) {
             >
               <span className="kol-helper-10 text-meta shrink-0">{i + 1}</span>
               <span className="truncate flex-1 min-w-0">{labelOf(typeOpts, f.t)}</span>
-              <EditorButton
+              <Button iconComponent={EditorIcon}
                 variant="ghost" size="sm" quiet iconOnly="chevron-down" iconSize={12}
                 aria-label="Move form up" title="Move form up"
                 disabled={i >= forms.length - 1}
                 onClick={(e) => { e.stopPropagation(); swapForm(i, i + 1) }}
                 style={{ transform: 'rotate(180deg)' }}
               />
-              <EditorButton
+              <Button iconComponent={EditorIcon}
                 variant="ghost" size="sm" quiet iconOnly="chevron-down" iconSize={12}
                 aria-label="Move form down" title="Move form down"
                 disabled={i <= 0}
                 onClick={(e) => { e.stopPropagation(); swapForm(i, i - 1) }}
               />
-              <EditorButton
+              <Button iconComponent={EditorIcon}
                 variant="ghost" size="sm" quiet iconOnly="duplicate" iconSize={12}
                 aria-label="Duplicate form" title="Duplicate form"
                 disabled={forms.length >= MAX_FORMS}
                 onClick={(e) => { e.stopPropagation(); dupForm(i) }}
               />
-              <EditorButton
+              <Button iconComponent={EditorIcon}
                 variant="ghost" size="sm" quiet iconOnly="trash" iconSize={12}
                 aria-label="Delete form" title="Delete form"
                 disabled={forms.length <= minForms}
@@ -243,21 +243,21 @@ export default function SoftformsLayers({ layer }) {
         })}
       </div>
 
-      <EditorButton
+      <Button iconComponent={EditorIcon}
         variant="primary" size="sm" className="w-full" iconLeft="plus" iconSize={12}
         disabled={forms.length >= MAX_FORMS} onClick={addForm}
       >
         Add form
-      </EditorButton>
+      </Button>
 
       {!is3d && (
-        <EditorButton
+        <Button
           variant="primary" size="sm" className="w-full"
           title="Edit forms on the canvas (click to select, drag to move, corners to scale, knob to rotate)"
           onClick={() => window.dispatchEvent(new CustomEvent('kol:softform-edit', { detail: { id: layer.id, index: Math.max(0, sel) } }))}
         >
           Edit forms on canvas
-        </EditorButton>
+        </Button>
       )}
 
       {selForm && (
@@ -284,12 +284,12 @@ export default function SoftformsLayers({ layer }) {
 
       <span className="kol-helper-10 text-meta pt-1">Randomise forms</span>
       <div className="grid grid-cols-2 gap-2">
-        <EditorButton variant="primary" size="sm" onClick={rollColor}>Color</EditorButton>
-        <EditorButton variant="primary" size="sm" onClick={rollTransform}>Transform</EditorButton>
-        <EditorButton variant="primary" size="sm" onClick={rollScale}>Scale</EditorButton>
-        <EditorButton variant="primary" size="sm" onClick={rollAnim}>Animation</EditorButton>
+        <Button variant="primary" size="sm" onClick={rollColor}>Color</Button>
+        <Button variant="primary" size="sm" onClick={rollTransform}>Transform</Button>
+        <Button variant="primary" size="sm" onClick={rollScale}>Scale</Button>
+        <Button variant="primary" size="sm" onClick={rollAnim}>Animation</Button>
       </div>
-      <EditorButton variant="primary" size="sm" className="w-full" onClick={rollRearrange}>Rearrange</EditorButton>
+      <Button variant="primary" size="sm" className="w-full" onClick={rollRearrange}>Rearrange</Button>
     </div>
   )
 }

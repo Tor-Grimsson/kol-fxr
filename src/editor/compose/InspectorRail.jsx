@@ -1,4 +1,5 @@
-import EditorButton from '../components/EditorButton'
+import { Button } from '@kolkrabbi/kol-component'
+import EditorIcon from '../icons/EditorIcon'
 import { useComposeState } from './state'
 import { findLayerDeep } from './helpers'
 import LayerInspector   from './inspectors/LayerInspector'
@@ -40,7 +41,7 @@ export default function InspectorRail() {
       <div className="flex flex-col gap-3">
         <p className="kol-helper-12 text-meta">{layerOnlyIds.length} layers selected.</p>
         <AlignmentPanel />
-        <EditorButton
+        <Button iconComponent={EditorIcon}
           variant="primary"
           size="sm"
           className="w-full"
@@ -49,13 +50,15 @@ export default function InspectorRail() {
           onClick={() => groupLayers(layerOnlyIds)}
         >
           Group selection
-        </EditorButton>
+        </Button>
       </div>
     )
   }
   else if (layer) { body = <LayerInspector layer={layer} /> }
-  /* Nothing selected → show the canvas info / background as the default. */
-  else { body = <CanvasInspector /> }
+  /* Nothing selected → an EMPTY rail (user ruling 2026-08-12: no dummy
+   * empty-state copy). The old CanvasInspector default made clicking the
+   * Canvas row a visual no-op; selection must visibly spawn its controls. */
+  else { body = null }
 
   return (
     <div className="kol-compose-rail kol-compose-rail--inspector">

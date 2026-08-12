@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Dropdown, Input, LabeledControl } from '@kolkrabbi/kol-component'
-import EditorButton from '../../components/EditorButton'
+import { Button, Dropdown, Input, LabeledControl } from '@kolkrabbi/kol-component'
 import { NumberField } from './NumberField'
 import { CLIPS, CURVE_KINDS, defaultCustomFor, forkClipDef } from '../../../loops/math/curves'
 import { isValidVars } from '../../../loops/math/mathfn'
@@ -72,7 +71,7 @@ function TermsEditor({ def, commit }) {
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <span className="kol-helper-10 text-meta">Vectors</span>
-        <EditorButton variant="primary" size="sm" onClick={addTerm}>Add</EditorButton>
+        <Button variant="primary" size="sm" onClick={addTerm}>Add</Button>
       </div>
       <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1.5 items-center min-w-0 [&>*]:min-w-0">
         <span className="kol-helper-10 text-fg-48 text-center">amp</span>
@@ -106,7 +105,7 @@ function TermRow({ term, onSet, onRemove, canRemove }) {
       {cell('amp', 1)}
       {cell('freq', 1)}
       {cell('phase', 0)}
-      <EditorButton variant="ghost" size="sm" onClick={onRemove} disabled={!canRemove} aria-label="Remove vector">×</EditorButton>
+      <Button variant="ghost" size="sm" onClick={onRemove} disabled={!canRemove} aria-label="Remove vector">×</Button>
     </>
   )
 }

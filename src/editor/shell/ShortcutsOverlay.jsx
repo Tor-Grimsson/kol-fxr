@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { comboLabel, shortcutsBySection } from '../state/keymap'
-import EditorButton from '../components/EditorButton'
+import { Button } from '@kolkrabbi/kol-component'
+import EditorIcon from '../icons/EditorIcon'
 
 /**
  * ShortcutsOverlay — modal cheat sheet for the editor keymap.
@@ -21,7 +22,8 @@ export default function ShortcutsOverlay() {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    const onShow  = () => setOpen(true)
+    /* S TOGGLES (user ruling 2026-08-12): pressing it again closes. */
+    const onShow  = () => setOpen((o) => !o)
     const onClose = () => setOpen(false)
     window.addEventListener('kol:show-shortcuts',  onShow)
     window.addEventListener('kol:close-shortcuts', onClose)
@@ -55,7 +57,7 @@ export default function ShortcutsOverlay() {
       >
         <div className="flex items-center justify-between px-5 h-12 border-b border-fg-08">
           <span className="kol-helper-12 text-emphasis">Keyboard shortcuts</span>
-          <EditorButton
+          <Button iconComponent={EditorIcon}
             variant="primary"
             size="sm"
             quiet

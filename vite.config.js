@@ -3,9 +3,22 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import svgr from 'vite-plugin-svgr'
 
+/* Dev-only favicon — a big yellow X so dev tabs are instantly tellable from
+ * prod. `apply: 'serve'` keeps it out of every build. */
+const devFavicon = {
+  name: 'dev-favicon',
+  apply: 'serve',
+  transformIndexHtml(html) {
+    const svg = encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M7 7 L25 25 M25 7 L7 25" stroke="#F2D24B" stroke-width="8" stroke-linecap="round"/></svg>',
+    )
+    return html.replace('</head>', `<link rel="icon" href="data:image/svg+xml,${svg}"></head>`)
+  },
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), svgr(), tailwindcss()],
+  plugins: [react(), svgr(), tailwindcss(), devFavicon],
   // Single react / react-dom copy — the published DS packages peer-depend on
   // React, and a duplicated copy crashes at runtime with a null dispatcher.
   resolve: {

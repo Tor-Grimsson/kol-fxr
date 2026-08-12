@@ -110,7 +110,9 @@ export default function TypeBlock({
       spellCheck={false}
       className={className}
       style={{
-        fontFamily:    `'${familyFor(value.width)}', 'Right Grotesk', sans-serif`,
+        /* familyCss (the 2026-08-12 family model) wins when the consumer
+         * resolved it; the width-cut mapping stays the no-prop fallback. */
+        fontFamily:    value.familyCss ?? `'${familyFor(value.width)}', 'Right Grotesk', sans-serif`,
         fontWeight:    value.weight,
         fontStyle:     value.italic ? 'italic' : 'normal',
         fontSize:      `${value.size}px`,

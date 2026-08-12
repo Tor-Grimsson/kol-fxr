@@ -272,7 +272,7 @@ export class IridescentEngine {
     if (lk?.p) p = { ...p, ...lk.p }
     const u = this.uniforms
     if (p.cat != null) u.uCat.value = Math.round(p.cat)
-    if (p.type != null) u.uType.value = Math.round(p.type)
+    if (p.form != null) u.uType.value = Math.round(p.form)
     if (p.count != null) u.uCount.value = Math.max(1, Math.min(6, Math.round(p.count)))
     if (p.size != null) u.uSize.value = p.size
     if (p.spread != null) u.uSpread.value = p.spread

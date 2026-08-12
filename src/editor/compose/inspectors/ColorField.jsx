@@ -59,17 +59,21 @@ export function ColorField({ value, onChange, palette, label = 'Color', hideLabe
   /* Swatch opens the palette popover; hex commits on blur/Enter. Inline
    * (labs row) = [24px swatch] LABEL ……… #hex — the reference's exact order
    * and size (labs: 24×24 rounded-[2px], swatch leads the row). */
+  /* In the paint bar (inline+hideLabel) the swatch BLEEDS the shell's
+   * padding so the full-height 'control-sm' chip sits flush at the box
+   * edge — the one-container anatomy. */
+  const inBar = inline && hideLabel
   const swatchBtn = (
     <button
       type="button"
       ref={popover.refs.setReference}
       {...popover.getReferenceProps()}
       aria-label={`${label}: ${subtitle}`}
-      className="inline-flex items-center shrink-0"
+      className={inBar ? 'inline-flex items-center shrink-0 -ml-3 -my-1' : 'inline-flex items-center shrink-0'}
     >
       <ColorSwatch
         hex={resolved}
-        size={inline ? 24 : 32}
+        size={inBar ? 'control-sm' : (inline ? 24 : 32)}
         showTransparent={isNone}
         transparentTone={isStroke ? 'error' : 'warning'}
         hoverable={false}
@@ -81,15 +85,17 @@ export function ColorField({ value, onChange, palette, label = 'Color', hideLabe
   )
   /* None / themed show an empty field ('# –' via placeholder), not a
    * hex — a disabled fill claiming #FFFFFF reads as white, and a themed
-   * token has no single hex. */
+   * token has no single hex. The sectioned-inspector bar (inline+hideLabel)
+   * mounts the SWATCH INSIDE the shell via `slotLeft` (kol-component 0.35 —
+   * the ColorSwatchFieldSizing anatomy: ONE container, Figma's paint bar). */
   const hexInput = (
     <Input
       variant="filled"
       size="sm"
+      slotLeft={inline && hideLabel ? swatchBtn : undefined}
       prefix="#"
       chars={6}
-      uppercase
-      placeholder="–"
+      placeholder={isVar ? 'auto' : '–'}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commitHex}
@@ -98,13 +104,14 @@ export function ColorField({ value, onChange, palette, label = 'Color', hideLabe
   )
 
   const row = inline ? (
-    <div className="flex items-center gap-3">
-      {swatchBtn}
+    <div className={hideLabel ? 'flex items-center gap-2' : 'flex items-center gap-3'}>
+      {!hideLabel && swatchBtn}
       {!hideLabel && (
         <span className="kol-helper-10 tracking-widest text-meta whitespace-nowrap">{label}</span>
       )}
-      <div className="flex-1" />
+      {!hideLabel && <div className="flex-1" />}
       {hexInput}
+      {hideLabel && <div className="flex-1" />}
     </div>
   ) : (
     <div className="flex items-center gap-2">

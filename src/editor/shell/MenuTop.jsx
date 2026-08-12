@@ -10,7 +10,7 @@ import { useComposeState } from '../compose/state'
 import { useGeneratorLibrary } from '../library/LibraryProvider'
 import { STARTERS } from '../library/starters'
 import { useComposeFile } from '../compose/useComposeFile'
-import { goMobile } from '../mobile/device'
+import { MODES, goMode } from '../mode'
 import { findLayerDeep } from '../compose/helpers'
 import { isBooleanable } from '../compose/boolean-ops'
 import { FILTERS, filterById } from '../../filters'
@@ -215,6 +215,22 @@ export default function MenuTop() {
           {currentPresetName || 'Untitled'}
         </span>
       )}
+      {/* The mode door — first-class beside the title (it kept getting lost
+          inside Settings). Label = the CURRENT chrome; picking another mode
+          navigates via goMode. */}
+      <MenuItem label="Editor" panelClassName="z-[1000]">
+        <div className="py-1 w-[200px]">
+          {MODES.map((m) => (
+            <MenuDropdownItem
+              key={m.id}
+              onClick={() => goMode(m.id)}
+              shortcut={m.id === 'editor' ? <EditorIcon name="check" size={11} /> : undefined}
+            >
+              {m.label}
+            </MenuDropdownItem>
+          ))}
+        </div>
+      </MenuItem>
       <div className="flex items-center gap-1 ml-auto">
         {/* panelClassName z-[1000]: MenuItem panels opt out of .kol-popover
             chrome (panel={false}) and get NO z-index — the canvas rulers
@@ -291,21 +307,17 @@ export default function MenuTop() {
           </div>
         </MenuItem>
 
-        <MenuItem label="Vector" panelClassName="z-[1000]">
+        <MenuItem label="Tools" panelClassName="z-[1000]">
           <div className="py-1 w-[220px]">
+            <MenuDropdownItem onClick={openColorModal}>
+              Color
+            </MenuDropdownItem>
+            <MenuDropdownDivider />
             <MenuDropdownItem onClick={flattenSelected} disabled={!canFlatten}>
               Flatten shape
             </MenuDropdownItem>
             <MenuDropdownItem onClick={() => releaseBoolean()} disabled={!canRelease}>
               Release boolean
-            </MenuDropdownItem>
-          </div>
-        </MenuItem>
-
-        <MenuItem label="Tools" panelClassName="z-[1000]">
-          <div className="py-1 w-[220px]">
-            <MenuDropdownItem onClick={openColorModal}>
-              Color
             </MenuDropdownItem>
           </div>
         </MenuItem>
@@ -377,12 +389,6 @@ export default function MenuTop() {
 
         <MenuItem label="Settings" panelClassName="z-[1000]">
           <div className="py-1 w-[220px]">
-            {/* Enter the touch-device generative chrome from desktop — a
-                simple generate + randomize surface (see editor/mobile). */}
-            <MenuDropdownItem onClick={goMobile}>
-              Simple mode
-            </MenuDropdownItem>
-            <MenuDropdownDivider />
             <MenuDropdownItem
               onClick={toggleGrid}
               shortcut={showGrid ? <EditorIcon name="check" size={11} /> : undefined}

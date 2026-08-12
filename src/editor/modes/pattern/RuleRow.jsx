@@ -1,6 +1,6 @@
-import { Section } from '@kolkrabbi/kol-component'
+import { Button, Section } from '@kolkrabbi/kol-component'
 import { Dropdown } from '@kolkrabbi/kol-component'
-import EditorButton from '../../components/EditorButton'
+import EditorIcon from '../../icons/EditorIcon'
 import { Input } from '@kolkrabbi/kol-component'
 import { Slider } from '@kolkrabbi/kol-component'
 import { Stepper } from '@kolkrabbi/kol-component'
@@ -91,7 +91,7 @@ function NumInput({ value, onChange, min = 0, max = 99 }) {
 
 function ToggleChip({ active, onClick, children, title }) {
   return (
-    <EditorButton
+    <Button
       variant={active ? 'primary' : 'outline'}
       size="sm"
       onClick={onClick}
@@ -99,7 +99,7 @@ function ToggleChip({ active, onClick, children, title }) {
       aria-pressed={active}
     >
       {children}
-    </EditorButton>
+    </Button>
   )
 }
 
@@ -122,7 +122,7 @@ export default function RuleRow({ rule, onChange, onRemove, onReroll }) {
             onChange={(v) => set({ selectKind: v })}
           />
         </div>
-        <EditorButton
+        <Button iconComponent={EditorIcon}
           variant="ghost"
           size="sm"
           iconOnly="refresh"
@@ -133,7 +133,7 @@ export default function RuleRow({ rule, onChange, onRemove, onReroll }) {
           className="shrink-0"
           style={{ padding: 6 }}
         />
-        <EditorButton
+        <Button iconComponent={EditorIcon}
           variant="ghost"
           size="sm"
           iconOnly="close"

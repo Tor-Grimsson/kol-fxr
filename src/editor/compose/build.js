@@ -19,8 +19,10 @@ import lockupHoriRaw  from '../../brand/logos/svg/kol-lockup-hori.svg?raw'
 import lockupVertRaw  from '../../brand/logos/svg/kol-lockup-vert.svg?raw'
 import { ASPECTS }    from '../shell/aspects'
 import { resolveColor, CANVAS_W } from './state'
-import { familyFor, applyCase } from '../modes/type/cuts'
-import { textLayerFont, textOutlinePaths } from '../modes/type/textOutline'
+import { applyCase } from '../modes/type/cuts'
+import { familyCssFor } from '../modes/type/families'
+import { paintAlphaExport } from './paint'
+import { textLayerFont, textOutlinePaths, axisTextGlyphs } from '../modes/type/textOutline'
 import { buildPatternSvg } from '../modes/pattern/render'
 import { getShapeSvg }     from '../modes/pattern/shapes'
 import { regularPolygonPoints, starPoints, trianglePoints } from './shape-math'
@@ -216,8 +218,8 @@ function shapeLayerSvg(layer, palette) {
   }
 
   if (kind === 'rect' || kind === 'ellipse' || kind === 'triangle' || kind === 'polygon' || kind === 'star') {
-    const fill   = layer.color === null ? 'none' : (resolveColor(layer.color, palette) ?? '#FFFFFF')
-    const stroke = resolveColor(layer.stroke, palette)
+    const fill   = layer.color === null ? 'none' : paintAlphaExport(resolveColor(layer.color, palette) ?? '#FFFFFF', layer.fillOpacity, layer.fillHidden)
+    const stroke = paintAlphaExport(resolveColor(layer.stroke, palette), layer.strokeOpacity, layer.strokeHidden)
     const sw     = layer.strokeWidth ?? 0
     const half   = sw > 0 ? sw / 2 : 0
     const lx = layer.x ?? 0
@@ -235,7 +237,8 @@ function shapeLayerSvg(layer, palette) {
       const y = ly + half
       const w = Math.max(0, lw - sw)
       const h = Math.max(0, lh - sw)
-      return `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" fill="${fill}"${strokeAttrs}/>`
+      const rx = layer.radius > 0 ? ` rx="${Number(layer.radius).toFixed(2)}"` : ''
+      return `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}"${rx} fill="${fill}"${strokeAttrs}/>`
     }
     if (kind === 'ellipse') {
       const cx = lx + lw / 2
@@ -334,9 +337,24 @@ function boolLayerSvg(layer, palette) {
  * parse it) or a cold cache (sync callers like the eyedropper that never
  * awaited warmTextFonts). foreignObject only renders in browser consumers. */
 function textLayerSvg(layer, palette) {
-  const color       = resolveColor(layer.color, palette) ?? '#FFFFFF'
-  const strokeColor = resolveColor(layer.stroke, palette)
+  const color       = paintAlphaExport(resolveColor(layer.color, palette) ?? '#FFFFFF', layer.fillOpacity, layer.fillHidden)
+  const strokeColor = paintAlphaExport(resolveColor(layer.stroke, palette), layer.strokeOpacity, layer.strokeHidden)
   const sw          = layer.strokeWidth ?? 0
+  /* Axis text (morph/random/fade) — the warm-phase glyph pack carries the
+   * REAL interpolated outlines (T6 export parity). Cold pack falls through
+   * to the basic branches below. */
+  if (layer.axisOn) {
+    const glyphs = axisTextGlyphs(layer)
+    if (glyphs?.length) {
+      const strokeAttrs = strokeColor && sw > 0
+        ? ` stroke="${strokeColor}" stroke-width="${sw}" paint-order="stroke fill"`
+        : ''
+      const paths = glyphs.filter((g) => g.d)
+        .map((g) => `<path d="${g.d}" transform="translate(${g.x.toFixed(2)} ${g.y.toFixed(2)})"/>`)
+        .join('')
+      return `<g transform="translate(${layer.x.toFixed(2)} ${layer.y.toFixed(2)})" fill="${color}" fill-rule="evenodd"${strokeAttrs}>${paths}</g>`
+    }
+  }
   const font = textLayerFont(layer)
   if (font) {
     const paths = textOutlinePaths(layer, font)
@@ -353,7 +371,7 @@ function textLayerSvg(layer, palette) {
  * STRICTLY as the fallback (mono cut / un-warmed font cache): it only
  * renders in browser SVG consumers and never in Illustrator/Inkscape/etc. */
 function textLayerForeignObject(layer, color, strokeColor, sw) {
-  const family = `'${familyFor(layer.width ?? 'Tight')}', 'Right Grotesk', sans-serif`
+  const family = familyCssFor(layer)   /* family model: RG cut / JetBrains / Google */
   const weight = layer.weight ?? 600
   const italic = layer.italic ? 'italic' : 'normal'
   const size   = layer.size ?? 96
@@ -361,12 +379,14 @@ function textLayerForeignObject(layer, color, strokeColor, sw) {
   const lh     = layer.lineHeight ?? 1.05
   const tcase  = layer.case === 'upper' ? 'uppercase' : layer.case === 'lower' ? 'lowercase' : 'none'
   const align  = layer.textAlign ?? 'center'
+  const vAlign = layer.verticalAlign === 'top' ? 'flex-start'
+    : layer.verticalAlign === 'bottom' ? 'flex-end' : 'center'
   const text   = escapeXml(applyCase(layer.text ?? '', layer.case)).replace(/\n/g, '<br/>')
   const strokeCss = strokeColor && sw > 0
     ? `-webkit-text-stroke:${sw}px ${strokeColor};paint-order:stroke fill;`
     : ''
   return `<foreignObject x="${layer.x.toFixed(2)}" y="${layer.y.toFixed(2)}" width="${layer.w.toFixed(2)}" height="${layer.h.toFixed(2)}">
-<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:center;font-family:${family};font-weight:${weight};font-style:${italic};font-size:${size}px;letter-spacing:${track}em;line-height:${lh};text-transform:${tcase};text-align:${align};color:${color};${strokeCss}white-space:pre-wrap;word-wrap:break-word;">${text}</div>
+<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:${vAlign};font-family:${family};font-weight:${weight};font-style:${italic};font-size:${size}px;letter-spacing:${track}em;line-height:${lh};text-transform:${tcase};text-align:${align};color:${color};${strokeCss}white-space:pre-wrap;word-wrap:break-word;">${text}</div>
 </foreignObject>`
 }
 

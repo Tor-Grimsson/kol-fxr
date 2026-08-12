@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react'
-import EditorButton from '../../components/EditorButton'
-import { ColorSwatch } from '@kolkrabbi/kol-component'
+import { Button, ColorSwatch } from '@kolkrabbi/kol-component'
 import { ViewToggle } from '@kolkrabbi/kol-component'
 import { resolveCssVar } from '../../color/cssVar'
 import { ColorField } from '../../compose/inspectors/LayerInspector'
@@ -100,12 +99,12 @@ export default function ColorPicker({ values, onChange, onCopyCss, onReset }) {
       />
 
       <div className="flex gap-2 pt-2 border-t border-fg-08">
-        <EditorButton variant="primary" size="sm" className="flex-1" onClick={onCopyCss}>
+        <Button variant="primary" size="sm" className="flex-1" onClick={onCopyCss}>
           Copy CSS
-        </EditorButton>
-        <EditorButton variant="primary" size="sm" className="flex-1" onClick={onReset}>
+        </Button>
+        <Button variant="primary" size="sm" className="flex-1" onClick={onReset}>
           Reset
-        </EditorButton>
+        </Button>
       </div>
     </div>
   )

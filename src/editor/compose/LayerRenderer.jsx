@@ -18,6 +18,11 @@ import { rasterizeLayer, sourceKey } from './rasterizeLayer'
 import KineticType from '../../kinetic/KineticType'
 import { loadFonts as loadKineticFonts, warmFontCss as warmKineticFontCss } from '../../kinetic/fonts'
 import { ensureWebcam, getWebcamStream, stopWebcam } from '../lib/webcam'
+import MorphedText from '../modes/type/MorphedText'
+import { familyFor, applyCase } from '../modes/type/cuts'
+import { pickCutFor, seedFromBlend } from '../modes/type/axisRandom'
+import { layerFamily, familyCssFor, isOutlineFamily, ensureFamilyLoaded } from '../modes/type/families'
+import { paintAlpha } from './paint'
 
 /**
  * LayerRenderer — renders a single layer as a positioned DOM element inside
@@ -450,6 +455,10 @@ function EngineLoopLayer({ layer, def, layerStyle }) {
   const camDrag = def.orbit && orbitMode
   return (
     <canvas
+      /* Fresh node per loop — destroyEngine force-loses the old canvas's GL
+         context, and getContext on a lost canvas hands three a dead context
+         (fatal since three 0.185: WebGLCapabilities reads precision off it). */
+      key={layer.loopId}
       ref={canvasRef}
       data-layer-id={layer.id}
       onPointerDownCapture={camDrag ? (e) => e.stopPropagation() : undefined}
@@ -1231,6 +1240,7 @@ function EngineFilterLayer({ layer, engine, preStages, pxStages = [], layerStyle
   const camDrag = filter.orbit && orbitMode
   return (
     <canvas
+      key={engine.id}  /* fresh node per filter — see EngineLoopLayer */
       ref={canvasRef}
       data-layer-id={layer.id}
       onPointerDownCapture={camDrag ? (e) => e.stopPropagation() : undefined}
@@ -1321,6 +1331,7 @@ function EngineLoopFilterLayer({ layer, loop, engine, preStages, pxStages = [], 
   const camDrag = filter.orbit && orbitMode
   return (
     <canvas
+      key={engine.id}  /* fresh node per filter — see EngineLoopLayer */
       ref={canvasRef}
       data-layer-id={layer.id}
       onPointerDownCapture={camDrag ? (e) => e.stopPropagation() : undefined}
@@ -1490,11 +1501,11 @@ function ShapeLayer({ layer, palette, layerStyle }) {
    * none marker). `undefined` / non-null falsy = default → fall back to
    * white so logos/flatten content remain visible. */
   const hasFill = layer.color !== null
-  const color   = hasFill ? (resolveColor(layer.color, palette) ?? '#FFFFFF') : 'transparent'
+  const color   = hasFill ? paintAlpha(resolveColor(layer.color, palette) ?? '#FFFFFF', layer.fillOpacity, layer.fillHidden) : 'transparent'
   const kind    = layer.kind ?? 'logo'
   const renderedSvg = kind === 'flatten' ? applySvgFit(layer.svg, layer.fit ?? 'fill') : null
 
-  const strokeColor = resolveColor(layer.stroke, palette)
+  const strokeColor = paintAlpha(resolveColor(layer.stroke, palette), layer.strokeOpacity, layer.strokeHidden)
   const sw   = layer.strokeWidth ?? 0
   const half = sw > 0 ? sw / 2 : 0
 
@@ -1548,6 +1559,7 @@ function ShapeLayer({ layer, palette, layerStyle }) {
             x={half} y={half}
             width={Math.max(0, (layer.w ?? 0) - sw)}
             height={Math.max(0, (layer.h ?? 0) - sw)}
+            rx={layer.radius > 0 ? layer.radius : undefined}
             fill={hasFill ? 'currentColor' : 'none'}
             stroke={strokeColor ?? 'none'}
             strokeWidth={sw}
@@ -1672,8 +1684,8 @@ function ShapeLayer({ layer, palette, layerStyle }) {
  * transform like every other layer — no non-scaling-stroke here. */
 function PathLayer({ layer, palette, layerStyle }) {
   const hasFill     = layer.color !== null
-  const color       = hasFill ? (resolveColor(layer.color, palette) ?? '#FFFFFF') : 'transparent'
-  const strokeColor = resolveColor(layer.stroke, palette)
+  const color       = hasFill ? paintAlpha(resolveColor(layer.color, palette) ?? '#FFFFFF', layer.fillOpacity, layer.fillHidden) : 'transparent'
+  const strokeColor = paintAlpha(resolveColor(layer.stroke, palette), layer.strokeOpacity, layer.strokeHidden)
   const sw          = layer.strokeWidth ?? 0
   /* Boolean results carry hole rings — emit every ring and fill evenodd so
    * holes punch through. Plain paths keep the single-ring fast path. */
@@ -1745,12 +1757,78 @@ function BoolLayer({ layer, palette, layerStyle }) {
  * `display: flex` + `alignItems: center` lets short text stay vertically
  * centered inside `layer.h`. The TypeBlock fills the wrapper width so
  * `textAlign` resolves over `layer.w`.
+ *
+ * Variable axis (`layer.axisOn` — the brand editor's basic morph setting,
+ * TypeFrame's three branches ported): morph = MorphedText glyph-outline
+ * interpolation Cut A→Cut B, random = per-char cut scatter, fade = two-cut
+ * cross-fade. Axis branches render display-only (no on-canvas editing —
+ * the Inspector's Content field owns text edits there); `axisBlend` is a
+ * layer prop, so a binding on it resolves per-frame via resolveLayer and
+ * the morph ANIMATES like any bound param.
  */
 function TextLayer({ layer, palette, layerStyle }) {
   const { selectedId, updateLayer } = useComposeState()
-  const color       = resolveColor(layer.color, palette) ?? '#FFFFFF'
-  const strokeColor = resolveColor(layer.stroke, palette)
+  const color       = paintAlpha(resolveColor(layer.color, palette) ?? '#FFFFFF', layer.fillOpacity, layer.fillHidden)
+  const strokeColor = paintAlpha(resolveColor(layer.stroke, palette), layer.strokeOpacity, layer.strokeHidden)
   const sw          = layer.strokeWidth ?? 0
+  const family      = layerFamily(layer)
+  const familyCss   = familyCssFor(layer)
+  /* Google families load on first sight (deduped link injection). */
+  useEffect(() => { ensureFamilyLoaded(family) }, [family])
+
+  /* Resizing (Figma Layout model, T4): auto modes MEASURE the rendered text
+   * off-screen (body-level div = virtual units 1:1, outside the canvas
+   * scale transform) and write the box back. Delta-guarded so the write
+   * settles instead of looping. */
+  const resizing = layer.resizing ?? 'fixed'
+  useEffect(() => {
+    if (resizing === 'fixed' || layer.axisOn) return
+    const el = document.createElement('div')
+    Object.assign(el.style, {
+      position: 'absolute', visibility: 'hidden', left: '-99999px', top: '0',
+      fontFamily: familyCss,
+      fontWeight: String(layer.weight ?? 600),
+      fontStyle: layer.italic ? 'italic' : 'normal',
+      fontSize: `${layer.size ?? 96}px`,
+      letterSpacing: `${layer.tracking ?? -0.01}em`,
+      lineHeight: String(layer.lineHeight ?? 1.05),
+      whiteSpace: resizing === 'auto-w' ? 'pre' : 'pre-wrap',
+      overflowWrap: resizing === 'auto-w' ? 'normal' : 'break-word',
+      width: resizing === 'auto-h' ? `${layer.w}px` : 'max-content',
+      minHeight: '1em',
+    })
+    el.textContent = applyCase(layer.text ?? '', layer.case) || ' '
+    document.body.appendChild(el)
+    const r = el.getBoundingClientRect()
+    el.remove()
+    if (resizing === 'auto-w') {
+      const nw = Math.max(8, Math.ceil(r.width) + 2)
+      const nh = Math.max(8, Math.ceil(r.height))
+      if (Math.abs(nw - layer.w) > 1 || Math.abs(nh - layer.h) > 1) updateLayer(layer.id, { w: nw, h: nh })
+    } else {
+      const nh = Math.max(8, Math.ceil(r.height))
+      if (Math.abs(nh - layer.h) > 1) updateLayer(layer.id, { h: nh })
+    }
+  }, [resizing, layer.text, layer.case, familyCss, layer.weight, layer.italic, layer.size, layer.tracking, layer.lineHeight, layer.w, layer.h, layer.axisOn, layer.id, updateLayer])
+  /* Axis branches need parseable outlines — non-outline families render the
+   * basic branch regardless of axisOn (the rail says why). */
+  const axisActive  = !!layer.axisOn && isOutlineFamily(family)
+  const mode        = layer.axisMode ?? 'morph'
+  const display     = applyCase(layer.text ?? '', layer.case)
+  /* Vertical align (T3, Figma parity): top / middle / bottom of the frame. */
+  const vAlign      = layer.verticalAlign === 'top' ? 'flex-start'
+    : layer.verticalAlign === 'bottom' ? 'flex-end' : 'center'
+  const baseStyle   = {
+    fontWeight:    layer.weight,
+    fontStyle:     layer.italic ? 'italic' : 'normal',
+    fontSize:      `${layer.size}px`,
+    letterSpacing: `${layer.tracking}em`,
+    lineHeight:    layer.lineHeight,
+    textAlign:     layer.textAlign ?? 'center',
+    minHeight:     '1em',
+    overflowWrap:  'break-word',
+    whiteSpace:    'pre-wrap',
+  }
   return (
     <div
       data-layer-id={layer.id}
@@ -1759,16 +1837,85 @@ function TextLayer({ layer, palette, layerStyle }) {
         left: layer.x, top: layer.y,
         width: layer.w, height: layer.h,
         cursor: 'move',
-        display: 'flex', alignItems: 'center',
+        display: 'flex', alignItems: vAlign,
+        /* Corner radius (Figma parity) — clips the text frame. */
+        ...(layer.radius > 0 ? { borderRadius: layer.radius, overflow: 'hidden' } : {}),
         ...layerStyle,
       }}
     >
-      <TypeBlock
-        value={{ ...layer, color, strokeColor: sw > 0 ? strokeColor : null, strokeWidth: sw }}
-        selected={selectedId === layer.id}
-        onChange={(patch) => updateLayer(layer.id, patch)}
-        className="w-full"
-      />
+      {!axisActive && (
+        <TypeBlock
+          value={{ ...layer, familyCss, color, strokeColor: sw > 0 ? strokeColor : null, strokeWidth: sw }}
+          selected={selectedId === layer.id}
+          onChange={(patch) => updateLayer(layer.id, patch)}
+          className="w-full"
+        />
+      )}
+
+      {axisActive && mode === 'morph' && (
+        <div className="w-full" style={{ textAlign: baseStyle.textAlign }}>
+          <MorphedText
+            text={display}
+            width1={layer.width}   weight1={layer.weight}  italic1={layer.italic}
+            width2={layer.width2}  weight2={layer.weight2} italic2={layer.italic}
+            blend={layer.axisBlend ?? 0.5}
+            curve={layer.axisCurve ?? 'flat'}
+            cp1={layer.curveCp1 ?? { x: 0.33, y: 0.33 }}
+            cp2={layer.curveCp2 ?? { x: 0.66, y: 0.66 }}
+            size={layer.size}
+            color={color}
+            fallbackStyle={{
+              ...baseStyle,
+              fontFamily: `'${familyFor(layer.width)}', 'Right Grotesk', sans-serif`,
+              color,
+            }}
+          />
+        </div>
+      )}
+
+      {axisActive && mode === 'random' && (
+        <div className="w-full" style={{ ...baseStyle, color }}>
+          {Array.from(display).map((ch, i) => {
+            const [w, wt] = pickCutFor(i, seedFromBlend(layer.axisBlend ?? 0.5), {
+              widthLock:  layer.randomWidthLock,
+              weightLock: layer.randomWeightLock,
+            })
+            return (
+              <span key={i} style={{ fontFamily: `'${familyFor(w)}', 'Right Grotesk', sans-serif`, fontWeight: wt }}>
+                {ch}
+              </span>
+            )
+          })}
+        </div>
+      )}
+
+      {axisActive && mode === 'fade' && (
+        <div className="w-full" style={{ display: 'grid' }}>
+          <div
+            style={{
+              ...baseStyle,
+              gridArea:   '1 / 1',
+              fontFamily: `'${familyFor(layer.width)}', 'Right Grotesk', sans-serif`,
+              color,
+              opacity:    1 - (layer.axisBlend ?? 0.5),
+            }}
+          >
+            {display}
+          </div>
+          <div
+            style={{
+              ...baseStyle,
+              gridArea:   '1 / 1',
+              fontFamily: `'${familyFor(layer.width2)}', 'Right Grotesk', sans-serif`,
+              fontWeight: layer.weight2,
+              color,
+              opacity:    layer.axisBlend ?? 0.5,
+            }}
+          >
+            {display}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

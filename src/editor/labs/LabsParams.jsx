@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { SegmentedToggle, ToggleSwitch, Divider, Dropdown } from '@kolkrabbi/kol-component'
-import EditorButton from '../components/EditorButton'
+import { Button, SegmentedToggle, ToggleSwitch, Divider, Dropdown } from '@kolkrabbi/kol-component'
 import EditorIcon from '../icons/EditorIcon'
 import { useComposeState } from '../compose/state'
 import { useLayerEdit } from '../compose/useLayerEdit'
@@ -272,9 +271,9 @@ function EffectSurface({ layer, showMod }) {
               lands before it and the internal gap stays the tight one. */}
           <div className="kol-params-section flex flex-col gap-4">
             <AutoControls schema={cluster} {...auto} />
-            <EditorButton variant="primary" size="sm" className="w-full" iconLeft="refresh" onClick={roll}>
+            <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="refresh" onClick={roll}>
               Randomize
-            </EditorButton>
+            </Button>
           </div>
           <Divider />
           {cut < params.length && (

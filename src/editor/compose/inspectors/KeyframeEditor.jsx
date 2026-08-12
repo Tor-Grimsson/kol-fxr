@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import EditorButton from '../../components/EditorButton'
-import { Slider, Dropdown, LabeledControl } from '@kolkrabbi/kol-component'
+import { Button, Slider, Dropdown, LabeledControl } from '@kolkrabbi/kol-component'
 import { EASE_OPTIONS } from '../../../loops/gl/primitiveEasing'
 import { DEFAULT_KEYFRAMES } from '../../../loops/gl/primitiveKeyframes'
 import { layerCycles } from '../../../loops/gl/phase'
@@ -75,7 +74,7 @@ export default function KeyframeEditor({ layer, patch, defaultDuration = 8 }) {
       <span className="kol-helper-10 text-meta">Keyframes</span>
       <div className="flex flex-col gap-1">
         {kfs.map((kf, i) => (
-          <EditorButton
+          <Button
             key={i}
             variant={i === sel ? 'primary' : 'secondary'}
             size="sm"
@@ -85,16 +84,16 @@ export default function KeyframeEditor({ layer, patch, defaultDuration = 8 }) {
           >
             <span>Key {i + 1}</span>
             <span className="kol-helper-10 tabular-nums">{Math.round((kf.t ?? 0) * 100)}%</span>
-          </EditorButton>
+          </Button>
         ))}
       </div>
       <div className="flex gap-2">
-        <EditorButton variant="primary" size="sm" className="flex-1" onClick={onAdd}>
+        <Button variant="primary" size="sm" className="flex-1" onClick={onAdd}>
           Add @ playhead
-        </EditorButton>
-        <EditorButton variant="ghost" size="sm" title="Delete keyframe" onClick={onDelete} disabled={kfs.length <= 1}>
+        </Button>
+        <Button variant="ghost" size="sm" title="Delete keyframe" onClick={onDelete} disabled={kfs.length <= 1}>
           Delete
-        </EditorButton>
+        </Button>
       </div>
 
       <span className="kol-helper-10 text-meta">Pose</span>

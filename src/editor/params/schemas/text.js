@@ -24,4 +24,7 @@ export const TEXT_SCHEMA = [
   { key: 'size',       label: 'Size',    type: 'range', min: 12, max: 400, step: 1, default: 96, format: (v) => `${v}px`, section: 'Layout' },
   { key: 'tracking',   label: 'Tracking', type: 'range', min: -0.05, max: 0.2, step: 0.005, default: 0, format: (v) => `${v.toFixed(3)}em`, section: 'Layout' },
   { key: 'lineHeight', label: 'Leading', type: 'range', min: 0.85, max: 2.0, step: 0.05, default: 1.05, format: (v) => v.toFixed(2), section: 'Layout' },
+  /* Variable-axis blend (the morph position, Cut A→Cut B) — bindable like
+   * any range param; `axisBlend` because `blend` is the compositing mode. */
+  { key: 'axisBlend',  label: 'Morph blend', type: 'range', min: 0, max: 1, step: 0.01, default: 0.5, format: (v) => `${Math.round(v * 100)}%`, section: 'Font' },
 ]

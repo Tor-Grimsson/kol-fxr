@@ -245,7 +245,7 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
      * 2026-07-08 chrome law, and text inputs are filled in this app. */
     control = (
       <Textarea
-        variant="filled" size="sm" rows={p.rows ?? 2}
+        variant="filled" size="sm" rows={p.rows ?? 2} axis="y"
         value={value ?? ''}
         onChange={(e) => setProp(p.key, e.target.value)}
         placeholder={p.placeholder}
