@@ -183,7 +183,7 @@ function TrackRow({ track, t, selected, setSelected, writeKeys }) {
                 left: `${kt * 100}%`,
                 width: 9, height: 9,
                 transform: 'translate(-50%, -50%) rotate(45deg)',
-                background: isSel(i) ? 'var(--kol-accent-primary)' : 'var(--kol-fg-1)',
+                background: isSel(i) ? 'var(--kol-accent-primary)' : 'var(--kol-fg-emphasis)',
                 borderRadius: 1.5,
               }}
             />

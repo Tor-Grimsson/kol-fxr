@@ -155,7 +155,7 @@ function LayerRow({
           onClick={onToggleVisibility}
           title={layer.visible ? 'Hide' : 'Show'}
           aria-pressed={!layer.visible}
-          className={`absolute inset-y-0 right-7 w-7 inline-flex items-center justify-center rounded text-meta hover:text-emphasis hover:bg-fg-08 transition-opacity ${active || !layer.visible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          className={`absolute inset-y-0 right-7 w-7 inline-flex items-center justify-center rounded text-oq-48 hover:text-emphasis hover:bg-fg-08 transition-opacity ${active || !layer.visible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
         >
           <EditorIcon name={layer.visible ? 'eye-on' : 'eye-off'} size={12} />
         </button>
@@ -164,7 +164,7 @@ function LayerRow({
           onClick={onToggleLock}
           title={layer.locked ? 'Unlock' : 'Lock'}
           aria-pressed={!!layer.locked}
-          className={`absolute inset-y-0 right-0 w-7 inline-flex items-center justify-center rounded hover:bg-fg-08 transition-opacity ${active || layer.locked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${layer.locked ? '' : 'text-meta hover:text-emphasis'}`}
+          className={`absolute inset-y-0 right-0 w-7 inline-flex items-center justify-center rounded hover:bg-fg-08 transition-opacity ${active || layer.locked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${layer.locked ? '' : 'text-oq-48 hover:text-emphasis'}`}
           style={layer.locked ? { color: 'var(--kol-accent-primary)' } : undefined}
         >
           <EditorIcon name={layer.locked ? 'lock' : 'unlock'} size={12} />

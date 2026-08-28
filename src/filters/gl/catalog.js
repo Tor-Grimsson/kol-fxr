@@ -14,10 +14,21 @@ const select = (key, label, dflt, options) => ({ key, label, type: 'select', def
 const toggle = (key, label, dflt = false) => ({ key, label, type: 'toggle', default: dflt })
 const opt = (value, label) => ({ value, label })
 /* Section a run of params — the labs panels group under small headers
- * (AutoControls renders consecutive same-section params as one block). */
-const sec = (section, ...params) => params.map((p) => ({ ...p, section }))
+ * (AutoControls renders consecutive same-section params as one block).
+ *
+ * A 'Motion' section is also the ANIM TAB (2026-08-27): these engines all
+ * authored their time-varying knobs under `sec('Motion', …)` expecting them
+ * to land there, but `paramTab` reads an explicit `tab:` and nothing else, so
+ * every one of them rendered on the Effect tab and the Motion tab came up
+ * empty. Tagging here rather than in `paramTab` keeps it to filters —
+ * generators put Motion Frame/Form on their Generate tab deliberately, and a
+ * global rule would move those too. */
+const sec = (section, ...params) =>
+  params.map((p) => ({ ...p, section, ...(section === 'Motion' && p.tab === undefined ? { tab: 'anim' } : null) }))
 
-const SPEED = range('speed', 'Speed', 0.1, 2.5, 0.05, 1)
+/* `speed` is a CLOCK knob in every engine that takes it, so it belongs to
+ * the Motion tab wherever it is spread (trails · distort · scan · slitscan). */
+const SPEED = { ...range('speed', 'Speed', 0.1, 2.5, 0.05, 1), tab: 'anim' }
 
 const trails = {
   id: 'gl-trails', label: 'Trails', kind: 'engine', engine: 'trails',
@@ -33,7 +44,7 @@ const trails = {
     ...sec('Transform',
       range('zoom', 'Zoom', 0.9, 1.1, 0.002, 1),
       range('rotate', 'Rotate', -0.1, 0.1, 0.002, 0),
-      range('drift', 'Drift', 0, 0.06, 0.002, 0.02),
+      { ...range('drift', 'Drift', 0, 0.06, 0.002, 0.02), tab: 'anim' },
       range('originX', 'Origin X', 0, 1, 0.01, 0.5),
       range('originY', 'Origin Y', 0, 1, 0.01, 0.5)),
     ...sec('Color',
@@ -163,10 +174,10 @@ const distort = {
     ...sec('Path',
       select('motionShape', 'Auto path', 'orbit',
         [opt('off', 'Off'), opt('orbit', 'Orbit'), opt('figure8', 'Figure 8'), opt('lissajous', 'Lissajous'), opt('sweep', 'Sweep'), opt('spiral', 'Spiral')]),
-      { ...range('motionSpeed', 'Path speed', 0, 4, 0.05, 1), when: (l) => (l.motionShape ?? 'orbit') !== 'off' },
+      { ...range('motionSpeed', 'Path speed', 0, 4, 0.05, 1), tab: 'anim', when: (l) => (l.motionShape ?? 'orbit') !== 'off' },
       { ...range('motionSize', 'Path size', 0, 1, 0.02, 0.6), when: (l) => (l.motionShape ?? 'orbit') !== 'off' },
       /* radius breathe along the auto path (engine motion.pulse) */
-      { ...range('motionPulse', 'Path pulse', 0, 1, 0.01, 0), when: (l) => (l.motionShape ?? 'orbit') !== 'off' },
+      { ...range('motionPulse', 'Path pulse', 0, 1, 0.01, 0), tab: 'anim', when: (l) => (l.motionShape ?? 'orbit') !== 'off' },
       SPEED),
   ],
 }

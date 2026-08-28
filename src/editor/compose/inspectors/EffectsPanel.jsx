@@ -8,14 +8,14 @@ import { useLayerEdit } from '../useLayerEdit'
 import AutoControls from '../../params/AutoControls'
 import BindDot from '../../params/BindDot'
 import { paramTab } from '../../params/schema'
-import { mulberry32, randomSeed, randomizeSchema, mergeRoll } from '../../lib/rng'
-import { loopById } from '../../../loops/registry'
+import { deriveScopes, allScopeParams, computeRoll, useRollSeed, SeedField } from '../../params/rolls'
 import { FILTERS } from '../../../filters'
 import {
   SWEEP_PRESETS, SWEEP_SHAPE_OPTIONS, SWEEP_TARGET_OPTIONS, ANGLED_SHAPES, makeSweep,
 } from '../../../filters/sweeps'
 import { MAX_FILTERS, resolvedChain } from '../filterChain'
-import { effectCategories, categoryOf, presetParamOf, presetPatchFor, FX_RACK_GROUPS, rackGroupFilters } from './effectCategories'
+import { categoryOf, presetParamOf, presetPatchFor, effectHost, flatCategories } from './effectCategories'
+import Hint from '../../components/Hint'
 
 /**
  * EffectsPanel — the Effects tab of the right rail, now hosting the labs
@@ -36,14 +36,13 @@ import { effectCategories, categoryOf, presetParamOf, presetPatchFor, FX_RACK_GR
  *
  * Motion tab = the stage's `tab:'anim'` params plus, for sweep-capable
  * filters, the labs STACKED sweep rig with its one-click presets. Effect
- * tab ends with the seeded Randomize (rng lib: editable seed, fresh
- * randomSeed per press, mergeRoll keeps bindings).
+ * Both tabs end with `StageRolls` — Generate's scoped Randomize block
+ * (all + per-scope, ⌥-click resets, one seeded SeedField).
  */
 const FX_TABS = [
   { value: 'effect', label: 'Effect' },
   { value: 'anim',   label: 'Motion' },
 ]
-const ANIM_HINT = 'Animate any parameter via its bind dot.'
 
 export default function EffectsPanel() {
   const { selectedId, layers } = useComposeState()
@@ -55,7 +54,7 @@ export default function EffectsPanel() {
       <div className="kol-compose-inspector-body">
         {layer
           ? <LayerEffects key={layer.id} layer={layer} />
-          : <p className="kol-helper-12 text-meta">Select a layer to edit its effect.</p>}
+          : <Hint className="kol-helper-12 text-meta">Select a layer to edit its effect.</Hint>}
       </div>
     </div>
   )
@@ -71,15 +70,9 @@ function LayerEffects({ layer }) {
   const chain = resolvedChain(layer)
   const hasEngine = chain.some((s) => s.def?.kind === 'engine')
 
-  /* Catalog per host: photo + 2d loops get everything incl. GL engines
-   * (their live pixels feed the engine source); other effectable types
-   * canvas-only; engine loops can't host effects (no GL source path). */
-  const loopLike = layer.type === 'loop' || layer.type === 'misc'
-  const engineLoop = loopLike && loopById(layer.loopId)?.kind === 'engine'
-  const effectable = layer.type === 'photo'
-    || ['shape', 'text', 'pattern', 'path'].includes(layer.type)
-    || (loopLike && !engineLoop)
-  const engineHost = layer.type === 'photo' || (loopLike && !engineLoop)
+  /* Catalog per host — the shared rule (effectCategories.js), read by the
+   * mobile Effects sheet too. */
+  const { effectable, engineHost, engineLoop } = effectHost(layer)
 
   /* Panel-local selection: the chain index whose params render below.
    * null = add mode (the pickers append a new stage). NOT layer state. */
@@ -146,12 +139,7 @@ function LayerEffects({ layer }) {
   const available = FILTERS.filter((f) => f.kind !== 'engine' || engineOk)
   /* The nav-model rack stub expands to its granular categories here — the
    * editor's Type dropdown lists them flat (labs' /effects/<group> set). */
-  const categories = effectCategories(available).flatMap((c) => (
-    c.rack
-      ? FX_RACK_GROUPS.map((g) => ({ id: g.id, label: g.label, filters: rackGroupFilters(g, available) }))
-        .filter((g) => g.filters.length > 0)
-      : [c]
-  ))
+  const categories = flatCategories(available)
   const catOptions = categories.map((c) => ({ value: c.id, label: c.label }))
   const catId = categories.some((x) => x.id === cat) ? cat : categories[0]?.id
   const catFilters = categories.find((c) => c.id === catId)?.filters ?? []
@@ -276,27 +264,85 @@ function LayerEffects({ layer }) {
           {tab === 'effect' && (
             <>
               <AutoControls schema={effectParams} layer={paramsView} setProp={setStageProp} palette={palette} renderAnimate={renderAnimate} />
-              <RandomizeRow
-                def={stage.def}
-                onRoll={(seed) => {
-                  const rolled = randomizeSchema(stage.def.params, mulberry32(seed))
-                  const filters = bareFilters.map((s, i) => (
-                    i === selIdx ? { ...s, params: mergeRoll(s.params, rolled) } : s
-                  ))
-                  updateLayer(layer.id, { filters })   /* discrete — one undo per roll */
-                }}
-              />
+              <StageRolls def={stage.def} view={paramsView} tab="effect" onPatch={setStageParams} />
             </>
           )}
           {tab === 'anim' && (
             <>
-              <AutoControls schema={stage.def.params} layer={paramsView} setProp={setStageProp} palette={palette} renderAnimate={renderAnimate} tab="anim" emptyHint={stage.def.sweeps ? undefined : ANIM_HINT} />
+              <AutoControls schema={stage.def.params} layer={paramsView} setProp={setStageProp} palette={palette} renderAnimate={renderAnimate} tab="anim" />
+              <StageRolls def={stage.def} view={paramsView} tab="anim" onPatch={setStageParams} />
               {stage.def.sweeps && (
                 <SweepStack sweeps={Array.isArray(stage.params.sweeps) ? stage.params.sweeps : []} onChange={setSweeps} />
               )}
             </>
           )}
         </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * StageRolls — the effect stage's Randomize block, the SAME shape Generate
+ * runs (ParametersPanel): "Randomize all" over the tab's params, then one
+ * button per SCOPE (the schema's sections, plus the type-based Colour
+ * scope), ⌥-click to reset a scope to the filter's defaults, all seeded
+ * through one editable SeedField.
+ *
+ * Before this the Effect tab had a single Randomize that rolled
+ * `stage.def.params` WHOLESALE — motion params included, which an Effect-tab
+ * press has no business touching — and the Motion tab had no randomize at
+ * all. Splitting by scope fixes both: `tab` picks which half of the schema
+ * this block owns, motion sections here and everything else there.
+ *
+ * It rolls through the shared `rolls.jsx` helpers against the stage's
+ * layer-shaped `view` bag, so per-param `noRandom`, bound-param survival and
+ * the range clamp all behave exactly as they do for a generator — one
+ * implementation, not a second dialect.
+ */
+export function StageRolls({ def, view, tab, onPatch }) {
+  const seed = useRollSeed(view)
+  const motion = tab === 'anim'
+  /* Split by TAB, not by section name — the same rule AutoControls renders
+   * by. Section names are the filter author's (`Path`, `Transform`, `Flow`
+   * are all motion in the gl engines), so keying the split off a fixed
+   * MOTION_SECTIONS list would have put a param's slider on one tab and its
+   * roll button on the other. */
+  const params = def.params.filter((p) => (paramTab(p) === 'anim') === motion)
+  const scopes = deriveScopes(params, view)
+  const allParams = motion ? params.filter((p) => !p.noRandom) : allScopeParams(params, view)
+
+  const roll = (params, scope) => {
+    if (!params.length) return
+    onPatch(computeRoll(view, params, seed.take(), { stripNoRandom: !!scope?.motion }))
+  }
+  const reset = (params) => {
+    const patch = {}
+    for (const p of params) if (p.default !== undefined) patch[p.key] = p.default
+    if (Object.keys(patch).length) onPatch(patch)
+  }
+
+  if (!allParams.length && !scopes.length) return null
+
+  return (
+    <div className="flex flex-col gap-2">
+      <SeedField seed={seed} />
+      {allParams.length > 0 && (
+        <Button variant="primary" size="sm" className="w-full"
+          onClick={(e) => (e.altKey ? reset(allParams) : roll(allParams))}>
+          {motion ? 'Randomize motion' : 'Randomize all'}
+        </Button>
+      )}
+      {scopes.length > 0 && (
+        /* Odd counts keep the lone half-width cell — Generate's grid does. */
+        <div className="grid grid-cols-2 gap-2">
+          {scopes.map((sc) => (
+            <Button key={sc.id} variant="primary" size="sm"
+              onClick={(e) => (e.altKey ? reset(sc.params) : roll(sc.params, sc))}>
+              {sc.label}
+            </Button>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -312,7 +358,7 @@ function StageRow({ stage, selected, onSelect, onToggle, onRemove, onUp, onDown,
       title={label}
       disabled={disabled}
       onClick={(e) => { e.stopPropagation(); onClick() }}
-      className="inline-flex items-center justify-center w-5 h-5 rounded shrink-0 text-body hover:text-emphasis disabled:opacity-30"
+      className="inline-flex items-center justify-center w-5 h-5 rounded shrink-0 text-oq-64 hover:text-emphasis disabled:opacity-30"
       style={{ border: 'none', background: 'transparent', cursor: disabled ? 'default' : 'pointer' }}
     >
       {child}
@@ -338,46 +384,6 @@ function StageRow({ stage, selected, onSelect, onToggle, onRemove, onUp, onDown,
       {iconBtn('Remove effect', onRemove, false,
         <EditorIcon name="close" size={11} />)}
     </div>
-  )
-}
-
-/* Seeded filter randomize (labs dither/ascii dice): editable seed + a
- * Randomize press that mints a fresh randomSeed. Committing a typed seed
- * re-rolls deterministically with it. */
-function RandomizeRow({ def: _def, onRoll }) {
-  const [seed, setSeed] = useState(() => randomSeed())
-  const [draft, setDraft] = useState(null)   /* null = not editing */
-  const commitDraft = (str) => {
-    setDraft(null)
-    const n = Number(String(str).trim())
-    if (!Number.isFinite(n)) return
-    const s = Math.floor(n)
-    setSeed(s)
-    onRoll(s)
-  }
-  return (
-    <LabeledControl label="Seed">
-      <div className="flex items-center gap-2">
-        <Input
-          variant="filled" size="sm" chars={10}
-          value={draft ?? String(seed)}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={(e) => commitDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
-        />
-        <Button iconComponent={EditorIcon}
-          variant="primary" size="sm" iconLeft="refresh" iconSize={12}
-          onClick={() => {
-            const s = randomSeed()
-            setSeed(s)
-            setDraft(null)
-            onRoll(s)
-          }}
-        >
-          Randomize
-        </Button>
-      </div>
-    </LabeledControl>
   )
 }
 
@@ -437,7 +443,7 @@ export function SweepStack({ sweeps, onChange, inline = false }) {
                     aria-label={enabled ? 'Disable sweep' : 'Enable sweep'}
                     title={enabled ? 'Disable sweep' : 'Enable sweep'}
                     onClick={() => setField(i, 'enabled', !enabled)}
-                    className="inline-flex items-center justify-center w-5 h-5 rounded shrink-0 text-body hover:text-emphasis"
+                    className="inline-flex items-center justify-center w-5 h-5 rounded shrink-0 text-oq-64 hover:text-emphasis"
                     style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
                   >
                     <EditorIcon name={enabled ? 'eye-on' : 'eye-off'} size={12} />
@@ -452,7 +458,7 @@ export function SweepStack({ sweeps, onChange, inline = false }) {
                 aria-label="Remove sweep"
                 title="Remove sweep"
                 onClick={() => removeAt(i)}
-                className="inline-flex items-center justify-center w-5 h-5 rounded shrink-0 text-body hover:text-emphasis"
+                className="inline-flex items-center justify-center w-5 h-5 rounded shrink-0 text-oq-64 hover:text-emphasis"
                 style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
               >
                 <EditorIcon name="close" size={11} />

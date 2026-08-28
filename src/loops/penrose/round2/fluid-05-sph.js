@@ -14,7 +14,7 @@ const PARAMS          = [
 
 export const r2_fluid_05_sph            = {
   id: 'r2-fluid-05-sph',
-  name: 'SPH — Smoothed Particle Hydrodynamics',
+  name: 'SPH FLUID',
   repo: 'Müller, Charypar & Gross 2003 · SCA 2003',
   summary:
     'Lagrangian SPH particle fluid — density, pressure, and viscosity forces summed via poly6/spiky kernels. Particles pool against glyph boundaries and slosh through narrow letter strokes like ink.',

@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { Icon } from '@kolkrabbi/kol-icons'
+import { Input } from '@kolkrabbi/kol-component'
 import { useTransport } from './transport'
 
 /**
@@ -18,11 +20,12 @@ import { useTransport } from './transport'
  */
 
 /* Size presets. `sm` (default) reproduces the desktop footer verbatim; `lg`
- * scales the cells, icons, and the loop readout to the touch scale used by
- * the mobile overlay (matches `size="lg"` buttons/toggles, ~40px tall). */
+ * scales the cells and icons to the touch scale used by the mobile overlay
+ * (matches `size="lg"` buttons/toggles, ~40px tall). The loop readout takes
+ * its own scale from the DS Input's `size`. */
 const SIZES = {
-  sm: { cell: 'px-3 py-1.5', icon: 14, mono: 'kol-mono-12' },
-  lg: { cell: 'px-4 py-2.5', icon: 20, mono: 'kol-mono-16' },
+  sm: { cell: 'px-3 py-1.5', icon: 14 },
+  lg: { cell: 'px-4 py-2.5', icon: 20 },
 }
 
 function Cell({ name, title, active, onClick, divider, cfg }) {
@@ -50,6 +53,47 @@ function Cell({ name, title, active, onClick, divider, cfg }) {
   )
 }
 
+/* Draft-then-commit, the same contract RangeField's box already uses: what
+ * you type survives until you leave the field. The store's floor stays where
+ * it belongs — the loop clock divides by this value, so 0 is not a legal
+ * state — but it lands on COMMIT, never on a keystroke. Clamping live is what
+ * made an emptied field snap straight back to the floor. */
+function LoopField({ seconds, onCommit, size }) {
+  const shown = String(seconds)
+  const [draft, setDraft] = useState(shown)
+  const [editing, setEditing] = useState(false)
+  useEffect(() => { if (!editing) setDraft(shown) }, [shown, editing])
+
+  const commit = () => {
+    setEditing(false)
+    const n = Number(draft.trim())
+    if (draft.trim() === '' || !Number.isFinite(n)) { setDraft(shown); return }
+    onCommit(n)
+  }
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      variant="property"
+      size={size}
+      affordance="Loop /"
+      unit="s"
+      chars={4}
+      title="Loop length (seconds)"
+      value={draft}
+      onFocus={(e) => { setEditing(true); e.target.select() }}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+        if (e.key === 'Escape') { setDraft(shown); setEditing(false); e.currentTarget.blur() }
+      }}
+      inputClassName="text-center"
+    />
+  )
+}
+
 export default function TransportBar({ size = 'sm' }) {
   const cfg = SIZES[size] ?? SIZES.sm
   const { playing, loopSeconds, play, pause, stop, rewind, setLoopSeconds } = useTransport()
@@ -61,21 +105,12 @@ export default function TransportBar({ size = 'sm' }) {
         <Cell name="pause" title="Pause" active={!playing} onClick={pause} divider cfg={cfg} />
       </div>
 
-      {/* Bare readout, labs' transport center ("Tempo / 120", borderless) —
-          the DS Input lost its borderless variant (ghost → outline, the
-          2026-07-08 chrome law), so the readout is authored chrome here. */}
-      <label className={`flex-1 flex items-center justify-center gap-1.5 ${cfg.mono}`} title="Loop length (seconds)">
-        <span className="text-meta">Loop /</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={String(loopSeconds)}
-          onChange={(e) => setLoopSeconds(e.target.value)}
-          className="bg-transparent border-0 outline-none p-0 w-8 text-center text-emphasis"
-          style={{ font: 'inherit' }}
-        />
-        <span className="text-meta">s</span>
-      </label>
+      {/* The DS property field IS this anatomy — dim affordance, hugging
+          numeric value, adjacent unit (Input variant="property", 0.36.0).
+          The old authored chrome predated it. */}
+      <div className="flex-1 flex justify-center">
+        <LoopField seconds={loopSeconds} onCommit={setLoopSeconds} size={size} />
+      </div>
 
       {/* Stop / rewind bump the transport's reset epoch — stateful consumers
           (sims, trails, video) restart fresh. Pause (left group) never does. */}

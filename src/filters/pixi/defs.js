@@ -21,7 +21,16 @@
  * min/max/step/default are verbatim labs.
  */
 
-const range = (key, label, min, max, step, dflt) => ({ key, label, type: 'range', min, max, step, default: dflt })
+/* `time` and `speed` are CLOCK knobs — pixi's animated filters (shockwave,
+ * crt, godray, reflection) drive their motion off them, so they belong on the
+ * Motion tab, not beside the look controls. Tagged here so every def gets it
+ * without repeating the flag; `paramTab` reads an explicit `tab:` and nothing
+ * infers it from the key. */
+const MOTION_KEYS = new Set(['time', 'speed'])
+const range = (key, label, min, max, step, dflt) => ({
+  key, label, type: 'range', min, max, step, default: dflt,
+  ...(MOTION_KEYS.has(key) ? { tab: 'anim', section: 'Motion' } : null),
+})
 const color = (key, label, dflt) => ({ key, label, type: 'color', default: dflt })
 // Boolean option → an Off/On segmented toggle (stores a real boolean).
 const toggle = (key, label, dflt = false) => ({ key, label, type: 'toggle', default: dflt })

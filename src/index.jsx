@@ -7,10 +7,9 @@
 // the built dist/design-editor.css is imported. The lib sheet scopes its
 // resets under .kol-design-editor (the root class stamped below).
 import './index.lib.css'
-import { useEffect } from 'react'
 import Editor from './editor/Editor'
 import { setMediaProxyBase } from './editor/library/mediaLibrary'
-import { applyThemeMode, getThemeMode, hasStoredThemeMode } from './editor/theme'
+import { useTheme } from '@kolkrabbi/kol-framework'
 
 /**
  * <DesignEditor /> — the whole editor as one embeddable component.
@@ -27,13 +26,11 @@ export function DesignEditor({ mediaProxyBase } = {}) {
   // before children mount. A context/prop-drill would be pure ceremony here.
   if (mediaProxyBase != null) setMediaProxyBase(mediaProxyBase)
 
-  // Apply the persisted theme choice on mount (the app does this pre-paint in
-  // index.html; embeds have no boot script). Without it, Settings → Theme
-  // shows the stored mode as selected while it isn't in effect. A fresh embed
-  // (nothing stored) keeps the host's data-theme untouched.
-  useEffect(() => {
-    if (hasStoredThemeMode()) applyThemeMode(getThemeMode())
-  }, [])
+  // Re-stamp a persisted theme choice on mount (the app does this pre-paint in
+  // index.html; embeds have no boot script). kol-framework's useTheme does it
+  // only when the host has NOT set data-theme itself — a fresh embed keeps the
+  // host's theme untouched.
+  useTheme()
 
   return (
     <div className="kol-design-editor">

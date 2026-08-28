@@ -113,6 +113,23 @@ const HOST_CLOCK = { loop: true, paused: false, speed: 0 }
 
 export function applyParams(def, engine, params) {
   applyEngineParams(def, engine, params)
+  /* Touch overlay — flat-shader engines nudge existing uniforms from the
+   * live stage pointer (randomiser "touch on every generator", 2026-08-12).
+   * Runs AFTER setParams every apply, so the nudge layers over the params'
+   * base values and lifting the finger reverts on the next frame. Pointer
+   * is layer-local 0..1; null when off the layer. */
+  if (typeof engine.setPointer === 'function') {
+    const st = transport.getCtx().stage
+    const w = params.w ?? 0
+    const h = params.h ?? 0
+    let p = null
+    if (st && w > 0 && h > 0) {
+      const x = (st.x - (params.x ?? 0)) / w
+      const y = (st.y - (params.y ?? 0)) / h
+      if (x >= 0 && x <= 1 && y >= 0 && y <= 1) p = { x, y, down: !!st.down }
+    }
+    engine.setPointer(p)
+  }
   /* Background toggle (scene-type engines, def.bgToggle): the renderers are
    * alpha:true — clear-alpha 0 makes the backdrop transparent. Runs AFTER
    * the per-engine update so engine-internal setClearColor calls (alpha 1)

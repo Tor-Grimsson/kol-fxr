@@ -839,7 +839,12 @@ function WebcamPhotoLayer({ layer, layerStyle }) {
   const transform = [layerStyle.transform, layer.mirror ? 'scaleX(-1)' : '']
     .filter(Boolean).join(' ') || undefined
   return (
+    /* ref is load-bearing, not decoration: the effect above sets srcObject on
+     * ref.current, so without this binding the stream is acquired (camera LED
+     * on) and never attached — a black layer with the light lit. Fixed
+     * 2026-08-27; it had been missing since the webcam source shipped. */
     <video
+      ref={ref}
       data-layer-id={layer.id}
       muted
       playsInline
@@ -934,25 +939,55 @@ function useSourceMedia(src, srcType, layerId) {
     }
     if (!src) { setMedia(null); return undefined }
     if (srcType === 'video') {
+      let primeTx = null   /* the paused first-frame prime, cleared on teardown */
       const v = document.createElement('video')
       if (/^https?:/.test(src)) v.crossOrigin = 'anonymous'
       v.muted = true
       v.loop = true
       v.playsInline = true
-      v.onloadedmetadata = () => {
+      /* `loadeddata`, NOT `loadedmetadata`: metadata is readyState 1 — the
+       * dimensions are known but nothing is decoded, so the first drawImage
+       * paints nothing. `loadeddata` is readyState 2 and carries the same
+       * videoWidth/Height, so it is the honest moment to publish. */
+      v.onloadeddata = () => {
         v.width = v.videoWidth
         v.height = v.videoHeight
-        setMedia(v)
         /* Transport governs playback — only start if the clock is running
          * (syncVideoTransport keeps it honest from then on). */
         if (transport.isPlaying()) {
+          setMedia(v)
           const pr = v.play()
           if (pr && pr.catch) pr.catch(() => {})
+          return
         }
+        /* PAUSED: PRIME A FRAME BEFORE PUBLISHING. A detached <video> that has
+         * never played has no PRESENTABLE frame — `readyState` 4 means the data
+         * is buffered, not that the decoder has a frame to composite — so
+         * `drawImage` paints nothing and the layer renders flat black. Measured
+         * here 2026-08-28: same element, same readyState 4, drawn before a seek
+         * → 1 distinct colour, after a completed seek → 575.
+         *
+         * Labs is where it bit: it opens with the clock stopped, so a dropped
+         * video was never played and never seeked and sat black until you
+         * pressed play. The randomiser hid it by calling transport.play() on
+         * insert; the editor hid it the same way.
+         *
+         * A completed seek makes the decoder present a frame. Seeking to 0 is a
+         * no-op when currentTime is already 0 (no `seeked`, no frame), so nudge
+         * a hair past it — 1/240s is inside frame 0 for anything up to 240fps,
+         * so this is frame 0 in every practical sense. Publish on `seeked`, and
+         * publish anyway on a timeout so a codec that never fires it still
+         * renders rather than staying blank forever. */
+        const publish = () => { v.onseeked = null; clearTimeout(primeTx); setMedia(v) }
+        v.onseeked = publish
+        primeTx = setTimeout(publish, 400)
+        try { v.currentTime = 1 / 240 } catch { publish() }
       }
       v.src = src
       return () => {
-        v.onloadedmetadata = null
+        clearTimeout(primeTx)
+        v.onseeked = null
+        v.onloadeddata = null
         v.pause()
         v.removeAttribute('src')
         v.load()
@@ -1009,6 +1044,15 @@ function applyTrimWrap(v, layer, win) {
  * pause, stop and rewind each notify once even while held), so the element
  * re-syncs whenever its governed state could have changed. */
 function syncVideoTransport(v, layer, epoch, epochRef) {
+  /* `isVideo` is read off `layer.srcType` and flips the instant the layer is
+   * patched; `media` is state and lags a tick while the new <video> loads its
+   * metadata. So on a source SWAP (an image already on the layer, then Upload
+   * a video — the labs/randomiser SOURCE strip does exactly this) one render
+   * lands here with srcType 'video' and the previous <img> still in `media`,
+   * and `v.pause()` threw, taking the whole editor tree to the error boundary.
+   * Guard the element, not the flag: the stale tick simply skips transport
+   * sync and the next render — with the real <video> — does it properly. */
+  if (typeof v?.pause !== 'function') return
   v.playbackRate = layer.playbackRate ?? 1
   const win = trimWindow(v, layer)
   v.loop = layer.videoLoop !== false && !win?.trimmed

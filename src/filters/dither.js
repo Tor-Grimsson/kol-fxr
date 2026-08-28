@@ -79,7 +79,7 @@ export default {
     { key: 'contrast', label: 'Contrast', type: 'range', min: 0.4, max: 3, step: 0.1, default: 1.4, section: 'Reaction' },
     { key: 'invert', label: 'Invert', type: 'toggle', default: false, section: 'Reaction' },
     { key: 'palette', label: 'Palette', type: 'select', default: 'ink', options: opts(RD_PALETTES), section: 'Color' },
-    { key: 'speed', label: 'Speed', type: 'range', min: 0.2, max: 3, step: 0.1, default: 1, section: 'Motion' },
+    { key: 'speed', label: 'Speed', type: 'range', min: 0.2, max: 3, step: 0.1, default: 1, tab: 'anim', section: 'Motion' },
   ],
   apply(ctx, src, w, h, p, u) {
     const s = ditherPool(p.id, () => {

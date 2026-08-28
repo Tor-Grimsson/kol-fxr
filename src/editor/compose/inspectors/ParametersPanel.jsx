@@ -10,7 +10,7 @@ import { useGeneratorLibrary } from '../../library/LibraryProvider'
 import AutoControls from '../../params/AutoControls'
 import BindDot from '../../params/BindDot'
 import { ModulationList } from '../../params/ModulationEditor'
-import { deriveScopes, allScopeParams, computeRoll, useRollSeed, SeedField } from '../../params/rolls'
+import { deriveScopes, allScopeParams, computeRoll, computePresetRoll, presetRollPool, useRollSeed, SeedField } from '../../params/rolls'
 import { motionPresetsFor, axisKeys } from '../../params/motionPresets'
 import { lookPresetsFor } from '../../params/lookPresets'
 import { paramSection } from '../../params/schema'
@@ -32,6 +32,7 @@ import { wildExpression, fitBounds } from '../../../loops/math/expression'
 import { mulberry32 } from '../../lib/rng'
 import { MISC_TREE } from '../../../loops/taxonomy'
 import { LoopPicker } from './LoopPicker'
+import Hint from '../../components/Hint'
 import KineticPanel from './KineticPanel'
 import { themeParams } from '../../../loops/theme'
 import { THEME_OPTIONS, DEFAULT_THEME } from '../../../loops/lib/themes'
@@ -65,7 +66,6 @@ const SUBTAB_OPTIONS = [
   { value: 'style',    label: 'Style' },
   { value: 'anim',     label: 'Animation' },
 ]
-const ANIM_HINT = 'Modulate any parameter via its bind dot (Time · LFO · Expression · Audio · MIDI · Joystick …). Pick a source at the dot; its controls appear here.'
 
 /* Text params minus the keys the Inspector's TextSurface owns (one home per
  * control) — leaves any future non-styling params. */
@@ -81,7 +81,7 @@ export default function ParametersPanel() {
       <div className="kol-compose-inspector-body">
         {layer
           ? <LayerParameters key={layer.id} layer={layer} />
-          : <p className="kol-helper-12 text-meta">Select a layer to edit its parameters.</p>}
+          : <Hint className="kol-helper-12 text-meta">Select a layer to edit its parameters.</Hint>}
       </div>
     </div>
   )
@@ -121,7 +121,7 @@ function LayerParameters({ layer }) {
         {tab === 'anim' && (
           <>
             <ModulationList layer={layer} schema={SHAPE_SCHEMA} setProp={setProp} />
-            <AutoControls schema={SHAPE_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" emptyHint={ANIM_HINT} />
+            <AutoControls schema={SHAPE_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" />
           </>
         )}
       </>
@@ -138,7 +138,7 @@ function LayerParameters({ layer }) {
         {tab === 'anim' && (
           <>
             <ModulationList layer={layer} schema={PHOTO_SCHEMA} setProp={setProp} />
-            <AutoControls schema={PHOTO_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" emptyHint={ANIM_HINT} />
+            <AutoControls schema={PHOTO_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" />
           </>
         )}
       </>
@@ -154,9 +154,9 @@ function LayerParameters({ layer }) {
     body = <KineticPanel {...shared} tabStrip={tabStrip} />
     stripInBody = true
   } else if (layer.type === 'path') {
-    body = tab === 'anim' ? <p className="kol-helper-12 text-meta">{ANIM_HINT}</p> : null
+    body = null
   } else {
-    return <p className="kol-helper-12 text-meta">This layer has no parameters.</p>
+    return <Hint className="kol-helper-12 text-meta">This layer has no parameters.</Hint>
   }
 
   return (
@@ -210,8 +210,8 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
   const seed = useRollSeed(layer)
   const scopes = deriveScopes(schema, layer)
   const tables = motionPresetsFor(layer.loopId, layer)
-  const roll = (params, scope) => {
-    const rollPatch = computeRoll(layer, params, seed.take(), { stripNoRandom: !!scope?.motion })
+  const roll = (params, scope, opts) => {
+    const rollPatch = computeRoll(layer, params, seed.take(), { stripNoRandom: !!scope?.motion, ...opts })
     /* A motion roll is by definition hand-off-the-preset — flip the touched
      * axis dropdown(s) to Custom (labs rollMotionFrame/Form). */
     if (tables && scope?.motion) {
@@ -337,7 +337,18 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
               weight/seed) — pickers above the randomize block, labs order. */}
           <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="generate" inline={inline} />
 
-          <Button variant="primary" size="sm" className="w-full" onClick={(e) => (e.altKey ? resetScope(allScopeParams(schema, layer)) : roll(allScopeParams(schema, layer)))}>
+          {/* Rolls WHICH PRESET you are on — the axis the rail had no button
+              for. Hidden when the group holds nothing else to move to. */}
+          {presetRollPool(layer).length > 0 && (
+            <Button variant="primary" size="sm" className="w-full" onClick={() => {
+              const s = seed.take()
+              const patch = computePresetRoll(layer, s)
+              if (patch) updateLayer(layer.id, patch)
+            }}>
+              Randomize preset
+            </Button>
+          )}
+          <Button variant="primary" size="sm" className="w-full" onClick={(e) => (e.altKey ? resetScope(allScopeParams(schema, layer)) : roll(allScopeParams(schema, layer), undefined, { withFilters: true }))}>
             Randomize all
           </Button>
           {scopes.length > 0 && (
@@ -426,7 +437,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
             </>
           )}
           <ModulationList layer={layer} schema={schema} setProp={setParamProp} />
-          <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="anim" emptyHint={ANIM_HINT} inline={inline} />
+          <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="anim" inline={inline} />
           {showKeyframes && (
             <KeyframeEditor layer={layer} patch={patch} defaultDuration={loop?.duration ?? 8} />
           )}
@@ -510,13 +521,13 @@ function PatternFields({ layer, setProp, updateLayer, palette, renderAnimate, ta
       )}
 
       {tab === 'style' && (
-        <p className="kol-helper-12 text-meta">Pattern styling lives in the Pattern tab.</p>
+        <Hint className="kol-helper-12 text-meta">Pattern styling lives in the Pattern tab.</Hint>
       )}
 
       {tab === 'anim' && (
         <>
           <ModulationList layer={layer} schema={PATTERN_SCHEMA} setProp={setProp} />
-          <AutoControls schema={PATTERN_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" emptyHint={ANIM_HINT} />
+          <AutoControls schema={PATTERN_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" />
         </>
       )}
     </>
@@ -598,7 +609,7 @@ function TextFields({ layer, setProp, updateLayer, palette, renderAnimate, tab }
       {tab === 'anim' && (
         <>
           <ModulationList layer={layer} schema={TEXT_SCHEMA} setProp={setProp} />
-          <AutoControls schema={TEXT_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" emptyHint={ANIM_HINT} />
+          <AutoControls schema={TEXT_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" />
         </>
       )}
     </>

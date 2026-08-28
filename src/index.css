@@ -1,14 +1,38 @@
 @import "tailwindcss";
 
-/* Design-system tokens + base CSS — the published brand-neutral theme. */
-@import "@kolkrabbi/kol-theme";
+/* Design-system tokens + base CSS — the published brand-neutral theme.
+ *
+ * `/core`, not the umbrella (FullConsumptionContract part 1, kol-monitor →
+ * kol-ds-ui, adopted 2026-08-27): the umbrella pulls all five DOMAIN PACKS —
+ * chess · workshop · foundry · dashboards · styleguide, ~81 KB — and plain
+ * CSS `@import` does not tree-shake, so an app that renders none of them
+ * shipped every byte. `/core` is the umbrella minus exactly those five, same
+ * cascade order. Swept before swapping: 341 selectors live only in the packs,
+ * and this repo references none of them (the four nominal hits were `active`,
+ * `top`, `bottom`, `disabled` — pack state-modifiers, and our `disabled` is
+ * the Tailwind variant). Go back to the umbrella the day fxr renders a pack. */
+@import "@kolkrabbi/kol-theme/core";
+
+/* THE @source MANIFEST — a hard requirement, and it was missing entirely
+ * (added 2026-08-15). KOL packages ship raw JSX and Tailwind does not scan
+ * node_modules, so every utility class used INSIDE a DS component was going
+ * ungenerated. It looked fine only by accident: the common ones (flex, gap-2)
+ * happen to appear in this app's own markup too, and most DS chrome is real
+ * CSS in kol-theme rather than utilities. Anything relying on a utility this
+ * app never types — kol-shell's chrome, for one — renders unstyled without
+ * this line. NOT bundled into kol-theme.css on purpose; it is opt-in. */
+@import "@kolkrabbi/kol-theme/kol-sources.css";
 
 /* Brand layer — Kolkrabbi identity (hue ramps, brand-primary/secondary roles,
  * accent rebind). Binds the neutral DS theme above to the Kolkrabbi brand. */
 @import "@kolkrabbi/kol-framework/kol-brand-color.css";
 
-/* Framework layer — page chrome / structural rules (inert without its markup). */
+/* Framework layer — page chrome / structural rules (inert without its markup).
+ * Self-layered: the file wraps its own body in `@layer components`, so no
+ * `layer()` belongs on this import. */
 @import "@kolkrabbi/kol-framework/kol-framework.css";
 
-/* Reserve scrollbar gutter so fullbleed canvases don't horizontal-scroll. */
-:root { scrollbar-gutter: stable; }
+/* THIS FILE IS IMPORTS ONLY. `:root { scrollbar-gutter: stable }` lived here
+ * until 2026-08-15 and moved into kol-framework.css — it is chrome every app
+ * on the framework wants, not this app's business. Rules do not belong in an
+ * entry stylesheet; if something is missing, it goes in the DS. */

@@ -674,6 +674,31 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
     setLayers(next)
   }, [])
 
+  /* ─── Frame: keep FULL-FRAME layers full-frame ───
+   * Changing the aspect resized the frame and left every layer where it was,
+   * so a photo inserted at 1:1 kept its 1080-tall box inside a 1800-tall 3:5
+   * frame — the image stopped covering and a black band appeared under it
+   * (user, 2026-08-27). `layerDefaults` starts photo/pattern/loop layers at
+   * exactly {0, 0, CANVAS_W, vh}, so a layer still sitting on the OLD frame
+   * is one nobody has hand-placed: refit it and it keeps covering. A layer
+   * that has been moved or resized is left alone — that box is a decision.
+   *
+   * Lives here rather than in setAspect because setCanvasSize changes the
+   * frame too, and both are declared above setLayersTracked; one effect on
+   * the resulting size covers every caller, which is the point (mobile's
+   * setStageAspect hand-rolled this for its own layer and nothing else did). */
+  const prevFrameRef = useRef(null)
+  useEffect(() => {
+    const vh = CANVAS_W / (canvasW / canvasH)
+    const prev = prevFrameRef.current
+    prevFrameRef.current = vh
+    if (prev == null || Math.abs(prev - vh) < 0.5) return
+    const wasFull = (l) => l.x === 0 && l.y === 0 && l.w === CANVAS_W && Math.abs(l.h - prev) < 0.5
+    setLayersTracked((ls) => (
+      ls.some(wasFull) ? ls.map((l) => (wasFull(l) ? { ...l, h: vh } : l)) : ls
+    ))
+  }, [canvasW, canvasH, setLayersTracked])
+
   const beginTransaction  = useCallback(() => {
     if (txRef.current === null) txRef.current = snap()
   }, [])

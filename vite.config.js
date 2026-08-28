@@ -2,6 +2,16 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import svgr from 'vite-plugin-svgr'
+import { THEME_BOOT_SCRIPT } from '@kolkrabbi/kol-framework/src/theme.js'
+
+/* The no-flash theme boot — kol-framework's own snippet (0.28.0), inlined
+   before the app script so the stored choice stamps data-theme pre-paint. */
+const themeBoot = {
+  name: 'kol-theme-boot',
+  transformIndexHtml(html) {
+    return html.replace(/<!-- kol-theme-boot[^>]*-->/, `<script>${THEME_BOOT_SCRIPT}</script>`)
+  },
+}
 
 /* Dev-only favicon — a big yellow X so dev tabs are instantly tellable from
  * prod. `apply: 'serve'` keeps it out of every build. */
@@ -18,7 +28,7 @@ const devFavicon = {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), svgr(), tailwindcss(), devFavicon],
+  plugins: [react(), svgr(), tailwindcss(), devFavicon, themeBoot],
   // Single react / react-dom copy — the published DS packages peer-depend on
   // React, and a duplicated copy crashes at runtime with a null dispatcher.
   resolve: {
@@ -29,6 +39,10 @@ export default defineConfig({
   // node_modules dep leaves them empty, so every kol-icons icon resolves to
   // "not found". Excluding it from dep-optimization makes Vite process the
   // package source directly (globs + ?raw both work), populating the registry.
+  // NOT the other DS packages: kol-component pulls CJS deps (lowlight) that only
+  // work pre-bundled. Stale-after-bump is handled by `vite --force` in the dev
+  // script instead (2026-08-27 — the title face and the filter labels both
+  // rendered the OLD package after a bump until the dep cache was rebuilt).
   optimizeDeps: {
     exclude: ['@kolkrabbi/kol-icons'],
   },
@@ -39,12 +53,12 @@ export default defineConfig({
   // vercel.json { "source": "/media/:path*", "destination": "https://media.kolkrabbi.io/:path*" }.
   server: {
     proxy: {
-      '/media': { target: 'https://media.kolkrabbi.io', changeOrigin: true, rewrite: (p) => p.replace(/^\/media/, '') },
+      '/media': { target: 'https://r2.kolkrabbi.io', changeOrigin: true, rewrite: (p) => p.replace(/^\/media/, '') },
     },
   },
   preview: {
     proxy: {
-      '/media': { target: 'https://media.kolkrabbi.io', changeOrigin: true, rewrite: (p) => p.replace(/^\/media/, '') },
+      '/media': { target: 'https://r2.kolkrabbi.io', changeOrigin: true, rewrite: (p) => p.replace(/^\/media/, '') },
     },
   },
 })

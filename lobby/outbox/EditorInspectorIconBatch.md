@@ -15,3 +15,9 @@ labels as stand-ins, never local set icons.
 - The stand-ins listed in the entry's table, live in the inspector today.
 - **On ship: adopt.** Bump + swap names in one pass; the mask glyph stays
   unused until the mask feature exists (flagged separately).
+
+## ✅ ADOPTED — 2026-08-15
+
+kol-icons is pinned ^0.17.0, well past the 0.15.0 this asked for — verified 2026-08-15.
+
+**Remainder here:** none.

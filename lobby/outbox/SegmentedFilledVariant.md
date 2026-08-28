@@ -15,3 +15,9 @@ doesn't, is documented as a stopgap in its header, and dies on ship.
 
 - `SegBar.jsx` + its call sites, until the variant lands.
 - **On ship: adopt.** One-pass swap + delete.
+
+## ✅ ADOPTED — 2026-08-15
+
+SegBar.jsx is gone from src/editor/components/ — verified 2026-08-15.
+
+**Remainder here:** none.

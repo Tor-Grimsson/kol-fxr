@@ -14,3 +14,9 @@ put it inside the Input shell.
 
 - Interim: swatch + hex adjacent in the paint rows (close, not the anatomy).
 - **On ship: adopt.** Rebuild the rows on the one-container bar.
+
+## ✅ ADOPTED — 2026-08-15
+
+Input slotLeft is in use at src/editor/compose/inspectors/ColorField.jsx — verified 2026-08-15.
+
+**Remainder here:** none.

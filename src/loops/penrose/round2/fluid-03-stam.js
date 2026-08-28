@@ -14,7 +14,7 @@ const PARAMS          = [
 
 export const r2_fluid_03_stam            = {
   id: 'r2-fluid-03-stam',
-  name: 'Stam Stable Fluids + Vorticity Confinement',
+  name: 'STAM STABLE FLUIDS',
   repo: 'Stam 1999 / Fedkiw 2001 — stable fluids + vorticity confinement',
   summary:
     'Semi-Lagrangian incompressible solver with Helmholtz-Hodge pressure projection. Vorticity confinement (Fedkiw 2001) re-energizes the fine swirl numerical diffusion destroys, filling the glyph with persistent nested eddies.',

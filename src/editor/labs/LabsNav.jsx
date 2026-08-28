@@ -1,7 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { Icon } from '@kolkrabbi/kol-icons'
-import { Tooltip } from '@kolkrabbi/kol-component'
-import { useDragResize } from '@kolkrabbi/kol-framework'
+import { useEffect, useRef } from 'react'
+import { setRailExtras, RAIL_EXTRA_PREFIX } from '../../railExtras'
 import { useComposeState } from '../compose/state'
 import { useLabsLayer } from './useLabsLayer'
 import { GENERATIVE_TREE, MISC_TREE } from '../../loops/taxonomy'
@@ -9,7 +7,6 @@ import { groupById, presetsInGroup, presetsInSub, presetLayerPatch } from '../..
 import { KINETIC_TREE, KINETIC_PRESETS, presetComp } from '../../kinetic/presets'
 import { FILTERS } from '../../filters'
 import { effectCategories, categoryOf, FX_RACK_GROUPS } from '../compose/inspectors/effectCategories'
-import { MODES, goMode } from '../mode'
 
 /**
  * LabsNav — labs mode's left rail (plan.md Phase 11.3): the persistent,
@@ -25,7 +22,7 @@ import { MODES, goMode } from '../mode'
  * Adopted from framework 0.17.0 (the SideNavGrabResize arc):
  *   useDragResize — the pill-marked grab edge: drag resizes (live
  *     --kol-sidenav-w), click toggles collapse, snap bands, keyboard,
- *     persistence. labs.css makes the editor grid's left column follow.
+ *     persistence. kol-labs.css makes the editor grid's left column follow.
  *   collapsed rail — :root[data-sidenav="collapsed"] hides labels/carets/
  *     lists (shipped rules); icon rows get a DS Tooltip and any icon press
  *     expands (the 0.17.0 behaviour).
@@ -74,87 +71,19 @@ export const GROUP_ICONS = {
 
 /* Mode-door rows (mode.js MODES) — shipped drawings only: desktop is the
  * compositor chrome, globe the labs output, refresh the randomiser. */
+/* SECTION GLYPHS — the collapse rule (user, 2026-08-27): a row that can
+ * survive collapse HAS AN ICON; one that cannot is not a row, it is a label.
+ * These five were labels, so collapsing took them off the rail entirely and
+ * the transition read as two different UIs rather than one narrowing. */
+export const SECTION_ICONS = {
+  effects: 'filter',
+  generative: 'layers',
+  composition: 'type',
+  modulation: 'frequency',
+  mode: 'mode-toggle-01',
+}
+
 export const MODE_ICONS = { editor: 'desktop', labs: 'globe', randomiser: 'refresh' }
-
-/* Section eyebrow — labs' method labels (Effects · Generative · …), the
- * SAME treatment as the right rail's section headers (kol-helper-10
- * text-meta) so the two sidebars read as one system. Clickable: the four
- * sections accordion — one open at a time. Hidden in the collapsed rail by
- * labs.css (`.kol-labs-eyebrow`). */
-function NavSection({ label, open, onToggle }) {
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="kol-labs-eyebrow w-full flex items-center gap-2 kol-helper-10 text-meta pl-6 pr-3 pt-4 pb-1 bg-transparent border-0 cursor-pointer text-left"
-      >
-        <span className="flex-1 min-w-0 truncate">{label}</span>
-        <Icon
-          name="chevron-down"
-          size={10}
-          className={`shrink-0 transition-transform duration-150${open ? '' : ' -rotate-90'}`}
-        />
-      </button>
-    </li>
-  )
-}
-
-/* A collapsible group row — the DS hop (box in kol-framework.css rules).
- * is-active (the accent icon) marks the group HOLDING the current selection.
- * Collapsed rail: tooltip names the glyph, any press expands (0.17.0). */
-function NavGroup({ id, label, active, open, onToggle, collapsed, onExpandRail, children }) {
-  const btn = (
-    <button
-      type="button"
-      onClick={collapsed ? onExpandRail : onToggle}
-      aria-expanded={open}
-      className={`kol-sidenav-hop kol-helper-12 bg-transparent border-0 cursor-pointer text-left${active ? ' is-active' : ''}`}
-    >
-      <span className="kol-sidenav-hop-icon inline-flex items-center justify-center w-5 h-5 shrink-0" aria-hidden="true">
-        <Icon name={GROUP_ICONS[id] ?? 'square'} size={16} />
-      </span>
-      <span className="kol-sidenav-hop-label flex-1 min-w-0 truncate">{label}</span>
-      <span className="kol-sidenav-hop-caret" aria-hidden="true">
-        <Icon
-          name="chevron-down"
-          size={12}
-          className={`transition-transform duration-150${open ? '' : ' -rotate-90'}`}
-        />
-      </span>
-    </button>
-  )
-  return (
-    <li className="relative">
-      {collapsed ? <Tooltip label={label} placement="right" triggerClassName="block">{btn}</Tooltip> : btn}
-      {open && <ul className="kol-sidenav-list">{children}</ul>}
-    </li>
-  )
-}
-
-/* A pickable leaf — the DS link row (the is-active accent dot ships in
- * kol-theme, positioned by the dot var: 56px indent − 14px, brand's rule). */
-function NavLeaf({ label, active, onClick }) {
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onClick}
-        style={{ '--kol-sidenav-dot-left': '42px' }}
-        className={`kol-sidenav-link kol-helper-10 w-full relative block py-[4px] pl-14 pr-6 bg-transparent border-0 cursor-pointer text-left truncate transition-colors duration-150${active ? ' is-active' : ' text-strong hover:text-emphasis'}`}
-      >
-        {label}
-      </button>
-    </li>
-  )
-}
-
-/* Sub-group header inside a leaf list (multi-group generative types) —
- * the DS group node at the leaf gutter, right-rail eyebrow treatment. */
-function LeafGroupLabel({ label }) {
-  return <div className="kol-sidenav-group kol-helper-10 text-meta pl-14">{label}</div>
-}
 
 /* Labs' EFFECTS > Pattern — the four GENERATOR pages (the 'optic' group:
  * Moiré · Mesh Gradient · Reaction · Halftone, labs' sidebar order). Leaves
@@ -187,33 +116,44 @@ const scanlineLookOf = (p = {}) => {
 export default function LabsNav() {
   const { addFilter, patchFilter } = useComposeState()
   const { layer, setOnly } = useLabsLayer()
-  const [openKey, setOpenKey] = useState('gen:Pattern')
-  const toggle = (key) => setOpenKey((k) => (k === key ? null : key))
 
   /* The four method sections accordion — mutually exclusive, clicking the
    * open one collapses it. Boot on the section holding the current layer.
    * The collapsed icon rail ignores the accordion (structure is invisible
    * there — every group's icon stays reachable). */
-  const [openSection, setOpenSection] = useState('effects')
-  const toggleSection = (id) => setOpenSection((s) => (s === id ? null : id))
   /* Follow the selection's section — a pick is already in its section
    * (no-op); a deep link / restored draft seeds AFTER mount, and this is
    * what lands the accordion on the right one. */
-  useEffect(() => {
-    /* optic loops are labs' EFFECTS > Pattern pages — they live in the
-     * Effects section even though they're loop layers. */
-    const s = layer?.type === 'loop' ? (layer?.loopGroup === 'optic' ? 'effects' : 'generative')
-      : layer?.type === 'kinetic' || layer?.type === 'misc' ? 'composition'
-        : layer?.type === 'photo' ? 'effects' : null
-    if (s) setOpenSection(s)
-  }, [layer?.type, layer?.loopGroup])
 
-  /* The DS grab edge: drag resizes (--kol-sidenav-w live on :root), click
-   * toggles the icon rail. labs.css points the editor grid's left column at
-   * the same tokens. */
-  const asideRef = useRef(null)
-  const { collapsed, toggleCollapsed, grabProps } = useDragResize(asideRef)
-  const expandRail = () => { if (collapsed) toggleCollapsed() }
+  /* Disclosure, collapse, the grab edge and the `:root[data-sidenav]` stamp
+   * are ALL SideNav's now (kol-framework 0.30.0) — this file kept its own
+   * `useDragResize`, open-key and open-section state while wearing the
+   * component's classes, which is precisely the fork the ticket named. */
+
+  /* THE SOURCE OUTLIVES THE LAYER. Picking a generative preset replaces the
+   * photo layer outright (setOnly keeps ONE layer), so hopping Effects →
+   * Generative → Effects used to drop the media and land you back on the
+   * From library | Upload empty state (user, 2026-08-27). Remember the last
+   * real source here — a ref, so it survives the swap the layer does not —
+   * and re-seed the next photo layer with it.
+   *
+   * Webcam is deliberately NOT remembered: its stream is stopped when the
+   * layer goes, and silently re-opening the camera on a nav click is not a
+   * restore, it is a surprise. Re-pick Camera to turn it back on. */
+  const lastSourceRef = useRef(null)
+  useEffect(() => {
+    if (layer?.type === 'photo' && layer.src) {
+      lastSourceRef.current = { src: layer.src, srcType: layer.srcType, fit: layer.fit }
+    }
+  }, [layer?.type, layer?.src, layer?.srcType, layer?.fit])
+
+  /* The source a new photo layer should carry: the live one if we're already
+   * on a photo, else whatever we last had. */
+  const carriedSource = () => (
+    layer?.type === 'photo'
+      ? { src: layer.src, srcType: layer.srcType, fit: layer.fit }
+      : (lastSourceRef.current ?? {})
+  )
 
   /* Effects: labs applies an effect to a SOURCE. Swap in a photo layer and
    * push the filter onto its chain — a photo with no `src` renders the
@@ -221,10 +161,7 @@ export default function LabsNav() {
    * exactly labs' behaviour on e.g. /radar/ascii. An existing photo layer
    * keeps its source, so browsing effects doesn't make you re-pick media. */
   const pickEffect = (filterId, patch) => {
-    const keepSrc = layer?.type === 'photo'
-      ? { src: layer.src, srcType: layer.srcType, fit: layer.fit }
-      : {}
-    const id = setOnly('photo', { ...keepSrc, filters: [], fxGroup: null })
+    const id = setOnly('photo', { ...carriedSource(), filters: [], fxGroup: null })
     if (id) {
       addFilter(id, filterId)
       if (patch) patchFilter(id, 0, patch)
@@ -235,10 +172,7 @@ export default function LabsNav() {
   /* A rack CATEGORY leaf (labs /radar/effects/<group>): an empty effect
    * stack scoped to that category — the rail becomes the rack surface. */
   const pickRackGroup = (groupId) => {
-    const keepSrc = layer?.type === 'photo'
-      ? { src: layer.src, srcType: layer.srcType, fit: layer.fit }
-      : {}
-    setOnly('photo', { ...keepSrc, filters: [], fxGroup: groupId })
+    setOnly('photo', { ...carriedSource(), filters: [], fxGroup: groupId })
     window.dispatchEvent(new CustomEvent('kol:open-effects'))
   }
 
@@ -266,209 +200,181 @@ export default function LabsNav() {
   /* Nav leaves = the CATEGORY level (`sub` values) — presets NEVER render
    * here; the right rail owns them (the hierarchy law). A group with no
    * authored categories IS the category: one leaf named after the group.
-   * A leaf picks its category's FIRST preset; the rail picks within it. */
-  const categoryLeaves = (gid, type = 'loop', groupLabel) => {
+   * A leaf picks its category's FIRST preset; the rail picks within it.
+   *
+   * DATA, not JSX (2026-08-27): these feed `SideNav`'s navTree as ACTION
+   * LEAVES — `{ label, onSelect, active }` — the seam kol-framework 0.30.0
+   * added so a dispatching rail can use the shared geometry. */
+  const leafRows = (gid, type = 'loop', groupLabel) => {
     const presets = presetsInGroup(gid)
     const subs = [...new Set(presets.map((p) => p.sub).filter(Boolean))]
     const pick = (p) => (type === 'misc'
       ? () => { setOnly('misc', presetLayerPatch(p, gid)); window.dispatchEvent(new CustomEvent('kol:open-params')) }
       : () => pickGenerative(p, gid))
     if (!subs.length) {
-      return (
-        <NavLeaf
-          label={groupLabel ?? groupById(gid).label}
-          active={layer?.loopGroup === gid}
-          onClick={pick(presets[0])}
-        />
-      )
+      return [{
+        label: groupLabel ?? groupById(gid).label,
+        onSelect: pick(presets[0]),
+        active: layer?.loopGroup === gid,
+      }]
     }
-    return subs.map((sub) => (
-      <NavLeaf
-        key={sub}
-        label={sub}
-        active={layer?.loopGroup === gid && activePreset?.sub === sub}
-        onClick={pick(presetsInSub(gid, sub)[0])}
-      />
-    ))
+    return subs.map((sub) => ({
+      label: sub,
+      onSelect: pick(presetsInSub(gid, sub)[0]),
+      active: layer?.loopGroup === gid && activePreset?.sub === sub,
+    }))
   }
 
   /* Generative types can span several registry groups (labs' own internal
-   * groups — see taxonomy.js); a header per group when there's more than
-   * one — except a category-less group, whose single leaf already carries
-   * the group name (a header above it would just repeat it). */
-  const generativeLeaves = (entry) =>
-    entry.groups.map((gid) => {
-      const label = entry.labels?.[gid] ?? groupById(gid).label
-      const hasSubs = presetsInGroup(gid).some((p) => p.sub)
-      return (
-        <li key={gid}>
-          {entry.groups.length > 1 && hasSubs && <LeafGroupLabel label={label} />}
-          <ul className="flex flex-col gap-[2px]">{categoryLeaves(gid, 'loop', label)}</ul>
-        </li>
-      )
+   * groups — see taxonomy.js); a nested group per registry group when there
+   * is more than one — except a category-less group, whose single leaf
+   * already carries the group name. */
+  const generativeRows = (entry) => entry.groups.flatMap((gid) => {
+    const label = entry.labels?.[gid] ?? groupById(gid).label
+    const hasSubs = presetsInGroup(gid).some((p) => p.sub)
+    const rows = leafRows(gid, 'loop', label)
+    return (entry.groups.length > 1 && hasSubs) ? [{ label, children: rows }] : rows
+  })
+
+  /* ── THE NAV TREE ──
+   * `SideNav` (kol-framework 0.30.0, WorkspaceSidebarGeometry) is the one
+   * workspace-rail geometry now; this file builds its tree and nothing else.
+   * It used to hand-roll ~350 lines of markup wearing this component's own
+   * classes, which is the fork the ticket named.
+   *
+   * THE SHAPE, per the collapse rule: a SECTION is a bare label — no icon, no
+   * route, no action — and the icon categories that follow are its SIBLINGS,
+   * not its children. Collapse hides the labels and the icon rows stay, so
+   * the rail reads as one thing narrowing. Nesting the categories under the
+   * section would take the whole subtree down with the label.
+   *
+   * Every leaf is an ACTION leaf: labs dispatches (swap the layer) and never
+   * routes, so no history is walked — `LabsView.jsx`'s replace-not-push
+   * `?preset=` contract is untouched. */
+  const navTree = [
+    /* The app destinations are NOT here any more: the shell rail renders them
+       itself now (one rail), and these rows are appended to its `items`. */
+    { id: 'sec:effects', label: 'Effects' },
+    ...effectCategories(FILTERS).map((cat) => ({
+      id: `fx:${cat.id}`,
+      label: cat.label,
+      icon: GROUP_ICONS[`fx:${cat.id}`] ?? 'square',
+      pages: cat.rack
+        /* FX RACK's leaves are its CATEGORIES (labs' sidebar) — the presets
+           live in the rack surface's adder. */
+        ? FX_RACK_GROUPS.map((g) => ({
+          label: g.label,
+          onSelect: () => pickRackGroup(g.id),
+          active: layer?.fxGroup === g.id,
+        }))
+        : cat.id === 'pattern'
+          ? PATTERN_PAGES.map((sub) => ({
+            label: sub,
+            onSelect: () => pickGenerative(presetsInSub('optic', sub)[0], 'optic'),
+            active: layer?.loopGroup === 'optic' && activePreset?.sub === sub,
+          }))
+          : cat.id === 'scanline'
+            ? SCANLINE_LOOKS.map((lk) => ({
+              label: lk.label,
+              onSelect: () => pickEffect('scanline', lk.patch),
+              active: !layer?.fxGroup && activeFilterId === 'scanline'
+                && scanlineLookOf(layer?.filters?.[0]?.params) === lk.label,
+            }))
+            : cat.filters.map((f) => ({
+              label: f.label ?? f.id,
+              onSelect: () => pickEffect(f.id),
+              active: !layer?.fxGroup && activeFilterId === f.id,
+            })),
+    })),
+
+    { id: 'sec:generative', label: 'Generative' },
+    ...GENERATIVE_TREE.map((entry) => ({
+      id: `gen:${entry.label}`,
+      label: entry.label,
+      icon: GROUP_ICONS[`gen:${entry.label}`] ?? 'square',
+      pages: generativeRows(entry),
+    })),
+
+    { id: 'sec:composition', label: 'Composition' },
+    ...KINETIC_TREE.map((entry) => ({
+      id: `kin:${entry.label}`,
+      label: entry.label,
+      icon: GROUP_ICONS[`kin:${entry.label}`] ?? 'square',
+      pages: entry.subs.map((sub) => ({
+        label: sub,
+        onSelect: () => pickKinetic(KINETIC_PRESETS.find((pr) => pr.sub === sub)),
+        active: layer?.type === 'kinetic'
+          && KINETIC_PRESETS.some((pr) => pr.sub === sub && pr.id === activePresetId),
+      })),
+    })),
+    ...MISC_TREE.map((entry) => ({
+      id: `misc:${entry.label}`,
+      label: entry.label,
+      icon: GROUP_ICONS[`misc:${entry.label}`] ?? 'square',
+      pages: entry.groups.flatMap((gid) => leafRows(gid, 'misc')),
+    })),
+
+    /* Modulation has no nav target of its own: every param's bind dot is the
+       entry point and the shaping UI is the rail's Motion tab. One hop. */
+    { id: 'sec:modulation', label: 'Modulation' },
+    {
+      id: 'mod:animation',
+      label: 'Animation',
+      icon: 'frequency',
+      onSelect: () => window.dispatchEvent(new CustomEvent('kol:open-params')),
+    },
+
+  ]
+
+  /* ── PUBLISH, DON'T RENDER ──
+   * This component draws nothing now. It hands the rows to the SHELL rail
+   * (`railExtras`), which renders them with kol-shell's `NavRail` — the same
+   * component, grab animation and active styling every other route gets.
+   *
+   * The shape `NavRail` reads is `{ icon, path, label, sub: [{ path, label }] }`
+   * and its only callback is `onNavigate(path)`, so each row's path is a
+   * sentinel and the dispatch table below is what actually runs on a click.
+   *
+   * ONE LEVEL IS LOST: `NavRail` has no section-header row, so the bare
+   * EFFECTS / GENERATIVE / COMPOSITION / MODULATION labels do not render — the
+   * icon rows they grouped all still do, in order. That is the one gap to file
+   * at kol-ds-ui; everything else maps exactly. */
+  useEffect(() => {
+    const dispatch = new Map()
+    const items = []
+
+    /* FOLD THE FLAT LIST INTO ITS SECTIONS. `navTree` is a stream — a `sec:`
+       marker, then the groups belonging to it, then the next marker. The rail
+       wants that nesting made real: the section becomes the L1 row and the
+       groups that followed it become its L2. */
+    navTree.forEach((entry) => {
+      if (entry.id.startsWith('sec:')) {
+        const key = entry.id.slice(4)
+        items.push({
+          icon: SECTION_ICONS[key] ?? 'square',
+          path: `${RAIL_EXTRA_PREFIX}${entry.id}`,
+          label: entry.label,
+          sub: [],
+        })
+        return
+      }
+      const path = `${RAIL_EXTRA_PREFIX}${entry.id}`
+      const pages = entry.pages ?? []
+      /* pressing a group runs its first leaf — the group IS its first category
+         when you have not picked one; the rest are the right rail's chips */
+      const own = entry.onSelect ?? pages[0]?.onSelect
+      if (own) dispatch.set(path, own)
+      const section = items[items.length - 1]
+      const row = { icon: entry.icon, path, label: entry.label }
+      /* a group before any section marker would be an L1 row; none exist today,
+         but falling back to that beats dropping it silently */
+      if (section?.sub) section.sub.push(row)
+      else items.push(row)
     })
 
-  const groupProps = { collapsed, onExpandRail: expandRail }
-  /* Collapsed rail shows every group icon regardless of the accordion. */
-  const sectionOpen = (id) => collapsed || openSection === id
+    setRailExtras({ items, dispatch: (p) => dispatch.get(p)?.() })
+    return () => setRailExtras(null)
+  })
 
-  return (
-    <div ref={asideRef} className="relative h-full min-h-0 flex flex-col">
-      <nav className="kol-compose-rail flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable] pt-4 pb-4">
-        <ul className="kol-sidenav-tree flex flex-col gap-[2px]">
-          <NavSection label="Effects" open={openSection === 'effects'} onToggle={() => toggleSection('effects')} />
-          {sectionOpen('effects') && effectCategories(FILTERS).map((cat) => (
-            <NavGroup
-              key={cat.id}
-              id={`fx:${cat.id}`}
-              label={cat.label}
-              active={cat.rack
-                ? !!layer?.fxGroup
-                : cat.id === 'pattern'
-                  ? layer?.type === 'loop' && layer?.loopGroup === 'optic'
-                  : !layer?.fxGroup && activeCatId === cat.id}
-              open={openKey === `fx:${cat.id}`}
-              onToggle={() => toggle(`fx:${cat.id}`)}
-              {...groupProps}
-            >
-              {cat.rack
-                /* FX RACK's leaves are its CATEGORIES (labs' sidebar) —
-                   the presets live in the rack surface's adder. */
-                ? FX_RACK_GROUPS.map((g) => (
-                  <NavLeaf
-                    key={g.id}
-                    label={g.label}
-                    active={layer?.fxGroup === g.id}
-                    onClick={() => pickRackGroup(g.id)}
-                  />
-                ))
-                : cat.id === 'pattern'
-                  ? PATTERN_PAGES.map((sub) => (
-                    <NavLeaf
-                      key={sub}
-                      label={sub}
-                      active={layer?.loopGroup === 'optic' && activePreset?.sub === sub}
-                      onClick={() => pickGenerative(presetsInSub('optic', sub)[0], 'optic')}
-                    />
-                  ))
-                  : cat.id === 'scanline'
-                    ? SCANLINE_LOOKS.map((lk) => (
-                      <NavLeaf
-                        key={lk.label}
-                        label={lk.label}
-                        active={!layer?.fxGroup && activeFilterId === 'scanline' && scanlineLookOf(layer?.filters?.[0]?.params) === lk.label}
-                        onClick={() => pickEffect('scanline', lk.patch)}
-                      />
-                    ))
-                    : cat.filters.map((f) => (
-                      <NavLeaf
-                        key={f.id}
-                        label={f.label ?? f.id}
-                        active={!layer?.fxGroup && activeFilterId === f.id}
-                        onClick={() => pickEffect(f.id)}
-                      />
-                    ))}
-            </NavGroup>
-          ))}
-
-          <NavSection label="Generative" open={openSection === 'generative'} onToggle={() => toggleSection('generative')} />
-          {sectionOpen('generative') && GENERATIVE_TREE.map((entry) => (
-            <NavGroup
-              key={entry.label}
-              id={`gen:${entry.label}`}
-              label={entry.label}
-              active={layer?.type === 'loop' && entry.groups.includes(layer?.loopGroup)}
-              open={openKey === `gen:${entry.label}`}
-              onToggle={() => toggle(`gen:${entry.label}`)}
-              {...groupProps}
-            >
-              {generativeLeaves(entry)}
-            </NavGroup>
-          ))}
-
-          <NavSection label="Composition" open={openSection === 'composition'} onToggle={() => toggleSection('composition')} />
-          {sectionOpen('composition') && KINETIC_TREE.map((entry) => (
-            <NavGroup
-              key={entry.label}
-              id={`kin:${entry.label}`}
-              label={entry.label}
-              active={layer?.type === 'kinetic' && entry.subs.some((sub) => KINETIC_PRESETS.some((p) => p.sub === sub && p.id === activePresetId))}
-              open={openKey === `kin:${entry.label}`}
-              onToggle={() => toggle(`kin:${entry.label}`)}
-              {...groupProps}
-            >
-              {entry.subs.map((sub) => (
-                <NavLeaf
-                  key={sub}
-                  label={sub}
-                  active={layer?.type === 'kinetic' && KINETIC_PRESETS.some((p) => p.sub === sub && p.id === activePresetId)}
-                  onClick={() => pickKinetic(KINETIC_PRESETS.find((p) => p.sub === sub))}
-                />
-              ))}
-            </NavGroup>
-          ))}
-          {sectionOpen('composition') && MISC_TREE.map((entry) => (
-            <NavGroup
-              key={entry.label}
-              id={`misc:${entry.label}`}
-              label={entry.label}
-              active={layer?.type === 'misc' && entry.groups.includes(layer?.loopGroup)}
-              open={openKey === `misc:${entry.label}`}
-              onToggle={() => toggle(`misc:${entry.label}`)}
-              {...groupProps}
-            >
-              {entry.groups.map((gid) => (
-                <li key={gid}>
-                  <ul className="flex flex-col gap-[2px]">{categoryLeaves(gid, 'misc')}</ul>
-                </li>
-              ))}
-            </NavGroup>
-          ))}
-
-          {/* Modulation has no nav target of its own: every param's bind dot is
-              the entry point, and the shaping UI is the rail's Motion tab. This
-              row just takes you there — a hop with no caret. */}
-          <NavSection label="Modulation" open={openSection === 'modulation'} onToggle={() => toggleSection('modulation')} />
-          {sectionOpen('modulation') && (
-            <li>
-              <button
-                type="button"
-                onClick={collapsed ? expandRail : () => window.dispatchEvent(new CustomEvent('kol:open-params'))}
-                className="kol-sidenav-hop kol-helper-12 bg-transparent border-0 cursor-pointer text-left"
-              >
-                <span className="kol-sidenav-hop-icon inline-flex items-center justify-center w-5 h-5 shrink-0" aria-hidden="true">
-                  <Icon name="frequency" size={16} />
-                </span>
-                <span className="kol-sidenav-hop-label flex-1 min-w-0 truncate">Animation</span>
-              </button>
-            </li>
-          )}
-
-          {/* The three-way mode door (mode.js MODES) — same hop idiom as
-              Modulation. Labs is this chrome; Editor / Randomiser navigate
-              via goMode (remembers the pick, then sets the ?view= URL). */}
-          <NavSection label="Mode" open={openSection === 'mode'} onToggle={() => toggleSection('mode')} />
-          {sectionOpen('mode') && MODES.map((m) => (
-            <li key={m.id}>
-              <button
-                type="button"
-                onClick={collapsed ? expandRail : () => { if (m.id !== 'labs') goMode(m.id) }}
-                className="kol-sidenav-hop kol-helper-12 bg-transparent border-0 cursor-pointer text-left"
-              >
-                <span className="kol-sidenav-hop-icon inline-flex items-center justify-center w-5 h-5 shrink-0" aria-hidden="true">
-                  <Icon name={MODE_ICONS[m.id]} size={16} />
-                </span>
-                <span className="kol-sidenav-hop-label flex-1 min-w-0 truncate">{m.label}</span>
-                {m.id === 'labs' && <span className="kol-helper-10 text-emphasis shrink-0">✓</span>}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      {/* The pill-marked grab edge — chrome + gesture ship in the DS
-          (kol-framework.css .kol-sidenav-grab + useDragResize). */}
-      <div className="kol-sidenav-grab absolute top-0 right-0 bottom-0 z-[1]" {...grabProps} />
-    </div>
-  )
+  return null
 }

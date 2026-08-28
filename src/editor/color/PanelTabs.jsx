@@ -17,7 +17,7 @@ export function TabsRow({ tabs = COLOR_TABS, active, onChange, onClose, onMinimi
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="text-meta hover:text-emphasis self-center"
+          className="text-oq-48 hover:text-emphasis self-center"
           style={{ lineHeight: 0 }}
         >
           <EditorIcon name="close" size={12} />
@@ -49,7 +49,7 @@ export function TabsRow({ tabs = COLOR_TABS, active, onChange, onClose, onMinimi
           type="button"
           onClick={onMinimise}
           aria-label="Minimise"
-          className="ml-auto text-meta hover:text-emphasis self-center"
+          className="ml-auto text-oq-48 hover:text-emphasis self-center"
           style={{ lineHeight: 0 }}
         >
           <EditorIcon name="chevron-down" size={12} />

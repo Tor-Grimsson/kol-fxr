@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Dropdown, Section, SegmentedToggle } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, Section, SegmentedToggle, FullscreenOverlay } from '@kolkrabbi/kol-component'
 import EditorIcon from '../../icons/EditorIcon'
 import MediaPicker from '../../library/MediaPicker'
 import { proxied, isVideoType } from '../../library/mediaLibrary'
@@ -256,7 +256,10 @@ export default function EditorFooter() {
         </>
       )}
       {webmProgress && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center" style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
+        /* DS overlay, closeButton off — a bake is not dismissible (ruled
+           2026-08-27; it was a hand-rolled scrim at z-[1000] that dismissed
+           on nothing, which at least was honest about being modal). */
+        <FullscreenOverlay open closeButton={false}>
           <div className="bg-surface-primary border border-fg-08 rounded shadow-xl flex flex-col gap-3" style={{ width: 320, padding: 20 }}>
             <div className="flex items-center justify-between">
               <span className="kol-helper-12 text-emphasis">Baking loop…</span>
@@ -266,7 +269,7 @@ export default function EditorFooter() {
               <div style={{ height: '100%', width: `${Math.round((webmProgress.done / Math.max(1, webmProgress.total)) * 100)}%`, background: 'var(--kol-accent-primary)', transition: 'width 80ms linear' }} />
             </div>
           </div>
-        </div>
+        </FullscreenOverlay>
       )}
       <BatchExportModal
         open={batchOpen}

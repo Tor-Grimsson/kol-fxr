@@ -20,3 +20,9 @@ past the viewport bottom.
   panel should cap at the viewport with the list scrolling inside, opening
   scrolled to the selected row.
 - Nothing else — no shim existed to retire (the no-shims ruling held).
+
+## ✅ ADOPTED — 2026-08-15
+
+kol-component ^0.46.0 / kol-theme ^0.43.1, far past the 0.32.x this asked for — verified 2026-08-15.
+
+**Remainder here:** none.

@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react'
+import { SegmentedToggle } from '@kolkrabbi/kol-component'
 import EditorIcon from '../icons/EditorIcon'
 import MediaPicker from '../library/MediaPicker'
 import { proxied, isVideoType } from '../library/mediaLibrary'
 import { useLayerEdit } from '../compose/useLayerEdit'
 import { saveClip } from '../lib/clipStore'
+import { ensureWebcam } from '../lib/webcam'
 
 /**
  * LabsSourcePicker — the two-pane empty state an effect shows while its
@@ -19,7 +21,13 @@ import { saveClip } from '../lib/clipStore'
  * export); Upload = a local file, video blobs persisted to the clipStore
  * side-channel keyed by layer id so a draft restore can re-mint the URL.
  */
-export default function LabsSourcePicker({ layer }) {
+/**
+ * The three ways pixels get into an effect layer, as one hook so the
+ * full-pane empty state and the rail's SOURCE strip drive the SAME writes.
+ * Returns the handlers plus the two nodes that must be mounted for them to
+ * work (the hidden file input and the media picker modal).
+ */
+function useSourceInput(layer) {
   const { patch } = useLayerEdit(layer.id)
   const fileRef = useRef(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -42,27 +50,88 @@ export default function LabsSourcePicker({ layer }) {
     patch({ src: proxied(url), srcType: isVideoType(contentType) ? 'video' : 'image' })
   }
 
-  const pane = 'flex-1 flex flex-col items-center justify-center gap-3 cursor-pointer text-meta hover:text-emphasis'
+  /* Live camera — request on this user gesture (permission UX + primes the
+   * webcam registry), only then flag the layer; a denial changes nothing.
+   * Front camera preferred (webcam.js facingMode). */
+  const onCamera = () => {
+    ensureWebcam(layer.id)
+      .then(() => patch({ src: null, srcType: 'webcam' }))
+      .catch(() => { /* camera denied / unavailable */ })
+  }
+
+  const nodes = (
+    <>
+      <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={onUpload} />
+      <MediaPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onPick={onLibraryPick} />
+    </>
+  )
+  return {
+    nodes,
+    openLibrary: () => setPickerOpen(true),
+    openUpload: () => fileRef.current?.click(),
+    openCamera: onCamera,
+  }
+}
+
+/* SOURCE — the input strip, the effect rail's counterpart to the generative
+ * rail's Generate/Style/Animation strip. An effect is an effect OF something,
+ * and until now the only way to that something was the full-pane empty state,
+ * which disappears the moment a source lands: picking an image meant you
+ * could never switch to the camera without clearing the layer.
+ *
+ * Stateless SegmentedToggle (`value={null}` — the DS's action-strip mode):
+ * these are three one-shot ACTIONS, not a selected state. Library and Upload
+ * both yield image OR video depending on the file, so there is no honest way
+ * to map a live `srcType` back onto one cell. */
+export function SourceStrip({ layer }) {
+  const src = useSourceInput(layer)
+  return (
+    <>
+      <SegmentedToggle
+        value={null}
+        onChange={(v) => ({ library: src.openLibrary, upload: src.openUpload, camera: src.openCamera }[v]?.())}
+        options={SOURCE_OPTIONS}
+        size="sm"
+        ariaLabel="Source"
+      />
+      {src.nodes}
+    </>
+  )
+}
+
+const SOURCE_OPTIONS = [
+  { value: 'library', label: 'Library' },
+  { value: 'upload', label: 'Upload' },
+  { value: 'camera', label: 'Camera' },
+]
+
+export default function LabsSourcePicker({ layer }) {
+  const src = useSourceInput(layer)
+
+  /* oq-48, not fg-meta: these panes carry a 28px EditorIcon, and alpha ink
+   * multiplies where strokes overlap (the opaque-icons law). oq-48 reads
+   * identical on the resting surface but stays opaque. Hover lifts the GROUND
+   * as well as the ink — a full-height pane is a big target and ink alone
+   * barely reads at this size. */
+  const pane = 'flex-1 flex flex-col items-center justify-center gap-3 cursor-pointer text-oq-48 hover:text-emphasis hover:bg-oq-02 transition-colors'
 
   return (
     <div className="w-full h-full flex items-stretch p-6 gap-px">
-      <button type="button" className={pane} onClick={() => setPickerOpen(true)}>
+      <button type="button" className={pane} onClick={src.openLibrary}>
         <EditorIcon name="image" size={28} />
         <span className="kol-mono-12">From library</span>
       </button>
       <div className="w-px" style={{ background: 'var(--kol-fg-08)' }} />
-      <button type="button" className={pane} onClick={() => fileRef.current?.click()}>
+      <button type="button" className={pane} onClick={src.openUpload}>
         <EditorIcon name="upload" size={28} />
         <span className="kol-mono-12">Upload</span>
       </button>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*,video/*"
-        className="hidden"
-        onChange={onUpload}
-      />
-      <MediaPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onPick={onLibraryPick} />
+      <div className="w-px" style={{ background: 'var(--kol-fg-08)' }} />
+      <button type="button" className={pane} onClick={src.openCamera}>
+        <EditorIcon name="camera" size={28} />
+        <span className="kol-mono-12">Camera</span>
+      </button>
+      {src.nodes}
     </div>
   )
 }

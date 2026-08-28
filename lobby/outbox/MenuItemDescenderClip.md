@@ -18,3 +18,9 @@ overflow-hidden truncation span, which only the DS can fix.
   BooleanDropdown / TextDropdown rows (ToolPalette) — same visual family,
   our markup, fixed at the source here.
 - **On ship: adopt.** Bump and eyeball the menubar's descender labels.
+
+## ✅ ADOPTED — 2026-08-15
+
+kol-component ^0.46.0, past the 0.35.0 this asked for — verified 2026-08-15.
+
+**Remainder here:** none.

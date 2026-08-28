@@ -90,7 +90,7 @@ function ExprPlot({ expr }) {
       ctx.setLineDash([])
 
       if (c.ok) {
-        ctx.font = '8px var(--kol-font-mono, monospace)'
+        ctx.font = '8px var(--kol-font-family-mono, monospace)'
         ctx.strokeStyle = fg
         ctx.fillStyle = fg
         for (const v of [vMax, vMid, vMin]) {
@@ -244,7 +244,7 @@ export function ModulationEditor({ layer, param, setProp }) {
                 className="w-full kol-helper-10 h-6 inline-flex items-center gap-2 text-body hover:text-emphasis text-left"
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontVariantLigatures: 'none' }}
               >
-                <span className="truncate" style={{ fontFamily: 'var(--kol-font-mono, monospace)' }}>{ex.code}</span>
+                <span className="truncate" style={{ fontFamily: 'var(--kol-font-family-mono, monospace)' }}>{ex.code}</span>
                 <span className="flex-1 text-right text-meta truncate">{ex.desc}</span>
               </button>
             ))}

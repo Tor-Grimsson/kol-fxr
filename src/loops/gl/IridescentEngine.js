@@ -264,6 +264,15 @@ export class IridescentEngine {
     this.uniforms.uAspect.value = w / h
   }
 
+  /* Touch: finger x shifts the hue, press boosts the warp. Rides the
+   * params' base (host calls this after setParams each apply). */
+  setPointer(p) {
+    if (!this.uniforms || !p) return
+    const u = this.uniforms
+    u.uHue.value = ((u.uHue.value + (p.x - 0.5) * 0.5) % 1 + 1) % 1
+    if (p.down) u.uWarp.value = u.uWarp.value + 0.6
+  }
+
   setParams(p) {
     if (!this.uniforms) return
     /* A named look (GRAD_LOOKS recipe) overrides the manual colour keys on

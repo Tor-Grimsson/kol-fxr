@@ -89,10 +89,10 @@ export default function LayerInspector({ layer }) {
                 variant="filled" size="sm" value={null}
                 ariaLabel="Transform"
                 options={[
-                  { value: 'rot', ariaLabel: 'Rotate 90° left', label: <span className="text-oq-48 inline-flex"><EditorIcon name="rotate-left" size={16} /></span> },
-                  { value: 'fh', ariaLabel: 'Flip horizontal', label: <span style={{ color: layer.flipX ? 'var(--kol-accent-primary)' : undefined, display: 'inline-flex' }}><span className="text-oq-48 inline-flex"><EditorIcon name="flip-h" size={16} /></span></span> },
-                  { value: 'fv', ariaLabel: 'Flip vertical', label: <span style={{ color: layer.flipY ? 'var(--kol-accent-primary)' : undefined, display: 'inline-flex' }}><span className="text-oq-48 inline-flex"><EditorIcon name="flip-v" size={16} /></span></span> },
-                  ...(layer.type === 'photo' ? [{ value: 'crop', ariaLabel: 'Crop image', label: <span className="text-oq-48 inline-flex"><EditorIcon name="crop" size={16} /></span> }] : []),
+                  { value: 'rot', ariaLabel: 'Rotate 90° left', label: <EditorIcon name="rotate-left" size={16} /> },
+                  { value: 'fh', ariaLabel: 'Flip horizontal', label: <span style={{ color: layer.flipX ? 'var(--kol-accent-primary)' : undefined, display: 'inline-flex' }}><EditorIcon name="flip-h" size={16} /></span> },
+                  { value: 'fv', ariaLabel: 'Flip vertical', label: <span style={{ color: layer.flipY ? 'var(--kol-accent-primary)' : undefined, display: 'inline-flex' }}><EditorIcon name="flip-v" size={16} /></span> },
+                  ...(layer.type === 'photo' ? [{ value: 'crop', ariaLabel: 'Crop image', label: <EditorIcon name="crop" size={16} /> }] : []),
                 ]}
                 onChange={(op) => {
                   if (op === 'rot') setProp('rotation', (((Math.round(layer.rotation ?? 0) - 90) % 360) + 360) % 360)
@@ -121,9 +121,9 @@ export default function LayerInspector({ layer }) {
                 value={layer.resizing ?? 'fixed'}
                 onChange={(v) => setProp('resizing', v)}
                 options={[
-                  { value: 'fixed',  ariaLabel: 'Fixed size',  label: <span className="text-oq-48 inline-flex"><Icon name="resize-fixed" size={16} /></span> },
-                  { value: 'auto-w', ariaLabel: 'Auto width',  label: <span className="text-oq-48 inline-flex"><Icon name="resize-auto-w" size={16} /></span> },
-                  { value: 'auto-h', ariaLabel: 'Auto height', label: <span className="text-oq-48 inline-flex"><Icon name="resize-auto-h" size={16} /></span> },
+                  { value: 'fixed',  ariaLabel: 'Fixed size',  label: <Icon name="resize-fixed" size={16} /> },
+                  { value: 'auto-w', ariaLabel: 'Auto width',  label: <Icon name="resize-auto-w" size={16} /> },
+                  { value: 'auto-h', ariaLabel: 'Auto height', label: <Icon name="resize-auto-h" size={16} /> },
                 ]}
               />
             </LabeledControl>
@@ -374,7 +374,7 @@ function AppearanceSection({ layer, setProp, first }) {
                 key={b.value}
                 type="button"
                 onClick={() => { setProp('blend', b.value); setBlendOpen(false) }}
-                className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-body hover:text-emphasis text-left"
+                className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-oq-64 hover:text-emphasis text-left"
               >
                 <span className="flex-1 truncate leading-normal">{b.label}</span>
                 {blend === b.value && <EditorIcon name="check" size={11} />}
@@ -575,26 +575,12 @@ function FlipButton({ axis, layer, flipLayer, segmented = false }) {
   )
 }
 
-/* One numeric field with its axis letter OUTSIDE the input, to the left.
- * `chars` makes the inner input hug a fixed width (the shell never grows on
- * focus — the old ghost/flex-1 combo let a focused input stretch past the
- * rail and force horizontal scroll; review item 7). Filled variant matches
- * the stroke panel's Weight field. Draft/commit via the shared NumberField —
- * a per-keystroke commit turns typing '-45' into NaN→0 at the bare '-'
- * and reshapes the layer at every intermediate digit. */
+/* AxisField — one axis value on the DS property field (PropertyField ticket,
+ * adopted): affordance inside the shell, the value hugs its own length, the
+ * unit sits against it (`0°`). Draft/commit via NumberField so a bare '-'
+ * never reshapes the layer. String affordances get 4px extra air — the
+ * shipped 6px reads glued against mono digits (the "balanced" ref). */
 function AxisField({ label, value, onCommit, suffix }) {
-  /* The prefixed-input idiom (2026-08-12): the affordance letter/icon lives
-   * INSIDE the filled shell (DS Input `prefix`), dim, with the bright value
-   * beside it — the hex field's look, everywhere. No outside letters.
-   * Balance: extra breathing room after the prefix (the ref's "balanced"
-   * frame); the input hugs the VALUE's length so a unit suffix (°/%) sits
-   * right against the number — `0°`, never `0   °`. */
-  /* `size` is IGNORED on number inputs — hug via an explicit ch width on
-   * the inner input; the unit suffix's -ml-1 cancels the DS pl-1 so the
-   * unit sits AGAINST the value (`0°`, never `0 °`). All of this is the
-   * declared stopgap for the PropertyField DS ticket. */
-  /* String affordances get an extra 4px of air — the shipped 6px reads
-   * glued against mono digits (the "balanced" ref wants visible space). */
   return (
     <NumberField
       variant="property" size="sm"

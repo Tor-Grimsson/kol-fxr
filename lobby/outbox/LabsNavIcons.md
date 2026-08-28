@@ -18,3 +18,9 @@ desktop for monitor, refresh for cycle…).
   mapped names in `GROUP_ICONS`, and verify the labs nav renders every group
   glyph (Randomize buttons stay on `refresh`).
 - Nothing else — no local registration to retire.
+
+## ✅ ADOPTED — 2026-08-15
+
+The GROUP_ICONS swap landed; the only remaining `target-lock` in LabsNav.jsx is a comment recording the mapping (:49) — verified 2026-08-15.
+
+**Remainder here:** none.

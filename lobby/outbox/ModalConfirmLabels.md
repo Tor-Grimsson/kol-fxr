@@ -17,3 +17,9 @@ no-shims bars a consumer patch, and no prop exists today.
 - Interim copy on the restore confirm: "Restore your last canvas? Cancel
   starts a new file." — carries the meaning until the labels API ships.
 - **On ship: adopt.** Bump, pass the real labels, drop the interim copy.
+
+## ✅ ADOPTED — 2026-08-15
+
+ModalProvider is mounted in src/editor/Editor.jsx — verified 2026-08-15.
+
+**Remainder here:** none.

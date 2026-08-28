@@ -32,7 +32,18 @@
 }
 /* Browser default focus ring (Firefox draws a double outline on inputs) —
    the DS .kol-control shell carries its own focus affordance (border
-   reveal), so the UA ring only stacks noise on top. */
+   reveal), so the UA ring only stacks noise on top.
+
+   THIS RULE STAYS — reviewed 2026-08-15 against the FocusRingsInConsumers
+   resolution, whose remainder said to delete it. That remainder was wrong.
+   kol-theme 0.43.0's `--kol-focus-ring` / `--kol-focus-ring-quiet` pair turns
+   off rings the DESIGN SYSTEM draws; this rule suppresses the ring the
+   BROWSER draws on a native <input>, which the DS never styled and therefore
+   cannot switch off. Deleting it restores the double outline this was written
+   to kill. The two are unrelated mechanisms that happen to share a symptom.
+
+   Setting both DS tokens to transparent is still available and orthogonal:
+   it would silence .kol-btn / .kol-seg-cell / the rails, not this. */
 .kol-editor-shell input:focus-visible,
 .kol-editor-shell textarea:focus-visible {
   outline: none;

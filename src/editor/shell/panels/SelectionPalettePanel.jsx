@@ -85,7 +85,9 @@ export default function SelectionPalettePanel() {
         * from POSITION (user note 0 — Figma divides the header from the
         * first section; full-bleed like every section divider). */}
       <div className="flex items-center gap-1 px-4 min-h-[46px] border-b border-fg-08">
-        {headerTitle && <span className="kol-helper-12 text-emphasis flex-1 truncate leading-normal">{headerTitle}</span>}
+        {/* Same eyebrow the rail's sections wear (user ruling 2026-08-27) — the
+            editor rail's surface title, labs' Surface title's twin. */}
+        {headerTitle && <p className="kol-eyebrow text-fg-96 flex-1 truncate">{headerTitle}</p>}
         {layer && (
           <HeaderMoreMenu
             layer={layer}
@@ -155,7 +157,7 @@ function HeaderMoreMenu({ layer, layerOnlyIds, layers, ops }) {
       >
         <Icon name="more" size={14} />
       </button>
-      <PopoverPanel popover={popover} panel={false} focus={false} className="z-[1000] bg-surface-secondary border border-fg-08 rounded shadow-lg py-1" style={{ width: 176 }}>
+      <PopoverPanel popover={popover} panel={false} focus={false} className="z-[var(--kol-z-tooltip)] bg-surface-secondary border border-fg-08 rounded shadow-lg py-1" style={{ width: 176 }}>
         {BOOL_OPS.map((b) => (
           <MenuDropdownItem key={b.id} disabled={!canBool} onClick={run(() => ops.booleanSelected(b.id))}>
             {b.label}

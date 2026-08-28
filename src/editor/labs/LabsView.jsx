@@ -1,4 +1,4 @@
-import './labs.css'
+import '../styles/kol-labs.css'
 import { useEffect, useRef, useState } from 'react'
 import { EditorProviders } from '../Editor'
 import EditorShell from '../EditorShell'
@@ -9,7 +9,7 @@ import { useTool } from '../state/tools'
 import { useGlobalShortcuts } from '../state/useGlobalShortcuts'
 import EditorFooter from '../shell/panels/EditorFooter'
 import TimelineDock from '../params/TimelineDock'
-import LabsMenuTop from './LabsMenuTop'
+import { useDragResize } from '@kolkrabbi/kol-framework'
 import LabsNav from './LabsNav'
 import LabsParams from './LabsParams'
 import LabsShortcuts from './LabsShortcuts'
@@ -30,7 +30,7 @@ import { useLabsLayer } from './useLabsLayer'
  *
  * It is a second REGISTRY over the shared `EditorShell`, not a second app:
  *
- *   ┌──────────── LabsMenuTop ─────────────┐
+ *   (no topbar — retired 2026-08-27; see NoTopbar below)
  *   ├─ nav ─┬──── OutputCanvas ────┬─ rail ─┤  nav  = LabsNav (categories)
  *   │ cats  │                      │ params │  rail = Parameters · Effects
  *   ├───────┴──── TimelineDock ────┴────────┤
@@ -138,8 +138,22 @@ function LabsStage() {
  * params), not the editor's Parameters·Effects tab pair. Same inspector-body
  * wrappers as the editor panels so the rail CSS (padding/gap) carries over. */
 function LabsRail() {
+  /* The right rail resizes now (kol-framework 0.21.0). `useDragResize` used to
+   * be sidenav-shaped by construction — it wrote --kol-sidenav-w on :root and
+   * read rightward drag as wider — so pointing this rail at it would have
+   * dragged BOTH rails off one variable, backwards. It now takes a token
+   * prefix and a side: 'kol-rail' keeps the two rails on separate variables,
+   * and side:'right' inverts the pointer AND the arrow keys, because this
+   * handle faces the canvas. The tokens (--kol-rail-w plus its snap/step/
+   * collapsed siblings) ship on :root from kol-theme 0.43.0, which is why
+   * kol-labs.css no longer declares the width. */
+  const railRef = useRef(null)
+  const { grabProps } = useDragResize(railRef, { token: 'kol-rail', side: 'right' })
   return (
-    <div className="kol-compose-rail kol-compose-rail--inspector">
+    <div ref={railRef} className="kol-compose-rail kol-compose-rail--inspector relative">
+      {/* Same DS grab chrome as the left rail, mirrored to the INNER edge —
+          the one facing the canvas is the one you reach for. */}
+      <div className="kol-sidenav-grab absolute top-0 left-0 bottom-0 z-[1]" {...grabProps} />
       {/* inspector-body IS the rail's scroller (kol-editor.css §4) */}
       <div className="kol-compose-inspector-body">
         <LabsParams />
@@ -148,11 +162,20 @@ function LabsRail() {
   )
 }
 
+/* NO TOPBAR (user, 2026-08-27: "skip the top bar … so we can maintain the
+ * Kolkrabbi logo and have a much more normal explanation"). Everything it
+ * carried has a home: the "Labs" wordmark is the lit row in the rail; Mode
+ * is the Editor / Labs / Randomiser rows; the UI theme is SideNav's own slot;
+ * the Settings dropdown was the /settings page's Defaults section (it lacked
+ * only Loop length, added there). LabsMenuTop retired to _tmp/. */
+const NoTopbar = () => null
+
 const LABS_REGISTRY = {
-  topbar: LabsMenuTop,
+  topbar: NoTopbar,
   canvas: LabsStage,
   panels: [
-    { slot: 'left.body', order: 0, Component: LabsNav },
+    /* LabsNav is NOT a panel any more — it renders nothing and publishes its
+       rows to the shell rail; it is mounted in LabsBody instead. */
     { slot: 'canvas.footer', order: 0, Component: TimelineDock },
     { slot: 'right.body', order: 0, Component: LabsRail },
     /* Transport/Output/File sits under the PARAMS rail in labs — right, not
@@ -165,6 +188,13 @@ function LabsBody() {
   const { setAspect, selectedId, select } = useComposeState()
   const { layer, setOnly } = useLabsLayer()
   const bootedRef = useRef(false)
+
+  /* ONE RAIL, NOT TWO (user ruling 2026-08-27) — and since 2026-08-28 it is
+   * literally ONE COMPONENT: labs no longer hides the shell rail and mounts
+   * kol-framework's `SideNav` in its own grid cell. It publishes its
+   * categories to that rail instead (`railExtras`, see LabsNav), so every
+   * route runs kol-shell's `NavRail` with the same grab-open animation and
+   * the same active styling. The hide/re-assert dance below went with it. */
 
   /* Undo / redo / grid — the mode-agnostic keymap the editor mounts too. */
   useGlobalShortcuts()
@@ -250,10 +280,12 @@ function LabsBody() {
     if (layer && selectedId !== layer.id) select(layer.id)
   }, [layer, selectedId, select])
 
-  /* `.kol-editor-labs` scopes labs.css to this chrome; `contents` keeps the
+  /* `.kol-editor-labs` scopes kol-labs.css to this chrome; `contents` keeps the
    * wrapper out of layout so the shell's grid is untouched. */
   return (
     <div className="kol-editor-labs contents">
+      {/* draws nothing — hands labs' categories to the shell rail */}
+      <LabsNav />
       <EditorShell registry={LABS_REGISTRY} />
       {/* S = the "Animate any value" card (labs' shortcuts overlay). */}
       <LabsShortcuts />

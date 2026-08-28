@@ -183,9 +183,9 @@ export function TextSurface({ layer }) {
             ariaLabel="Text alignment"
             value={layer.textAlign ?? 'center'}
             options={[
-              { value: 'left',   ariaLabel: 'Align left',   label: <span className="text-oq-48 inline-flex"><EditorIcon name="align-h-start" size={16} /></span> },
-              { value: 'center', ariaLabel: 'Align center', label: <span className="text-oq-48 inline-flex"><EditorIcon name="align-h-center" size={16} /></span> },
-              { value: 'right',  ariaLabel: 'Align right',  label: <span className="text-oq-48 inline-flex"><EditorIcon name="align-h-end" size={16} /></span> },
+              { value: 'left',   ariaLabel: 'Align left',   label: <EditorIcon name="align-h-start" size={16} /> },
+              { value: 'center', ariaLabel: 'Align center', label: <EditorIcon name="align-h-center" size={16} /> },
+              { value: 'right',  ariaLabel: 'Align right',  label: <EditorIcon name="align-h-end" size={16} /> },
             ]}
             onChange={(v) => setProp('textAlign', v)}
           />
@@ -194,9 +194,9 @@ export function TextSurface({ layer }) {
             ariaLabel="Vertical alignment"
             value={layer.verticalAlign ?? 'middle'}
             options={[
-              { value: 'top',    ariaLabel: 'Align top',    label: <span className="text-oq-48 inline-flex"><EditorIcon name="align-v-start" size={16} /></span> },
-              { value: 'middle', ariaLabel: 'Align middle', label: <span className="text-oq-48 inline-flex"><EditorIcon name="align-v-center" size={16} /></span> },
-              { value: 'bottom', ariaLabel: 'Align bottom', label: <span className="text-oq-48 inline-flex"><EditorIcon name="align-v-end" size={16} /></span> },
+              { value: 'top',    ariaLabel: 'Align top',    label: <EditorIcon name="align-v-start" size={16} /> },
+              { value: 'middle', ariaLabel: 'Align middle', label: <EditorIcon name="align-v-center" size={16} /> },
+              { value: 'bottom', ariaLabel: 'Align bottom', label: <EditorIcon name="align-v-end" size={16} /> },
             ]}
             onChange={(v) => setProp('verticalAlign', v)}
           />

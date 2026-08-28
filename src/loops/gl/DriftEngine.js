@@ -331,6 +331,20 @@ export class DriftEngine {
     this.uniforms.uAspect.value = w / h
   }
 
+  /* Touch: finger x steers the flow, press surges the gust. Called by the
+   * host AFTER setParams each apply, so the nudge rides the params' base
+   * and self-reverts when the pointer leaves. */
+  setPointer(p) {
+    if (!this.uniforms || !p) return
+    const u = this.uniforms
+    const a = (p.x - 0.5) * Math.PI * 0.6
+    const f = u.uFlow.value
+    const c = Math.cos(a)
+    const s = Math.sin(a)
+    f.set(f.x * c - f.y * s, f.x * s + f.y * c)
+    if (p.down) u.uGust.value = Math.min(1.5, u.uGust.value * 2 + 0.3)
+  }
+
   setParams(p) {
     if (!this.uniforms) return
     const u = this.uniforms

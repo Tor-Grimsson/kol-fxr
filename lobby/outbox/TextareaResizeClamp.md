@@ -18,3 +18,9 @@ no-shims ruling), and no prop constrains the axis today.
   the overflow until the atom clamps at the source.
 - **On ship: adopt.** Bump, drop the stopgaps if redundant, verify an X-drag
   in the right rail can no longer scroll the sidebar.
+
+## ✅ ADOPTED — 2026-08-15
+
+kol-component ^0.46.0, past the 0.35.0 this asked for — verified 2026-08-15.
+
+**Remainder here:** none.

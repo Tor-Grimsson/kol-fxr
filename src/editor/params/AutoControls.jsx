@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Input, Dropdown, ViewToggle, ToggleSwitch, LabeledControl, Textarea } from '@kolkrabbi/kol-component'
+import { Input, Dropdown, ViewToggle, ToggleSwitch, LabeledControl, SettingsRow, LabeledControlSection, Textarea } from '@kolkrabbi/kol-component'
+import Hint from '../components/Hint'
 import { visibleParams, isAnimatable, paramTab, paramSection } from './schema'
 import { isBinding, resolveValue } from './resolve'
 import { useTransportCtx } from './transport'
@@ -23,17 +24,35 @@ import { ColorField } from '../compose/inspectors/ColorField'
  * Consecutive same-section params share one small header; `emptyHint`
  * renders when the filter leaves nothing (the Animation tab's hint line).
  *
- * `inline` (labs skin): rows go label-left (LabeledControl's own inline
- * layout), toggles become the DS ToggleSwitch, colors go inline too. The
- * editor default stays label-above. Sections always wrap in a
- * `.kol-params-section` block — same spacing as before (outer gap = inner
- * gap), but a hook labs.css can tighten and divide.
+ * `inline` (labs skin) IS THE DS SETTINGS ROW (`SettingsRow`, the approved
+ * SettingsPanel organism — kol-component 0.104.0, `SettingsPanelApproved`).
+ * That is the estate standard for a label + control row and kol-r2b2's
+ * Display-settings drawer is the reference render: the label uppercased into
+ * a fixed column, the control filling the rest, switches at the far right
+ * (`align="end"`) and dropdowns across the row (`align="fill"`).
+ *
+ * Adopting it retires two local habits: the hand-passed `kol-helper-10
+ * tracking-widest text-meta` label string, and the per-type `rowInline =
+ * false` opt-outs that sent selects and segmenteds label-above while ranges
+ * stayed label-left — which is exactly why the rail read ragged. Only `text`
+ * still breaks the row: a textarea needs the full width to be usable.
+ *
+ * `labelWidth` is the one deviation from r2b2's 160 — this rail is a ~300px
+ * inspector, not a drawer, so the column is narrower. Same component, same
+ * shape, tuned width. The editor default (`inline` false) stays label-above.
+ *
+ * Sections are the DS `LabeledControlSection` with `divided` — the approved
+ * organism's header, a real `kol-eyebrow text-fg-80` standing apart from its
+ * row stack. It replaces `Section`/`InspectorSection`, whose label is the
+ * `kol-helper-10 tracking-widest text-meta` string the estate stopped writing
+ * (user, 2026-08-27) — same "labeled control group" idea, older type role.
+ * The hairline still comes from `divided`; nothing here is styled locally.
  */
 export default function AutoControls({ schema, layer, setProp, palette, renderAnimate, tab, emptyHint, inline = false }) {
   let params = visibleParams(schema, layer)
   if (tab) params = params.filter((p) => paramTab(p) === tab)
   if (params.length === 0) {
-    return emptyHint ? <p className="kol-mono-12 text-meta">{emptyHint}</p> : null
+    return emptyHint ? <Hint>{emptyHint}</Hint> : null
   }
   const groups = []
   for (const p of params) {
@@ -42,16 +61,46 @@ export default function AutoControls({ schema, layer, setProp, palette, renderAn
     if (last && last.section === section) last.params.push(p)
     else groups.push({ section, params: [p] })
   }
+  /* The PICKING CLUSTER break. A schema that authors no `section` collapses
+   * into one flat group, so no boundary exists for a rule to land on — which
+   * is why the generative rail had no divider anywhere. The repo already has
+   * the rule for effect pages (LabsParams: the cluster is the preset param
+   * plus the selects that follow it); this is that same rule, applied to the
+   * sectionless group so every surface breaks in the same place: the leading
+   * run of SELECTS is the picker, everything after it is parameters. */
+  for (let i = 0; i < groups.length; i++) {
+    const g = groups[i]
+    if (g.section) continue
+    let lead = 0
+    while (lead < g.params.length && g.params[lead].type === 'select') lead++
+    if (lead === 0 || lead === g.params.length) continue
+    groups.splice(i, 1, { section: undefined, params: g.params.slice(0, lead) },
+                        { section: undefined, params: g.params.slice(lead) })
+    i++
+  }
   return (
     <>
+      {/* A section whose first param carries the same word as its label
+          ("Geometry" header over a "Geometry" select) prints doubled — the
+          param's own label already says it, so the header drops. */}
+      {/* `divided` is the DS's between-siblings hairline (kol-component 0.46.0
+          / kol-theme 0.43.0). It replaces the `.kol-params-section` hook class
+          and the two rules kol-labs.css carried for it — that class existed only
+          to reach these sections from CSS, which is exactly what the prop
+          ends. Applied HERE, in the shared renderer, so effect AND generative
+          pages divide alike: the unscoped behaviour ruled 2026-08-15, not the
+          older `.kol-labs-fx`-fenced one.
+
+          `gap-4` is gone deliberately. It fought Section's own `gap-2`, and
+          kol-labs.css then out-specified it back to 8px — Section's default IS
+          8px, so dropping both lands on the same rendering with nothing
+          overriding anything. */}
       {groups.map((g) => (
-        <div key={g.params[0].key} className="kol-params-section flex flex-col gap-4">
-          {/* A section whose first param carries the same word as its label
-              ("Geometry" header over a "Geometry" select) prints doubled —
-              the param's own label already says it, so the header drops. */}
-          {g.section && g.section !== g.params[0].label && (
-            <span className="kol-helper-10 text-meta">{g.section}</span>
-          )}
+        <LabeledControlSection
+          key={g.params[0].key}
+          label={g.section && g.section !== g.params[0].label ? g.section : undefined}
+          divided
+        >
           {g.params.map((p) => {
             const bound = isBinding(layer[p.key])
             const animate = renderAnimate && isAnimatable(p) ? renderAnimate(p, bound) : null
@@ -68,7 +117,7 @@ export default function AutoControls({ schema, layer, setProp, palette, renderAn
               />
             )
           })}
-        </div>
+        </LabeledControlSection>
       ))}
     </>
   )
@@ -173,19 +222,7 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
      * type a number for a constant or an expression to bind it; a bound track
      * shows the resolved value moving. */
     control = <RangeField param={p} layer={layer} setProp={setProp} />
-    if (inline) {
-      /* Labs row: natural-width UPPERCASE label, track takes the rest —
-       * a fixed label column starves the track in a 300px rail. */
-      return (
-        <div className="flex items-center gap-3">
-          <span className="kol-helper-10 tracking-widest text-meta whitespace-nowrap">{p.label}</span>
-          <div className="flex-1 min-w-0">{control}</div>
-          {animate}
-        </div>
-      )
-    }
   } else if (p.type === 'select') {
-    rowInline = false
     control = (
       <Dropdown
         variant="subtle" size="sm" className="w-full"
@@ -194,18 +231,7 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
         onChange={(v) => setProp(p.key, p.numeric ? Number(v) : v)}
       />
     )
-    if (inline) {
-      /* Labs authors select labels sentence-case (section-header treatment),
-       * so they skip the uppercase label pair the row controls use. */
-      return (
-        <div className="flex flex-col gap-2">
-          <span className="kol-helper-10 text-meta">{p.label}</span>
-          {animate ? <div className="flex items-center gap-2"><div className="flex-1 min-w-0">{control}</div>{animate}</div> : control}
-        </div>
-      )
-    }
   } else if (p.type === 'segmented') {
-    rowInline = false
     control = (
       <ViewToggle
         options={p.options ?? []}
@@ -219,16 +245,10 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
      * the switch can't (`['Clip', 'Visible']`), which keeps the cells. */
     const [offLabel, onLabel] = p.labels ?? ['Off', 'On']
     if (inline && !p.labels) {
-      /* Label + switch span the row freely — a fixed label column would wrap
-       * the longer toggle labels ("ORIGINAL COLOR"). */
-      return (
-        <div className="flex items-center gap-3">
-          <span className="kol-helper-10 tracking-widest text-meta whitespace-nowrap">{p.label}</span>
-          <div className="flex-1" />
-          <ToggleSwitch size="sm" checked={!!value} onChange={(v) => setProp(p.key, v)} />
-          {animate}
-        </div>
-      )
+      /* The switch sits at the row's right edge; the label column is
+       * LabeledControl's, same as every other inline row. */
+      /* No local justify-end wrapper: SettingsRow's align="end" owns it. */
+      control = <ToggleSwitch size="sm" checked={!!value} onChange={(v) => setProp(p.key, v)} />
     } else {
       rowInline = false
       control = (
@@ -256,9 +276,13 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
   }
 
   const hint = p.type === 'range' && p.format && typeof value === 'number' && !bound ? p.format(value) : undefined
-  return (
-    <LabeledControl label={p.label} hint={hint} inline={rowInline} labelWidth={INLINE_LABEL_W}>
-      {animate ? <div className="flex items-center gap-2"><div className="flex-1 min-w-0">{control}</div>{animate}</div> : control}
-    </LabeledControl>
-  )
+  const body = animate
+    ? <div className="flex items-center gap-2"><div className="flex-1 min-w-0">{control}</div>{animate}</div>
+    : control
+  /* A bare switch is the only control that sits at the row's right edge;
+   * everything else spans it. r2b2's rule, verbatim. */
+  const align = p.type === 'toggle' && !p.labels ? 'end' : 'fill'
+  return rowInline
+    ? <SettingsRow label={p.label} hint={hint} align={align} labelWidth={INLINE_LABEL_W}>{body}</SettingsRow>
+    : <LabeledControl label={p.label} hint={hint} labelWidth={INLINE_LABEL_W}>{body}</LabeledControl>
 }

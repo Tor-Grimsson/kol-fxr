@@ -4,7 +4,7 @@ import Canvas, { CANVAS_VIRTUAL_W } from './shell/Canvas'
 import LayerRenderer from './compose/LayerRenderer'
 import { resolveColor, useComposeState } from './compose/state'
 import { transport } from './params/transport'
-import { applyThemeMode, getThemeMode } from './theme'
+import { useTheme } from '@kolkrabbi/kol-framework'
 import { OUTPUT_SNAPSHOT_KEY } from './compose/useComposeFile'
 
 /**
@@ -98,8 +98,9 @@ export function OutputStage({ fit = 'contain' }) {
  * the snapshot, start playback, render the stage. Once, on mount. */
 function OutputBody() {
   const { loadPreset } = useComposeState()
+  /* re-stamps a saved theme choice on mount (kol-framework's store) */
+  useTheme()
   useEffect(() => {
-    applyThemeMode(getThemeMode())
     try {
       const raw = localStorage.getItem(OUTPUT_SNAPSHOT_KEY)
       const env = raw ? JSON.parse(raw) : null

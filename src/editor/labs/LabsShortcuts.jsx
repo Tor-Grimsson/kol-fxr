@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Button } from '@kolkrabbi/kol-component'
+import { LabeledControlSection, FullscreenOverlay } from '@kolkrabbi/kol-component'
+import { comboLabel, shortcutsBySection } from '../state/keymap'
 import EditorIcon from '../icons/EditorIcon'
 
 /**
@@ -11,7 +12,6 @@ import EditorIcon from '../icons/EditorIcon'
  * Self-contained like the editor's ShortcutsOverlay: owns its key listener,
  * so LabsBody just mounts it.
  */
-const SCRIM = 'rgba(0, 0, 0, 0.6)'
 
 const EXAMPLES = [
   ['0.5', 'a plain value — stays put (normal slider)'],
@@ -33,16 +33,25 @@ const FUNCTIONS = [
   ['Constants', 'PI TAU PHI E'],
 ]
 
-const KEYS = [
-  ['Space', 'play / pause'],
-  ['R', 'reset'],
-  ['Shift+R', 'reroll'],
-  ['M', 'modulation dots'],
-  ['C', 'orbit camera'],
-  ['F', 'framerate'],
-  ['0', 'fit zoom'],
-  ['1–4', 'zoom 50–200%'],
-  ['S', 'toggle this'],
+/* KEYS IS NO LONGER HAND-MAINTAINED (2026-08-15). It was ten hardcoded rows
+ * that had already drifted from the real keymap — it claimed `R → reset` and
+ * `Shift+R → reroll` while `keymap.js` said Rectangle tool and rulers, and it
+ * predated `I` entirely. Both lists were right about DIFFERENT chromes, and
+ * nothing declared which.
+ *
+ * `keymap.js` gained a `views:` field, so labs' own keys are declared there
+ * now and this reads them. One source of truth; the drift cannot come back.
+ *
+ * `Esc → close` stays local: it is this panel's own affordance, bound below,
+ * not an app shortcut the keymap should carry.
+ *
+ * Labels render AS AUTHORED — no `.toLowerCase()`. A first pass had one, and it
+ * turned "Orbit tool (3D camera)" into "3d camera". Casing is authored, never
+ * transformed; that is the same law the uppercase rule in this repo's CSS was
+ * deleted for. */
+const labsKeys = () => [
+  ...shortcutsBySection('labs').flatMap(({ items }) =>
+    items.map((s) => [comboLabel(s.combo), s.label])),
   ['Esc', 'close'],
 ]
 
@@ -66,26 +75,20 @@ export default function LabsShortcuts() {
   if (!open) return null
 
   return (
-    <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center"
-      style={{ background: SCRIM }}
-      onClick={() => setOpen(false)}
-    >
+    /* The DS overlay owns the scrim, Escape, backdrop dismiss, scroll lock,
+       the focus trap and the z tier (EditorOverlaysOnFullscreenOverlay, ruled
+       2026-08-27). This file used to hand-roll all of it around a local
+       `SCRIM` const at `z-[1000]`, and trapped nothing. */
+    <FullscreenOverlay open onClose={() => setOpen(false)}>
       <div
-        className="bg-surface-primary border border-fg-08 rounded shadow-xl flex flex-col"
-        style={{ width: 640, maxWidth: 'calc(100vw - 48px)', maxHeight: 'calc(100vh - 48px)' }}
-        onClick={(e) => e.stopPropagation()}
+        className="flex flex-col"
+        style={{ width: 640, maxWidth: '100%' }}
       >
         <div className="flex items-start justify-between px-6 pt-5">
           <div>
-            <p className="kol-helper-10 uppercase tracking-widest text-meta mb-1">Shortcuts</p>
+            <p className="kol-eyebrow text-meta mb-1">Shortcuts</p>
             <p className="kol-mono-16 text-emphasis">Animate any value</p>
           </div>
-          <Button iconComponent={EditorIcon}
-            variant="primary" size="sm" quiet iconOnly="close" iconSize={14}
-            aria-label="Close"
-            onClick={() => setOpen(false)}
-          />
         </div>
 
         <div className="overflow-y-auto px-6 pb-6 flex flex-col gap-5">
@@ -97,8 +100,7 @@ export default function LabsShortcuts() {
             Drag the slider to clear an expression.
           </p>
 
-          <div>
-            <p className="kol-helper-10 uppercase tracking-widest text-meta mb-2">Examples</p>
+          <LabeledControlSection label="Examples">
             <div className="flex flex-col gap-1">
               {EXAMPLES.map(([expr, what]) => (
                 <div key={expr} className="flex items-center gap-4">
@@ -107,10 +109,9 @@ export default function LabsShortcuts() {
                 </div>
               ))}
             </div>
-          </div>
+          </LabeledControlSection>
 
-          <div>
-            <p className="kol-helper-10 uppercase tracking-widest text-meta mb-2">Loop</p>
+          <LabeledControlSection label="Loop">
             <p className="kol-mono-12 text-body">
               The transport clock is a loop, not a BPM —
               {' '}<span className="text-emphasis">Loop / N s</span> in the
@@ -118,10 +119,9 @@ export default function LabsShortcuts() {
               oscillator, sweep and export wraps seamlessly over it. Type a
               new length there; the default lives in Settings → Loop length.
             </p>
-          </div>
+          </LabeledControlSection>
 
-          <div>
-            <p className="kol-helper-10 uppercase tracking-widest text-meta mb-2">Functions</p>
+          <LabeledControlSection label="Functions">
             <div className="flex flex-col gap-2">
               {FUNCTIONS.map(([group, list]) => (
                 <div key={group}>
@@ -130,10 +130,10 @@ export default function LabsShortcuts() {
                 </div>
               ))}
             </div>
-          </div>
+          </LabeledControlSection>
 
           <div className="pt-3 border-t border-fg-08 flex flex-wrap gap-x-5 gap-y-1">
-            {KEYS.map(([key, what]) => (
+            {labsKeys().map(([key, what]) => (
               <span key={key} className="kol-mono-12">
                 <span className="text-emphasis">{key}</span>
                 {' '}<span className="text-meta">{what}</span>
@@ -142,6 +142,6 @@ export default function LabsShortcuts() {
           </div>
         </div>
       </div>
-    </div>
+    </FullscreenOverlay>
   )
 }

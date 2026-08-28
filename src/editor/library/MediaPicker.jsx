@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Input } from '@kolkrabbi/kol-component'
+import { Button, Input, Dropdown, FullscreenOverlay, MediaViewer } from '@kolkrabbi/kol-component'
 import EditorIcon from '../icons/EditorIcon'
-import { listMedia, mediaUrl, isImageType, isVideoType, formatSize } from './mediaLibrary'
+import { listMedia, mediaUrl, mediaSrc, isImageType, isVideoType, formatSize, BUCKET_OPTIONS, DEFAULT_BUCKET } from './mediaLibrary'
 
 /**
  * MediaPicker — modal browser over the kol-media CDN bucket (the labs
@@ -44,116 +44,74 @@ function Chevron({ dir = 'left', size = 22 }) {
   )
 }
 
-/* Lightbox preview over `files` at `index`. Owns its own ←/→/Esc keys; the
- * picker suppresses its own Esc while this is open so one keypress steps back
- * one level, not straight out. */
-function MediaLightbox({ files, index, onClose, onPrev, onNext, onUse, accept }) {
-  const videoRef = useRef(null)
+/* Lightbox preview over `files` at `index` — the DS `MediaViewer` (ruled
+ * 2026-08-27, EditorOverlaysOnFullscreenOverlay): a paged media view is
+ * MediaViewer on FullscreenOverlay, not a third archetype. It owns the
+ * scrim, Escape, backdrop close, the close button, scroll lock, the focus
+ * trap, ←/→ paging and the modal z tier — all of which this file used to
+ * hand-roll at `z-[1100]` behind an `rgba(0,0,0,0.88)` + blur(6px) scrim of
+ * its own, above the DS's whole stacking ladder. The per-item row (name,
+ * size, position, Use, Copy URL) rides MediaViewer's `actions` slot. */
+function MediaLightbox({ files, index, onClose, onIndexChange, onUse, accept, bucket }) {
   const [copied, setCopied] = useState(false)
-  const o = files[index]
+  useEffect(() => { setCopied(false) }, [index])
 
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'Escape') { e.stopPropagation(); onClose() }
-      else if (e.key === 'ArrowLeft') onPrev()
-      else if (e.key === 'ArrowRight') onNext()
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  }, [onClose, onPrev, onNext])
+  /* `mediaSrc`, not `mediaUrl`: it proxies R2 and leaves the two B2 hosts
+     direct. Copy URL stays the real public URL — that is what you would paste. */
+  const media = files.map((f) => ({
+    url: mediaSrc(f.key, bucket),
+    alt: f.displayKey,
+    kind: isVideoType(f.contentType) ? 'video' : 'image',
+  }))
 
-  useEffect(() => { setCopied(false); videoRef.current?.load() }, [index])
-
-  if (!o) return null
-
-  const pickable =
-    accept === 'video' ? isVideoType(o.contentType)
-    : accept === 'image' ? isImageType(o.contentType)
-    : isImageType(o.contentType) || isVideoType(o.contentType)
-
-  const copyUrl = async () => {
-    try { await navigator.clipboard.writeText(mediaUrl(o.key)) } catch { /* blocked */ }
+  const copyUrl = async (f) => {
+    try { await navigator.clipboard.writeText(mediaUrl(f.key, bucket)) } catch { /* blocked */ }
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[1100] flex items-center justify-center"
-      style={{ background: 'rgba(0, 0, 0, 0.88)', backdropFilter: 'blur(6px)' }}
-      onClick={onClose}
-    >
-      <button
-        type="button"
-        className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded text-meta hover:text-emphasis transition-colors"
-        onClick={(e) => { e.stopPropagation(); onPrev() }}
-        aria-label="Previous"
-      >
-        <Chevron dir="left" />
-      </button>
-
-      <div className="max-w-[90vw] max-h-[85vh] flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
-        {isImageType(o.contentType) ? (
-          <img
-            src={mediaUrl(o.key)}
-            alt={o.displayKey}
-            className="max-w-full max-h-[70vh] object-contain rounded"
-            style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
-          />
-        ) : isVideoType(o.contentType) ? (
-          <video
-            ref={videoRef}
-            src={mediaUrl(o.key)}
-            controls
-            autoPlay
-            loop
-            muted
-            className="max-w-full max-h-[70vh] rounded"
-            style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
-          />
-        ) : (
-          <div className="w-40 h-40 flex flex-col items-center justify-center gap-2 text-meta">
-            <span className="kol-mono-12">{o.contentType || 'file'}</span>
+    <MediaViewer
+      open
+      media={media}
+      index={index}
+      onIndexChange={onIndexChange}
+      onClose={onClose}
+      actions={(_item, i) => {
+        const f = files[i]
+        if (!f) return null
+        const pickable =
+          accept === 'video' ? isVideoType(f.contentType)
+          : accept === 'image' ? isImageType(f.contentType)
+          : isImageType(f.contentType) || isVideoType(f.contentType)
+        return (
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-4">
+              <span className="kol-mono-12 text-emphasis">{f.displayKey}</span>
+              <span className="kol-mono-12 text-meta">{formatSize(f.size)}</span>
+              <span className="kol-mono-10 text-meta">{i + 1} / {files.length}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {pickable && (
+                <Button variant="primary" size="sm" onClick={() => onUse(f)}>Use</Button>
+              )}
+              <Button variant="primary" size="sm" onClick={() => copyUrl(f)}>
+                {copied ? 'Copied' : 'Copy URL'}
+              </Button>
+            </div>
           </div>
-        )}
-        <div className="flex items-center gap-4">
-          <span className="kol-mono-12 text-emphasis">{o.displayKey}</span>
-          <span className="kol-mono-12 text-meta">{formatSize(o.size)}</span>
-        </div>
-        <span className="kol-mono-10 text-meta">{index + 1} / {files.length}</span>
-        <div className="flex items-center gap-2 mt-1">
-          {pickable && (
-            <Button variant="primary" size="sm" onClick={() => onUse(o)}>
-              Use
-            </Button>
-          )}
-          <Button variant="primary" size="sm" onClick={copyUrl}>
-            {copied ? 'Copied' : 'Copy URL'}
-          </Button>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded text-meta hover:text-emphasis transition-colors"
-        onClick={(e) => { e.stopPropagation(); onNext() }}
-        aria-label="Next"
-      >
-        <Chevron dir="right" />
-      </button>
-
-      <Button iconComponent={EditorIcon}
-        variant="primary" size="sm" quiet
-        iconOnly="close" iconSize={14}
-        aria-label="Close preview"
-        className="absolute top-4 right-4"
-        onClick={onClose}
-      />
-    </div>
+        )
+      }}
+    />
   )
 }
 
 export default function MediaPicker({ open, onClose, onPick, accept = 'all' }) {
+  /* THREE STORES, not one (2026-08-28). The hand-rolled mediaLibrary knew only
+   * R2's ~430 files; the other ~7,500 across the two B2 buckets had no way in.
+   * Switching store re-lists — the drill-down below is client-side over one
+   * listing, so the bucket is part of that fetch, not a filter on it. */
+  const [bucket, setBucket] = useState(DEFAULT_BUCKET)
   const [prefix, setPrefix] = useState('')       /* current folder (ends '/'), '' = root */
   const [filter, setFilter] = useState('')        /* secondary name filter within the folder */
   const [allObjects, setAllObjects] = useState([])
@@ -161,21 +119,24 @@ export default function MediaPicker({ open, onClose, onPick, accept = 'all' }) {
   const [error, setError] = useState(null)
   const [lightboxIndex, setLightboxIndex] = useState(null)
 
-  /* List the whole bucket once per open; drill-down is client-side. */
+  /* List the whole bucket once per open (and again on a store switch);
+   * drill-down is client-side. */
   useEffect(() => {
     if (!open) return undefined
+    const ac = new AbortController()
     let cancelled = false
     setLoading(true)
     setError(null)
     setPrefix('')
     setFilter('')
     setLightboxIndex(null)
-    listMedia('')
+    setAllObjects([])
+    listMedia('', { bucket, signal: ac.signal })
       .then((objs) => { if (!cancelled) setAllObjects(objs) })
-      .catch((e) => { if (!cancelled) setError(e.message) })
+      .catch((e) => { if (!cancelled && e.name !== 'AbortError') setError(e.message) })
       .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
-  }, [open])
+    return () => { cancelled = true; ac.abort() }
+  }, [open, bucket])
 
   /* Esc closes the picker — but only when the lightbox isn't up (it owns Esc
    * to step back one level first). */
@@ -200,22 +161,27 @@ export default function MediaPicker({ open, onClose, onPick, accept = 'all' }) {
   const visibleFiles = (q ? files.filter((o) => o.displayKey.toLowerCase().includes(q)) : files).filter(wanted)
   const crumbs = prefix ? prefix.replace(/\/$/, '').split('/') : []
 
-  const pick = (o) => { onPick?.(mediaUrl(o.key), { contentType: o.contentType }); onClose?.() }
+  /* The URL is built on the SELECTED bucket's own host — callers wrap it in
+   * `proxied()`, which is a no-op for the two B2 hosts (they send CORS `*`)
+   * and rewrites only R2. */
+  const pick = (o) => { onPick?.(mediaUrl(o.key, bucket), { contentType: o.contentType }); onClose?.() }
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-[1000] flex items-center justify-center"
-        style={{ background: 'rgba(0, 0, 0, 0.6)' }}
-        onClick={onClose}
-      >
+      <FullscreenOverlay open onClose={onClose}>
         <div
           className="bg-surface-primary border border-fg-08 rounded shadow-xl flex flex-col"
-          style={{ width: 720, maxWidth: 'calc(100vw - 48px)', maxHeight: 'calc(100vh - 48px)' }}
-          onClick={(e) => e.stopPropagation()}
+          style={{ width: 720, maxWidth: '100%', maxHeight: 'calc(100vh - 48px)' }}
         >
           <div className="flex items-center gap-3 px-5 h-12 border-b border-fg-08 shrink-0">
             <span className="kol-helper-12 text-emphasis whitespace-nowrap">Media library</span>
+            <Dropdown
+              variant="grey"
+              options={BUCKET_OPTIONS}
+              value={bucket}
+              onChange={setBucket}
+              aria-label="Store"
+            />
             <Input
               variant="filled"
               size="sm"
@@ -277,14 +243,30 @@ export default function MediaPicker({ open, onClose, onPick, accept = 'all' }) {
                         key={o.key}
                         className="cursor-pointer"
                         title={o.key}
-                        onClick={() => setLightboxIndex(idx)}
+                        /* CLICK LOADS. It used to open the lightbox and make
+                           you press Use in there — two steps and a full-screen
+                           detour to pick a thumbnail you could already see
+                           (user, 2026-08-27). The lightbox is still reachable
+                           for a proper look: it is the ⤢ on hover. */
+                        onClick={() => pick(o)}
                       >
-                        <div className="aspect-square bg-fg-04 rounded overflow-hidden border border-fg-08 hover:border-fg-24 transition-colors">
+                        <div className="group relative aspect-square bg-fg-04 rounded overflow-hidden border border-fg-08 hover:border-fg-24 transition-colors">
                           {isVideoType(o.contentType) ? (
-                            <video src={mediaUrl(o.key)} muted preload="metadata" className="w-full h-full object-cover" />
+                            <video src={mediaSrc(o.key, bucket)} muted preload="metadata" className="w-full h-full object-cover" />
                           ) : (
-                            <img src={mediaUrl(o.key)} alt="" loading="lazy" className="w-full h-full object-cover" />
+                            <img src={mediaSrc(o.key, bucket)} alt="" loading="lazy" className="w-full h-full object-cover" />
                           )}
+                          {/* Preview — the old click target, demoted to an
+                              opt-in so the tile itself can just load. */}
+                          <button
+                            type="button"
+                            aria-label={`Preview ${o.displayKey}`}
+                            title="Preview"
+                            className="absolute top-1 right-1 w-7 h-7 inline-flex items-center justify-center rounded bg-oq-08 text-oq-64 hover:text-emphasis opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => { e.stopPropagation(); setLightboxIndex(idx) }}
+                          >
+                            <EditorIcon name="maximize" size={12} />
+                          </button>
                         </div>
                         <p className="kol-helper-10 text-meta truncate mt-1">{o.displayKey}</p>
                       </li>
@@ -295,16 +277,16 @@ export default function MediaPicker({ open, onClose, onPick, accept = 'all' }) {
             )}
           </div>
         </div>
-      </div>
+      </FullscreenOverlay>
 
       {lightboxIndex !== null && visibleFiles[lightboxIndex] && (
         <MediaLightbox
           files={visibleFiles}
           index={lightboxIndex}
           accept={accept}
+          bucket={bucket}
           onClose={() => setLightboxIndex(null)}
-          onPrev={() => setLightboxIndex((i) => (i - 1 + visibleFiles.length) % visibleFiles.length)}
-          onNext={() => setLightboxIndex((i) => (i + 1) % visibleFiles.length)}
+          onIndexChange={setLightboxIndex}
           onUse={pick}
         />
       )}

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MenuItem, MenuDropdownItem, MenuDropdownDivider, MenuDropdownNest } from '@kolkrabbi/kol-component'
 import { Input, useModal } from '@kolkrabbi/kol-component'
 import EditorIcon from '../icons/EditorIcon'
-import { useThemeMode } from '../theme'
+import { useTheme } from '@kolkrabbi/kol-framework'
 import { useAppSettings, setAppSetting } from '../lib/appSettings'
 import { THEME_OPTIONS } from '../../loops/lib/themes'
 import { ASPECTS } from './aspects'
@@ -53,7 +53,7 @@ export default function MenuTop() {
   } = useComposeState()
   const { library } = useGeneratorLibrary()
   const modal = useModal()
-  const [themeMode, setThemeMode] = useThemeMode()
+  const { mode: themeMode, setTheme: setThemeMode } = useTheme()
   /* Global app defaults (appSettings) — the loop palette theme / autoplay /
    * clip-to-frame / default aspect edited from the Settings menu; distinct
    * from the light/dark UI theme above. */
@@ -218,7 +218,7 @@ export default function MenuTop() {
       {/* The mode door — first-class beside the title (it kept getting lost
           inside Settings). Label = the CURRENT chrome; picking another mode
           navigates via goMode. */}
-      <MenuItem label="Editor" panelClassName="z-[1000]">
+      <MenuItem label="Editor" panelClassName="z-[var(--kol-z-tooltip)]">
         <div className="py-1 w-[200px]">
           {MODES.map((m) => (
             <MenuDropdownItem
@@ -232,11 +232,12 @@ export default function MenuTop() {
         </div>
       </MenuItem>
       <div className="flex items-center gap-1 ml-auto">
-        {/* panelClassName z-[1000]: MenuItem panels opt out of .kol-popover
-            chrome (panel={false}) and get NO z-index — the canvas rulers
-            (z-index 4, positioned) would paint over them. Match the
-            .kol-popover token value. */}
-        <MenuItem label="Generative" panelClassName="z-[1000]" panelStyle={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        {/* MenuItem panels opt out of .kol-popover chrome (panel={false}) and
+            so get NO z-index — the canvas rulers (z-index 4, positioned) would
+            paint over them. Tracks the .kol-popover TOKEN, which moved 1000 →
+            --kol-z-tooltip when the DS pulled its own strays onto the ladder
+            (EditorOverlaysOnFullscreenOverlay, ruled 2026-08-27). */}
+        <MenuItem label="Generative" panelClassName="z-[var(--kol-z-tooltip)]" panelStyle={{ maxHeight: '70vh', overflowY: 'auto' }}>
           <div className="py-1 w-[260px]">
             {GENERATIVE_TREE.map((parent) => (
               <MenuDropdownNest key={parent.label} label={parent.label}>
@@ -252,7 +253,7 @@ export default function MenuTop() {
           </div>
         </MenuItem>
 
-        <MenuItem label="Effects" panelClassName="z-[1000]" panelStyle={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        <MenuItem label="Effects" panelClassName="z-[var(--kol-z-tooltip)]" panelStyle={{ maxHeight: '70vh', overflowY: 'auto' }}>
           <div className="py-1 w-[260px]">
             {/* TYPE nests (Halftone · Scanline · CRT · Refraction · FX rack ·
                 Pattern); categories inside apply a filter to the selected
@@ -307,7 +308,7 @@ export default function MenuTop() {
           </div>
         </MenuItem>
 
-        <MenuItem label="Tools" panelClassName="z-[1000]">
+        <MenuItem label="Tools" panelClassName="z-[var(--kol-z-tooltip)]">
           <div className="py-1 w-[220px]">
             <MenuDropdownItem onClick={openColorModal}>
               Color
@@ -322,7 +323,7 @@ export default function MenuTop() {
           </div>
         </MenuItem>
 
-        <MenuItem label="File" panelClassName="z-[1000]">
+        <MenuItem label="File" panelClassName="z-[var(--kol-z-tooltip)]">
           <div className="py-1 w-[220px]">
             <MenuDropdownItem onClick={onNew}>
               New
@@ -357,7 +358,7 @@ export default function MenuTop() {
           </div>
         </MenuItem>
 
-        <MenuItem label="Canvas" panelClassName="z-[1000]">
+        <MenuItem label="Canvas" panelClassName="z-[var(--kol-z-tooltip)]">
           <div className="py-1 w-[220px]">
             <MenuDropdownNest label="Aspect">
               {ASPECT_OPTIONS.map((opt) => (
@@ -387,7 +388,7 @@ export default function MenuTop() {
           </div>
         </MenuItem>
 
-        <MenuItem label="Settings" panelClassName="z-[1000]">
+        <MenuItem label="Settings" panelClassName="z-[var(--kol-z-tooltip)]">
           <div className="py-1 w-[220px]">
             <MenuDropdownItem
               onClick={toggleGrid}
@@ -452,7 +453,7 @@ export default function MenuTop() {
           </div>
         </MenuItem>
 
-        <MenuItem label="Templates" align="end" panelClassName="z-[1000]" panelStyle={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        <MenuItem label="Templates" align="end" panelClassName="z-[var(--kol-z-tooltip)]" panelStyle={{ maxHeight: '70vh', overflowY: 'auto' }}>
           <div className="py-1 w-[220px]">
             <MenuDropdownNest label={`Starters · ${STARTERS.length}`}>
               {STARTERS.map((s) => (

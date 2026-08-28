@@ -7,14 +7,14 @@ import { useComposeState } from './state'
  * value={null}. A single selected layer aligns to the CANVAS, ≥2 to their
  * common bbox (state.alignSelected). */
 const H_OPTS = [
-  { value: 'start',  label: <span className="text-oq-48 inline-flex"><EditorIcon name="align-h-start" size={16} /></span>, ariaLabel: 'Align left' },
-  { value: 'center', label: <span className="text-oq-48 inline-flex"><EditorIcon name="align-h-center" size={16} /></span>, ariaLabel: 'Align horizontal center' },
-  { value: 'end',    label: <span className="text-oq-48 inline-flex"><EditorIcon name="align-h-end" size={16} /></span>, ariaLabel: 'Align right' },
+  { value: 'start',  label: <EditorIcon name="align-h-start" size={16} />, ariaLabel: 'Align left' },
+  { value: 'center', label: <EditorIcon name="align-h-center" size={16} />, ariaLabel: 'Align horizontal center' },
+  { value: 'end',    label: <EditorIcon name="align-h-end" size={16} />, ariaLabel: 'Align right' },
 ]
 const V_OPTS = [
-  { value: 'start',  label: <span className="text-oq-48 inline-flex"><EditorIcon name="align-v-start" size={16} /></span>, ariaLabel: 'Align top' },
-  { value: 'center', label: <span className="text-oq-48 inline-flex"><EditorIcon name="align-v-center" size={16} /></span>, ariaLabel: 'Align vertical center' },
-  { value: 'end',    label: <span className="text-oq-48 inline-flex"><EditorIcon name="align-v-end" size={16} /></span>, ariaLabel: 'Align bottom' },
+  { value: 'start',  label: <EditorIcon name="align-v-start" size={16} />, ariaLabel: 'Align top' },
+  { value: 'center', label: <EditorIcon name="align-v-center" size={16} />, ariaLabel: 'Align vertical center' },
+  { value: 'end',    label: <EditorIcon name="align-v-end" size={16} />, ariaLabel: 'Align bottom' },
 ]
 
 export default function AlignmentPanel() {

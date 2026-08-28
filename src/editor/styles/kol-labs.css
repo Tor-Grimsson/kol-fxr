@@ -1,0 +1,65 @@
+/**
+ * Labs chrome skin — scoped under `.kol-editor-labs` (the LabsView wrapper),
+ * so nothing here reaches the editor chrome.
+ *
+ * NO text-transform lives here. A `.kol-helper-10.tracking-widest` uppercase
+ * rule stood here until 2026-08-15: it re-imposed a casing the DS had
+ * deliberately dropped (casing is authored, not transformed), and because it
+ * keyed on the `tracking-widest` pair, every label that dodged that pair
+ * rendered sentence-case instead — which is exactly how one rail ended up
+ * showing SCATTER SEED next to Palette. Labels render as the schema authors
+ * them. If a string should be uppercase, author it uppercase.
+ */
+
+/* PARAM DENSITY + SECTION HAIRLINE — GONE, adopted 2026-08-15.
+ *
+ * `.kol-params-section` and its two rules lived here because `Section` had no
+ * notion of what happens BETWEEN two sections, so the hook class existed only
+ * to reach them from CSS. kol-component 0.46.0 gives `Section` a `divided`
+ * prop and kol-theme 0.43.0 carries the pair rule
+ * (`.kol-section--divided + .kol-section--divided`), so both are now the DS's.
+ * Applied in `params/AutoControls.jsx`, the SHARED renderer — which keeps the
+ * hairline unscoped across effect AND generative pages (the 2026-08-15 call),
+ * rather than restoring the old `.kol-labs-fx` fence.
+ *
+ * The 8px gap came back for free: `Section` ships `gap-2`. The `gap-4` in that
+ * call site's className was what this file was out-specifying all along.
+ *
+ * RAIL WIDTH — also gone. kol-framework 0.21.1 ships `--kol-rail-w: 256px` on
+ * :root, the same value this file declared, plus the -w-collapsed/-snap/-step/
+ * -snap-default siblings the drag gesture needs. The grid rules below stay
+ * ONLY because this shell's grid is `.kol-editor-grid`, not the DS's
+ * `.kol-brand-layout` — the DS's `[data-rail="true"]` template cannot reach
+ * markup that never wears that class. */
+/* Each rail's track sits behind a private var, so the two collapse
+ * INDEPENDENTLY off one rule each — not the four a 2×2 of combined states
+ * would cost. Same technique the DS uses for `.kol-brand-layout[data-rail]`;
+ * mirrored rather than shared because this shell's grid class is its own. */
+/* THE NAV TRACK IS GONE (2026-08-28): labs' categories are rows on the SHELL
+ * rail now, not a `SideNav` in the grid's left cell — and that rail is
+ * `position: fixed` with AppShell offsetting the page by its live width, so it
+ * is not a grid column at all. `.kol-editor-left` still renders (empty), hence
+ * the 0 track rather than a two-column template. */
+.kol-editor-labs .kol-editor-grid {
+  --_nav-track: 0px;
+  --_rail-track: var(--kol-rail-w);
+  grid-template-columns: var(--_nav-track) minmax(0, 1fr) var(--_rail-track);
+  transition: grid-template-columns 150ms ease;
+}
+/* data-rail is stamped by useDragResize({ token: 'kol-rail' }) — the right
+ * rail can now collapse the same way the left one always could. */
+:root[data-rail="collapsed"] .kol-editor-labs .kol-editor-grid {
+  --_rail-track: var(--kol-rail-w-collapsed);
+}
+/* The rail's hairline is SideNav's own (`hairline`, as the shell rail wears
+ * it). `.kol-editor-left`'s border-right doubled it AND ate the 1px that made
+ * this rail 55 against the shell's 56 — measured. */
+.kol-editor-labs .kol-editor-left { border-right: 0; }
+
+/* The right rail's drag suspends the ease, or the grid trails the pointer.
+ * (The left/sidenav half went with the nav track — the shell rail's own
+ * grab-drag moves AppShell's margin, not this grid.) */
+:root[data-rail-dragging] .kol-editor-labs .kol-editor-grid {
+  transition: none;
+}
+

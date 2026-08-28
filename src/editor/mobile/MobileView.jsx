@@ -5,10 +5,11 @@ import { OutputStage } from '../OutputView'
 import { useComposeState, CANVAS_W } from '../compose/state'
 import { PRESET_SIZES } from '../shell/aspects'
 import { transport } from '../params/transport'
-import { applyThemeMode, getThemeMode } from '../theme'
-import { firstPresetPatch } from '../../loops/registry'
+import { useTheme } from '@kolkrabbi/kol-framework'
+import { firstPresetPatch, loopById, resolveCameraKeys } from '../../loops/registry'
+import { useTool } from '../state/tools'
 import LabsSourcePicker from '../labs/LabsSourcePicker'
-import { isTabletSized, goDesktop } from './device'
+import { isTabletSized, goDesktop, isMobileDevice, wantsDesktop } from './device'
 import { goLabs, modeById } from '../mode'
 import { MODE_ICONS } from '../labs/LabsNav'
 import CategoryScreen, { SPREAD } from './CategoryScreen'
@@ -33,14 +34,14 @@ function EntryScreen({ onGenerate }) {
    * the chrome chooser — one line, then the doors. Media insert lives on
    * the category screen (it's a randomiser action, not a chrome). */
   return (
-    <div className="fixed inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+    <div className="fixed inset-y-0 right-0 left-[var(--fxr-rail,0px)] kol-overlay-scrim flex flex-col items-center justify-center p-6" style={{ zIndex: 'var(--kol-z-modal)' }}>
       <div
         className="w-full max-w-sm rounded p-8 flex flex-col gap-6"
         style={{ background: 'var(--kol-surface-primary)' }}
       >
         <div className="flex flex-col gap-2">
-          <span className="kol-mono-16 text-emphasis">kolkrabbi-fxr</span>
-          <p className="kol-mono-12 text-meta m-0">Select chrome</p>
+          <span className="kol-eyebrow text-body">Select chrome</span>
+          <span className="kol-mono-16 text-emphasis">Effexor FXR</span>
         </div>
         <div className="flex flex-col gap-2">
           <Button variant="primary" size="lg" className={SPREAD} iconLeft={MODE_ICONS.randomiser} iconRight={MODE_ICONS.randomiser} onClick={onGenerate}>Generate</Button>
@@ -62,7 +63,12 @@ function EntryScreen({ onGenerate }) {
 
 function MobileBody() {
   const { layers, addLayer, removeLayer, updateLayer, canvasW, canvasH, aspect, setAspect } = useComposeState()
-  const [screen, setScreen] = useState('entry')   /* entry | category | live */
+  const { setTool } = useTool()
+  /* Under the shell rail the chrome chooser is redundant — the rail IS the
+     chooser — so the randomiser opens on the generator list; the entry card
+     is for touch-only devices, which have no rail (user, 2026-08-27). */
+  const start = () => (isMobileDevice() && !wantsDesktop() ? 'entry' : 'category')
+  const [screen, setScreen] = useState(start)   /* entry | category | live */
   const [activeId, setActiveId] = useState(null)
   const [stageFit, setStageFit] = useState('contain')  /* contain = 4:5 letterbox · cover = fill display */
 
@@ -72,12 +78,16 @@ function MobileBody() {
    * sticks until Start over. */
   const [stageScale, setStageScale] = useState(1)
   const pinchRef = useRef({ pts: new Map(), startDist: 0, startScale: 1 })
+  const tapRef = useRef(null)
   const pinchDist = () => {
     const [a, b] = [...pinchRef.current.pts.values()]
     return Math.hypot(a.x - b.x, a.y - b.y)
   }
   const onPinchDown = (e) => {
     pinchRef.current.pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    tapRef.current = pinchRef.current.pts.size === 1
+      ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() }
+      : null
     if (pinchRef.current.pts.size === 2) {
       pinchRef.current.startDist = pinchDist()
       pinchRef.current.startScale = stageScale
@@ -95,16 +105,32 @@ function MobileBody() {
     }
   }
   const onPinchEnd = (e) => {
+    /* Tap = re-trigger, but only where touch has no richer meaning already:
+     * penrose presses, camera orbits and engine pointer-nudges keep theirs. */
+    const tap = tapRef.current
+    if (tap && tap.id === e.pointerId && e.type === 'pointerup' && screen === 'live'
+        && performance.now() - tap.t < 350 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 12
+        && active?.type === 'loop') {
+      const def = loopById(active.loopId)
+      if (def && def.group !== 'penrose' && def.kind !== 'engine' && !resolveCameraKeys(def)) transport.rewind()
+    }
+    if (tap?.id === e.pointerId) tapRef.current = null
     pinchRef.current.pts.delete(e.pointerId)
     if (pinchRef.current.pts.size < 2) pinchRef.current.startDist = 0
   }
 
+  /* re-stamps a saved theme choice on mount (kol-framework's store) */
+  useTheme()
   useEffect(() => {
-    applyThemeMode(getThemeMode())
     /* The provider inits aspect '4:5' but canvasW/H 1080×1080 — desktop
      * reconciles that in EditorBody's boot; mobile must do the same or every
      * full-frame layer is built square inside a 4:5 frame. */
     setAspect('4:5')
+    /* Orbit tool, permanently: mobile never mounts CanvasArea, so the tool
+     * context only feeds LayerRenderer's camera hooks — this one flip gives
+     * every camera-capable generator (3D Scene orbit, SF3D/math param
+     * cameras, field/pattern cam loops) touch-orbit with zero new wiring. */
+    setTool('orbit')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -112,7 +138,9 @@ function MobileBody() {
 
   /* Esc closes the source-picker overlay (same as its Back: unwind the
    * empty photo layer). CategoryScreen handles its own Esc. */
-  const pickerOpen = screen === 'live' && active?.type === 'photo' && !active.src
+  /* Webcam layers keep src null for life (the stream lives in the webcam
+   * registry) — without the srcType guard the picker would never close. */
+  const pickerOpen = screen === 'live' && active?.type === 'photo' && !active.src && active.srcType !== 'webcam'
   useEffect(() => {
     if (!pickerOpen) return
     const onKey = (e) => { if (e.key === 'Escape') restart() }
@@ -175,20 +203,22 @@ function MobileBody() {
     for (const l of [...layers]) removeLayer(l.id)
     setActiveId(null)
     setStageScale(1)
-    setScreen('entry')
+    setScreen(start())
   }
 
   return (
-    <div className="fixed inset-0 bg-black">
+    <div className="relative h-dvh bg-black">
       {/* touch-none: touches over the stage arrive as pointer events (the
           mouse modulation source), not browser pan/zoom gestures. Scoped to
           the stage wrapper — the overlay/screens above keep native touch
           (the category list scrolls). The transform also makes this the
           containing block for OutputStage's fixed positioning, so the pinch
-          scale applies to the whole stage. */}
+          scale applies to the whole stage — ALWAYS present (2026-08-27): at
+          scale 1 with no transform the stage escaped to the viewport and sat
+          under the shell rail. */}
       <div
         className="absolute inset-0 touch-none"
-        style={{ transform: stageScale === 1 ? undefined : `scale(${stageScale})` }}
+        style={{ transform: `scale(${stageScale})` }}
         onPointerDownCapture={onPinchDown}
         onPointerMoveCapture={onPinchMove}
         onPointerUpCapture={onPinchEnd}
@@ -201,7 +231,7 @@ function MobileBody() {
         <EntryScreen onGenerate={() => setScreen('category')} />
       )}
       {screen === 'category' && (
-        <CategoryScreen onPick={startGenerative} onInsert={startInsert} onBack={() => setScreen('entry')} />
+        <CategoryScreen onPick={startGenerative} onInsert={startInsert} onBack={start() === 'entry' ? () => setScreen('entry') : undefined} />
       )}
       {screen === 'live' && (
         <MobileOverlay
@@ -216,8 +246,8 @@ function MobileBody() {
       {/* Source picker overlay — labs' two-pane (From library | Upload)
           while the inserted photo layer has no pixels yet. Back unwinds
           the empty layer entirely. */}
-      {screen === 'live' && active?.type === 'photo' && !active.src && (
-        <div className="fixed inset-0 z-10 flex flex-col bg-black/60 backdrop-blur-sm">
+      {pickerOpen && (
+        <div className="fixed inset-y-0 right-0 left-[var(--fxr-rail,0px)] kol-overlay-scrim flex flex-col" style={{ zIndex: 'var(--kol-z-modal)' }}>
           <div className="flex-1 min-h-0">
             <LabsSourcePicker layer={active} />
           </div>

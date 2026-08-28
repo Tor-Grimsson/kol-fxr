@@ -267,11 +267,11 @@ export default {
         { value: 'mirror', label: 'Mirror' },
       ] },
     { key: 'mirror', label: 'Mirror fold', type: 'toggle', default: false, section: 'Blend' },
-    { key: 'spin', label: 'Spin · turns', type: 'range', min: -2, max: 2, step: 1, default: 0, section: 'Motion' },
-    { key: 'drift', label: 'Drift', type: 'range', min: 0, max: 0.5, step: 0.01, default: 0, section: 'Motion' },
+    { key: 'spin', label: 'Spin · turns', type: 'range', min: -2, max: 2, step: 1, default: 0, tab: 'anim', section: 'Motion' },
+    { key: 'drift', label: 'Drift', type: 'range', min: 0, max: 0.5, step: 0.01, default: 0, tab: 'anim', section: 'Motion' },
     /* time-less pattern fields (no t arg) ignore phase */
-    { key: 'phase', label: 'Phase', type: 'range', min: 0, max: 3, step: 0.05, default: 0, when: (l) => !['diagonal', 'shards', 'grid', 'lens'].includes(l.pattern), section: 'Motion' },
-    { key: 'pulse', label: 'Pulse', type: 'range', min: 0, max: 1, step: 0.05, default: 0, section: 'Motion' },
+    { key: 'phase', label: 'Phase', type: 'range', min: 0, max: 3, step: 0.05, default: 0, when: (l) => !['diagonal', 'shards', 'grid', 'lens'].includes(l.pattern), tab: 'anim', section: 'Motion' },
+    { key: 'pulse', label: 'Pulse', type: 'range', min: 0, max: 1, step: 0.05, default: 0, tab: 'anim', section: 'Motion' },
   ],
   apply(ctx, src, w, h, p, u) {
     const osc = Math.sin(TAU * u)

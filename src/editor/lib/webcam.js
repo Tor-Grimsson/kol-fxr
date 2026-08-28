@@ -31,7 +31,10 @@ export function ensureWebcam(id) {
   if (existing && existing.active) return Promise.resolve(existing)
   const inFlight = pending.get(id)
   if (inFlight) return inFlight
-  const p = navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+  /* facingMode 'user' PREFERS the front camera on phones/tablets (the
+   * randomiser's camera-in ask, 2026-08-12); it's a soft constraint, so
+   * single-camera desktops keep working unchanged. */
+  const p = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
     .then((stream) => { streams.set(id, stream); pending.delete(id); return stream })
     .catch((err) => { pending.delete(id); throw err })
   pending.set(id, p)

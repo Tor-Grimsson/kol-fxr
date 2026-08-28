@@ -24,6 +24,23 @@
 /* Design-system tokens + base CSS — the published brand-neutral theme. */
 @import "@kolkrabbi/kol-theme";
 
+/* THE @source MANIFEST — required here for the SAME reason as the app entry
+   (added 2026-08-15; the app's had been missing entirely). KOL packages ship
+   raw JSX and Tailwind does not scan node_modules, so any utility class used
+   INSIDE a DS component goes ungenerated without this. The lib renders the
+   whole editor, which is built from DS components, so it has exactly the same
+   exposure the app did.
+
+   Cost, measured rather than guessed: it scans every kol package's src, so
+   utilities land here for components this bundle may never mount. Weighed
+   against a control that renders unstyled in someone else's page, and against
+   a JS bundle already north of 2 MB, the CSS delta is noise. Correctness wins.
+
+   This does NOT leak host-page chrome — that is what excluding
+   kol-framework.css below is for. A manifest only tells Tailwind where to
+   LOOK; it emits no rules of its own. */
+@import "@kolkrabbi/kol-theme/kol-sources.css";
+
 /* Brand layer — Kolkrabbi identity (hue ramps, brand-primary/secondary roles,
  * accent rebind). Binds the neutral DS theme above to the Kolkrabbi brand. */
 @import "@kolkrabbi/kol-framework/kol-brand-color.css";

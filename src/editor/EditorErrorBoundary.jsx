@@ -31,7 +31,7 @@ export default class EditorErrorBoundary extends Component {
     return (
       <div
         className="flex flex-col items-center justify-center gap-4 h-dvh"
-        style={{ background: 'var(--kol-surface-primary)', color: 'var(--kol-fg-1)' }}
+        style={{ background: 'var(--kol-surface-primary)', color: 'var(--kol-fg-emphasis)' }}
       >
         <span className="kol-helper-12 text-emphasis">The editor hit an error.</span>
         <span className="kol-helper-12 text-meta max-w-[420px] text-center">

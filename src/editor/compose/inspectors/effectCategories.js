@@ -11,6 +11,7 @@
  * in 'Other' so future filters never vanish from the picker.
  */
 import { filterById } from '../../../filters'
+import { loopById } from '../../../loops/registry'
 
 const CATEGORIES = [
   { id: 'halftone',   label: 'Halftone',   filterIds: ['fx-halftone-dither', 'fx-ascii', 'fx-bitmap'] },   /* labs page order: Dither · ASCII · Bitmap */
@@ -116,3 +117,39 @@ export const presetPatchFor = (def, value) => ({
   [presetParamOf(def.id)]: value,
   ...(def.presetPatches?.[value] ?? {}),
 })
+
+/**
+ * Which layer types can host an effect, and which can feed a GL engine
+ * stage — the ONE rule, read by both the desktop Effects panel and the
+ * mobile Effects sheet. It lived inline in EffectsPanel until 2026-08-27,
+ * when the mobile sheet needed the same answer; two copies of "can this
+ * layer take a filter" is exactly how the two surfaces drift apart.
+ *
+ * Photo layers (video included — a video is a photo layer with
+ * srcType:'video') and 2d loops get everything incl. GL engines, since
+ * their live pixels feed the engine source. Other effectable types are
+ * canvas-only; engine loops can't host effects at all (no GL source path).
+ */
+export function effectHost(layer) {
+  if (!layer) return { effectable: false, engineHost: false, engineLoop: false }
+  const loopLike = layer.type === 'loop' || layer.type === 'misc'
+  const engineLoop = loopLike && loopById(layer.loopId)?.kind === 'engine'
+  return {
+    effectable: layer.type === 'photo'
+      || ['shape', 'text', 'pattern', 'path'].includes(layer.type)
+      || (loopLike && !engineLoop),
+    engineHost: layer.type === 'photo' || (loopLike && !engineLoop),
+    engineLoop,
+  }
+}
+
+/** effectCategories with the FX RACK stub expanded into its granular
+ * categories — the flat browse list both effect pickers show. */
+export function flatCategories(available) {
+  return effectCategories(available).flatMap((c) => (
+    c.rack
+      ? FX_RACK_GROUPS.map((g) => ({ id: g.id, label: g.label, filters: rackGroupFilters(g, available) }))
+        .filter((g) => g.filters.length > 0)
+      : [c]
+  ))
+}

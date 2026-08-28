@@ -196,6 +196,15 @@ export class SoftFormsEngine {
     }
   }
 
+  /* Touch: finger x shifts the hue, press bulges the forms. Rides the
+   * params' base (host calls this after setParams each apply). */
+  setPointer(p) {
+    if (!this.uniforms || !p) return
+    const u = this.uniforms
+    u.uHue.value = u.uHue.value + (p.x - 0.5) * 0.4
+    if (p.down) u.uBulge.value = Math.min(1.2, u.uBulge.value + 0.35)
+  }
+
   setParams(p) {
     if (!this.uniforms) return
     const u = this.uniforms

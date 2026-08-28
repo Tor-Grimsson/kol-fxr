@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { LabeledControl } from '@kolkrabbi/kol-component'
 import { NumberField } from '../compose/inspectors/NumberField'
 import { mulberry32, randomSeed, randomizeSchema, mergeRoll } from '../lib/rng'
+import { presetsInGroup, presetLayerPatch, isToolPreset } from '../../loops/registry'
+import { resolvedChain } from '../compose/filterChain'
 import { visibleParams } from './schema'
 
 /**
@@ -70,7 +72,7 @@ export function allScopeParams(schema, layer) {
  * its motion params noRandom to keep the all-roll off them, but pressing
  * the motion scope itself must roll them (labs randFrame/randForm).
  */
-export function computeRoll(layer, params, seed, { stripNoRandom = false } = {}) {
+export function computeRoll(layer, params, seed, { stripNoRandom = false, withFilters = false } = {}) {
   const src = stripNoRandom ? params.map((p) => (p.noRandom ? { ...p, noRandom: false } : p)) : params
   const rolled = randomizeSchema(src, mulberry32(seed >>> 0))
   /* A roll must not leave any in-scope range param outside its slider.
@@ -88,7 +90,57 @@ export function computeRoll(layer, params, seed, { stripNoRandom = false } = {})
   }
   const current = {}
   for (const k of Object.keys(rolled)) current[k] = layer[k]
-  return { ...mergeRoll(current, rolled), _rollSeed: seed }
+  const patch = { ...mergeRoll(current, rolled), _rollSeed: seed }
+  /* A WHOLE-LAYER roll rolls the effect chain too. Scope presses don't —
+   * "Colour" means the generator's colours, not the chain's. */
+  if (withFilters) {
+    const filters = computeFilterRoll(layer, seed)
+    if (filters) patch.filters = filters
+  }
+  return patch
+}
+
+/**
+ * Roll the layer's EFFECT CHAIN → the `filters` array, or null when the
+ * layer has no stages. Each stage's own params roll against its filter def
+ * (per-param noRandom honoured by randomizeSchema, bindings kept by
+ * mergeRoll) — the same contract as the Effects panel's per-stage button,
+ * which until now was the ONLY thing that ever rolled a filter.
+ *
+ * ONE rng walks the whole chain, so two stages of the same filter don't roll
+ * to identical values; its seed is offset off the layer roll's so the chain
+ * doesn't correlate with the generator params it rolls beside.
+ */
+export function computeFilterRoll(layer, seed) {
+  const chain = resolvedChain(layer)
+  if (!chain.length) return null
+  const rng = mulberry32((seed + 0x9e3779b9) >>> 0)
+  return chain.map(({ def, ...stage }) => (
+    def ? { ...stage, params: mergeRoll(stage.params, randomizeSchema(def.params, rng)) } : stage
+  ))
+}
+
+/**
+ * Roll the PRESET itself → the layer patch, or null when the group holds no
+ * other preset to move to. Every other roll here rolls a preset's PARAMS;
+ * this one rolls which preset you are on, which is the axis the rail had no
+ * button for at all. Tool presets (Oscilloscope and friends — instruments,
+ * not looks) stay out of the pool, same rule the registry already states.
+ *
+ * Lifted out of MobileOverlay 2026-08-15 — it was implemented there and
+ * nowhere else, so the whole desktop/labs rail was missing the control.
+ * Seeded through the same `_rollSeed` flow, and the patch is the registry's
+ * canonical one, never a hand-rolled subset.
+ */
+export function presetRollPool(layer) {
+  return presetsInGroup(layer.loopGroup).filter((p) => p.id !== layer.presetId && !isToolPreset(p))
+}
+
+export function computePresetRoll(layer, seed) {
+  const pool = presetRollPool(layer)
+  if (!pool.length) return null
+  const p = pool[Math.floor(mulberry32(seed >>> 0)() * pool.length)]
+  return { ...presetLayerPatch(p, layer.loopGroup), _rollSeed: seed }
 }
 
 /**

@@ -54,7 +54,6 @@ import { THEME_OPTIONS, DEFAULT_THEME, resolveTheme } from '../../../loops/lib/t
  * flat range param. Note the flat prop, once set, overrides the per-element
  * Style-tab blend.
  */
-const ANIM_HINT = 'Animate any parameter via its bind dot.'
 
 const MORPH_BLEND_PARAM = { key: 'morphBlend', label: 'Morph blend', type: 'range', min: 0, max: 1, step: 0.01, default: 0.5 }
 
@@ -332,8 +331,6 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
       {tab === 'anim' && anyMorph && (
         <MorphBlendKnob layer={layer} setProp={setProp} insts={insts} renderAnimate={renderAnimate} />
       )}
-
-      {tab === 'anim' && <p className="kol-helper-12 text-meta">{ANIM_HINT}</p>}
     </>
   )
 }

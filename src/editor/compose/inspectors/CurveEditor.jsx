@@ -34,7 +34,7 @@ function ExprField({ label, value, args, onCommit }) {
     <LabeledControl label={label} hint={bad ? 'doesn’t compile — last good kept' : undefined}>
       <Input
         variant="filled" size="sm" className="w-full"
-        style={{ fontFamily: 'var(--kol-font-mono, monospace)', fontVariantLigatures: 'none' }}
+        style={{ fontFamily: 'var(--kol-font-family-mono, monospace)', fontVariantLigatures: 'none' }}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => { if (draft !== value) onCommit(draft) }}

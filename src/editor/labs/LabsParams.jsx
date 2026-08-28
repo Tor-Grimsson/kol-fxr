@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, SegmentedToggle, ToggleSwitch, Divider, Dropdown } from '@kolkrabbi/kol-component'
+import { Button, SegmentedToggle, ToggleSwitch, Divider, Dropdown, LabeledControlSection } from '@kolkrabbi/kol-component'
 import EditorIcon from '../icons/EditorIcon'
 import { useComposeState } from '../compose/state'
 import { useLayerEdit } from '../compose/useLayerEdit'
@@ -11,7 +11,8 @@ import { mulberry32, randomSeed, randomizeSchema, mergeRoll } from '../lib/rng'
 import { FILTERS } from '../../filters'
 import { resolvedChain, MAX_FILTERS } from '../compose/filterChain'
 import { effectCategories, categoryOf, presetParamOf, FX_RACK_GROUPS, rackGroupFilters, postProcessingFilters } from '../compose/inspectors/effectCategories'
-import { SweepStack } from '../compose/inspectors/EffectsPanel'
+import { SweepStack, StageRolls } from '../compose/inspectors/EffectsPanel'
+import { SourceStrip } from './LabsSourcePicker'
 import { LoopFields } from '../compose/inspectors/ParametersPanel'
 import KineticPanel from '../compose/inspectors/KineticPanel'
 import { KINETIC_TREE, KINETIC_PRESETS, presetComp } from '../../kinetic/presets'
@@ -21,6 +22,7 @@ import { groupById, loopById, presetsInGroup, presetsInSub, presetLayerPatch } f
 import { computeRoll, allScopeParams } from '../params/rolls'
 import { useAppSettings, getAppSettings, setAppSetting } from '../lib/appSettings'
 import { useLabsLayer } from './useLabsLayer'
+import Hint from '../components/Hint'
 
 /* R = reset (re-pick the selection at its defaults) · Shift+R = reroll —
  * labs' keys, bound by whichever surface is mounted (one layer, one surface).
@@ -69,7 +71,6 @@ const GEN_TABS = [
   { value: 'style',    label: 'Style' },
   { value: 'anim',     label: 'Animation' },
 ]
-const ANIM_HINT = 'Animate any parameter via its bind dot.'
 
 /* The trio row — labs' RailVariantNav: BARE kol-helper-12 text links,
  * authored case (never uppercased), justify-between, active = emphasis.
@@ -119,11 +120,15 @@ function ChipsRow({ options, active, onPick, spread = false, pills = false }) {
  * links, or pills) over the page's tab strip over the body. Body gap = 20px
  * (labs' rail gap-5); the tab strip is the caller's (Effect·Motion on
  * effect pages, Generate·Style·Animation on generative ones). */
-function Surface({ chips, active, onPick, spread, pills, title, tabStrip, fx = false, children }) {
+function Surface({ chips, active, onPick, spread, pills, title, tabStrip, preStrip, fx = false, children }) {
   return (
     <div className={`flex flex-col gap-5${fx ? ' kol-labs-fx' : ''}`}>
-      {title && <span className="kol-helper-12 text-emphasis">{title}</span>}
+      {/* The surface title wears the SAME eyebrow as the sections under it
+          (user ruling 2026-08-27) — it was `kol-helper-12 text-emphasis`,
+          sentence case, the one label in the rail on its own type role. */}
+      {title && <p className="kol-eyebrow text-fg-96">{title}</p>}
       {chips && <ChipsRow options={chips} active={active} onPick={onPick} spread={spread} pills={pills} />}
+      {preStrip}
       {tabStrip}
       {children}
     </div>
@@ -171,11 +176,17 @@ function EffectSurface({ layer, showMod }) {
   const setStageProp = setStagePropAt(0)
   const renderAnimate = showMod ? (p) => <BindDot layer={paramsView} param={p} setProp={setStageProp} /> : undefined
 
+  /* Patch stage 0's params in one write — StageRolls hands back a whole
+   * param patch, not a key/value pair like setStageProp. */
+  const patchStageParams = (patch) => {
+    const filters = bareFilters.map((s, i) => (i === 0 ? { ...s, params: { ...s.params, ...patch } } : s))
+    updateLayer(layer.id, { filters })   /* discrete — one undo per roll */
+  }
+  /* R rolls the EFFECT half only — motion is the Motion tab's own button now
+   * (it used to roll stage.def.params wholesale, motion included). */
   const roll = () => {
     if (!stage) return
-    const rolled = randomizeSchema(stage.def.params, mulberry32(randomSeed()))
-    const filters = bareFilters.map((s, i) => (i === 0 ? { ...s, params: mergeRoll(s.params, rolled) } : s))
-    updateLayer(layer.id, { filters })   /* discrete — one undo per roll */
+    patchStageParams(computeRoll(paramsView, allScopeParams(stage.def.params, paramsView), randomSeed()))
   }
   useLabsKeys(
     () => { if (stage) updateLayer(layer.id, { filters: bareFilters.map((s, i) => (i === 0 ? { ...s, params: {} } : s)) }) },
@@ -198,14 +209,12 @@ function EffectSurface({ layer, showMod }) {
       <Surface title="Effects" fx tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size="sm" />}>
         {tab === 'effect' && (
           <>
-            <div className="kol-params-section flex flex-col gap-4">
-              <span className="kol-helper-10 text-meta">Effect Stack</span>
-              {chain.length === 0 && <p className="kol-mono-10 text-meta">No effects yet — add one below.</p>}
+            <LabeledControlSection label="Effect Stack" divided>
+              {chain.length === 0 && <Hint className="kol-mono-10 text-meta">No effects yet — add one below.</Hint>}
               <StackCards {...stackProps} from={0} />
-            </div>
+            </LabeledControlSection>
             <Divider />
-            <div className="kol-params-section flex flex-col gap-4">
-              <span className="kol-helper-10 text-meta">{rackGroup.label}</span>
+            <LabeledControlSection label={rackGroup.label} divided>
               <Dropdown
                 variant="subtle" size="sm" className="w-full"
                 options={rackOptions}
@@ -213,19 +222,15 @@ function EffectSurface({ layer, showMod }) {
                 disabled={chain.length >= MAX_FILTERS}
                 onChange={(id) => { if (id) addFilter(layer.id, id) }}
               />
-            </div>
+            </LabeledControlSection>
           </>
         )}
-        {tab === 'anim' && (
-          stage?.def?.sweeps ? (
-            <SweepStack
-              sweeps={Array.isArray(stage.params.sweeps) ? stage.params.sweeps : []}
-              onChange={(sweeps) => setStageProp('sweeps', sweeps)}
-              inline
-            />
-          ) : (
-            <p className="kol-mono-12 text-meta">{ANIM_HINT}</p>
-          )
+        {tab === 'anim' && stage?.def?.sweeps && (
+          <SweepStack
+            sweeps={Array.isArray(stage.params.sweeps) ? stage.params.sweeps : []}
+            onChange={(sweeps) => setStageProp('sweeps', sweeps)}
+            inline
+          />
         )}
       </Surface>
     )
@@ -262,19 +267,19 @@ function EffectSurface({ layer, showMod }) {
 
   const auto = { layer: paramsView, setProp: setStageProp, palette, renderAnimate, inline: true }
   return (
-    <Surface chips={chips} active={stage.id} onPick={onChip} spread={isTrio} title={title} fx tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size="sm" />}>
+    <Surface chips={chips} active={stage.id} onPick={onChip} spread={isTrio} title={title} fx
+      preStrip={<SourceStrip layer={layer} />}
+      tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size="sm" />}>
       {tab === 'effect' && (
         <>
           {head.length > 0 && <AutoControls schema={head} {...auto} />}
-          {/* Randomize lives INSIDE the picking cluster's block (labs: tight
-              under Shape) — the wrapper is itself a section, so the hairline
-              lands before it and the internal gap stays the tight one. */}
-          <div className="kol-params-section flex flex-col gap-4">
+          {/* Randomize lives INSIDE the picking cluster's block — the wrapper
+              is itself a section, so the hairline lands before it and the
+              internal gap stays the tight one. */}
+          <LabeledControlSection divided>
             <AutoControls schema={cluster} {...auto} />
-            <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="refresh" onClick={roll}>
-              Randomize
-            </Button>
-          </div>
+            <StageRolls def={stage.def} view={paramsView} tab="effect" onPatch={patchStageParams} />
+          </LabeledControlSection>
           <Divider />
           {cut < params.length && (
             <>
@@ -291,7 +296,8 @@ function EffectSurface({ layer, showMod }) {
       )}
       {tab === 'anim' && (
         <>
-          <AutoControls schema={stage.def.params} {...auto} tab="anim" emptyHint={stage.def.sweeps ? undefined : ANIM_HINT} />
+          <AutoControls schema={stage.def.params} {...auto} tab="anim" />
+          <StageRolls def={stage.def} view={paramsView} tab="anim" onPatch={patchStageParams} />
           {stage.def.sweeps && (
             <SweepStack
               sweeps={Array.isArray(stage.params.sweeps) ? stage.params.sweeps : []}
@@ -327,7 +333,7 @@ function StackCards({ chain, from = 0, layer, hostView, toggleFilter, removeFilt
             type="button"
             aria-label="Remove effect"
             onClick={() => removeFilter(layer.id, idx)}
-            className="ml-auto inline-flex items-center justify-center w-5 h-5 shrink-0 text-body hover:text-emphasis cursor-pointer"
+            className="ml-auto inline-flex items-center justify-center w-5 h-5 shrink-0 text-oq-64 hover:text-emphasis cursor-pointer"
             style={{ border: 'none', background: 'transparent' }}
           >
             <EditorIcon name="close" size={12} />
@@ -354,8 +360,7 @@ function PostProcessing({ chain, layer, hostView, addFilter, removeFilter, toggl
     ...postProcessingFilters(FILTERS).map((f) => ({ value: f.id, label: f.label ?? f.id })),
   ]
   return (
-    <div className="kol-params-section flex flex-col gap-4">
-      <span className="kol-helper-10 text-meta">Post-Processing</span>
+    <LabeledControlSection label="Post-Processing" divided>
       <StackCards
         chain={chain} from={1} layer={layer} hostView={hostView}
         toggleFilter={toggleFilter} removeFilter={removeFilter}
@@ -368,7 +373,7 @@ function PostProcessing({ chain, layer, hostView, addFilter, removeFilter, toggl
         disabled={chain.length >= MAX_FILTERS}
         onChange={(id) => { if (id) addFilter(layer.id, id) }}
       />
-    </div>
+    </LabeledControlSection>
   )
 }
 
@@ -398,7 +403,7 @@ function GenerativeSurface({ layer, showMod, tree }) {
     () => { if (current) setOnly(layer.type, presetLayerPatch(current, layer.loopGroup)) },
     () => {
       const schema = loopById(layer.loopId)?.params ?? []
-      updateLayer(layer.id, computeRoll(layer, allScopeParams(schema, layer), randomSeed()))
+      updateLayer(layer.id, computeRoll(layer, allScopeParams(schema, layer), randomSeed(), { withFilters: true }))
     },
   )
 
@@ -468,10 +473,10 @@ export default function LabsParams() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  if (!layer) return <p className="kol-mono-12 text-meta">Pick an effect or generator from the nav.</p>
+  if (!layer) return <Hint>Pick an effect or generator from the nav.</Hint>
   if (layer.type === 'photo') return <EffectSurface key={layer.id} layer={layer} showMod={showMod} />
   if (layer.type === 'loop') return <GenerativeSurface key={layer.id} layer={layer} showMod={showMod} />
   if (layer.type === 'misc') return <GenerativeSurface key={layer.id} layer={layer} showMod={showMod} tree={MISC_TREE} />
   if (layer.type === 'kinetic') return <KineticSurface key={layer.id} layer={layer} showMod={showMod} />
-  return <p className="kol-mono-12 text-meta">This layer has no labs surface.</p>
+  return <Hint>This layer has no labs surface.</Hint>
 }

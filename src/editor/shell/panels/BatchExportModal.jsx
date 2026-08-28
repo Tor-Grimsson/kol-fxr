@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button } from '@kolkrabbi/kol-component'
+import { Button, FullscreenOverlay } from '@kolkrabbi/kol-component'
 import EditorIcon from '../../icons/EditorIcon'
 import { ASPECTS, PRESET_SIZES } from '../aspects'
 
@@ -15,7 +15,6 @@ import { ASPECTS, PRESET_SIZES } from '../aspects'
  */
 
 /* Modal backdrop — dark in both themes (matches ShortcutsOverlay). */
-const SCRIM = 'rgba(0, 0, 0, 0.6)'
 const SCALES = [1, 2, 3]
 /* 'custom' has no fixed dims — it's not a batch target. */
 const PRESETS = ASPECTS.filter((a) => a.id !== 'custom')
@@ -69,19 +68,12 @@ export default function BatchExportModal({ open, onClose, runBatchExport, baseAs
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center"
-      style={{ background: SCRIM }}
-      onClick={close}
-    >
-      <div
-        className="bg-surface-primary border border-fg-08 rounded shadow-xl flex flex-col"
-        style={{ width: 440, maxWidth: 'calc(100vw - 48px)', maxHeight: 'calc(100vh - 48px)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-5 h-12 border-b border-fg-08">
-          <span className="kol-helper-12 text-emphasis">Batch export</span>
-          <Button iconComponent={EditorIcon} variant="primary" size="sm" quiet iconOnly="close" iconSize={14} aria-label="Close" onClick={close} />
+    /* DS overlay — scrim, Escape, backdrop, scroll lock, focus trap and the
+       modal z tier all come with it (ruled 2026-08-27). */
+    <FullscreenOverlay open onClose={close}>
+      <div className="flex flex-col" style={{ width: 440, maxWidth: '100%' }}>
+        <div className="flex items-center px-5 h-12 border-b border-fg-08">
+          <p className="kol-eyebrow text-fg-96">Batch export</p>
         </div>
 
         <div className="overflow-y-auto p-5 flex flex-col gap-4">
@@ -134,7 +126,7 @@ export default function BatchExportModal({ open, onClose, runBatchExport, baseAs
           </Button>
         </div>
       </div>
-    </div>
+    </FullscreenOverlay>
   )
 }
 

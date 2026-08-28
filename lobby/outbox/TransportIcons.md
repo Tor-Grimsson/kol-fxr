@@ -19,3 +19,9 @@ found in icon set` and rendered empty cells.
   TransportBar cells render both glyphs at 12–16px (editor + labs chrome,
   desktop + mobile sizes).
 - Nothing else — no local registration, no workaround to retire.
+
+## ✅ ADOPTED — 2026-08-15
+
+TransportBar.jsx renders Cell name="stop" and name="rewind" (:118/:119) — verified 2026-08-15.
+
+**Remainder here:** none.

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Button, Dropdown, LabeledControl, ViewToggle } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, LabeledControl, ViewToggle, FullscreenOverlay } from '@kolkrabbi/kol-component'
 import EditorIcon from '../icons/EditorIcon'
 import SwatchRow from '../compose/SwatchRow'
 import { useComposeState } from '../compose/state'
@@ -127,16 +127,14 @@ function PaletteModalBody({ onClose, layoutId, setLayoutId, harmonyId, setHarmon
   }
 
   return (
-    <div
-      className="kol-design-editor fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-      onMouseDown={onClose}
-    >
+    /* DS overlay (ruled 2026-08-27) — it brings the scrim, Escape, backdrop
+       dismiss, scroll lock, the focus trap and the modal z tier; this used to
+       be a hand-rolled `bg-black/50` at `z-[1000]` with none of the rest.
+       `kol-design-editor` stays: the theme scope this modal renders under. */
+    <FullscreenOverlay open onClose={onClose}>
       <div
-        role="dialog"
-        aria-modal="true"
         aria-label="Palette"
-        className="kol-popover w-[720px] max-w-[92vw] max-h-[90vh] overflow-y-auto"
-        onMouseDown={(e) => e.stopPropagation()}
+        className="kol-design-editor kol-popover w-[720px] max-w-full max-h-[90vh] overflow-y-auto"
       >
         <div className="flex h-10 items-center justify-between border-b border-fg-08 px-5">
           <span className="kol-helper-12 text-emphasis">Palette</span>
@@ -144,7 +142,7 @@ function PaletteModalBody({ onClose, layoutId, setLayoutId, harmonyId, setHarmon
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-meta hover:text-emphasis"
+            className="text-oq-48 hover:text-emphasis"
             style={{ lineHeight: 0 }}
           >
             <EditorIcon name="close" size={12} />
@@ -233,6 +231,6 @@ function PaletteModalBody({ onClose, layoutId, setLayoutId, harmonyId, setHarmon
           </div>
         </div>
       </div>
-    </div>
+    </FullscreenOverlay>
   )
 }

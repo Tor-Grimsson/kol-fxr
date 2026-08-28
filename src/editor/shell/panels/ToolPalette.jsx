@@ -141,7 +141,7 @@ function ShapeDropdown({ tool, setTool }) {
                 setOpen(false)
                 e.currentTarget.blur()
               }}
-              className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-body hover:text-emphasis text-left"
+              className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-oq-64 hover:text-emphasis text-left"
             >
               <span className="shrink-0 w-4 inline-flex items-center justify-center">
                 <EditorIcon name={v.icon} size={14} />
@@ -212,7 +212,7 @@ function BooleanDropdown({ disabled, onApply }) {
               setOpen(false)
               e.currentTarget.blur()
             }}
-            className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-body hover:text-emphasis text-left"
+            className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-oq-64 hover:text-emphasis text-left"
           >
             <span className="shrink-0 w-4 inline-flex items-center justify-center">
               <EditorIcon name={v.icon} size={14} />
@@ -272,7 +272,7 @@ function TextDropdown({ tool, setTool, addLayer }) {
             setOpen(false)
             e.currentTarget.blur()
           }}
-          className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-body hover:text-emphasis text-left"
+          className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-oq-64 hover:text-emphasis text-left"
         >
           <span className="shrink-0 w-4 inline-flex items-center justify-center">
             <EditorIcon name="tool-text" size={14} />
@@ -287,7 +287,7 @@ function TextDropdown({ tool, setTool, addLayer }) {
             setOpen(false)
             e.currentTarget.blur()
           }}
-          className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-body hover:text-emphasis text-left"
+          className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-oq-64 hover:text-emphasis text-left"
         >
           <span className="shrink-0 w-4 inline-flex items-center justify-center">
             <EditorIcon name="layer-kinetic" size={14} />
