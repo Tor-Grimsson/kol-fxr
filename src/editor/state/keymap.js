@@ -85,6 +85,14 @@ export const SHORTCUTS = [
 
   /* View */
   { id: 'show-shortcuts', combo: 'S',     label: 'Show / hide shortcuts',   section: 'View' },
+  /* The settings DRAWER, not the `/settings` page (that is the rail's ⌥6).
+   * Bound in `EditorShell.jsx`, where the drawer lives — `passive` here for the
+   * same reason `fps` is: declared for the cheat sheet, dispatched at the
+   * surface that owns it. EVERY chrome renders EditorShell, so it answers in
+   * the editor, labs and the randomiser alike; the shell pages (home, library,
+   * settings) render no chrome and never bind it. `,` because `S` is the
+   * shortcuts overlay and every tool letter is spoken for. */
+  { id: 'settings-drawer', combo: ',',    label: 'Show / hide settings',    section: 'View', passive: true },
   { id: 'toggle-dots',    combo: 'M',     label: 'Show / hide modulation dots', section: 'View' },
   /* Dispatched by state/useGlobalShortcuts.js onto the DS switch
    * (`usePlaceholders().toggle`, kol-component 0.46.0). No longer `passive`:
@@ -123,6 +131,20 @@ const KEY_LABELS = {
 const isMac = () => typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
 
 /* Parse a combo string into its constituent parts. */
+/* The `KeyboardEvent.code` for a single-character key — letters and digits by
+ * rule, punctuation by name. Null for anything not listed, which falls back to
+ * the `e.key` comparison. */
+const PUNCT_CODE = {
+  ',': 'Comma', '.': 'Period', '/': 'Slash', '\\': 'Backslash',
+  ';': 'Semicolon', "'": 'Quote', '[': 'BracketLeft', ']': 'BracketRight',
+  '-': 'Minus', '=': 'Equal', '`': 'Backquote',
+}
+function codeFor(key) {
+  if (/^[a-z]$/i.test(key)) return `Key${key.toUpperCase()}`
+  if (/^[0-9]$/.test(key)) return `Digit${key}`
+  return PUNCT_CODE[key] ?? null
+}
+
 function parseCombo(combo) {
   const parts = combo.split('+')
   return {
@@ -134,6 +156,12 @@ function parseCombo(combo) {
 }
 
 /* Match a KeyboardEvent against a combo string. */
+/* One entry by id — for a surface that binds its own key (a `passive` entry)
+ * and must not re-type the combo the cheat sheet is showing. */
+export function shortcutById(id) {
+  return SHORTCUTS.find((s) => s.id === id)
+}
+
 export function matchCombo(event, combo) {
   const { needsMod, needsShift, needsAlt, key } = parseCombo(combo)
   const modPressed = isMac() ? event.metaKey : event.ctrlKey
@@ -142,7 +170,17 @@ export function matchCombo(event, combo) {
   if (needsShift !== event.shiftKey) return false
   if (needsAlt !== event.altKey) return false
 
-  if (key.length === 1) return event.key.toLowerCase() === key.toLowerCase()
+  /* ALT REWRITES `e.key` ON macOS — ⌥, is `≤`, ⌥1 is `¡`. So an Alt combo is
+   * matched on the PHYSICAL key (`e.code`), which Option does not touch; the
+   * same reason AppLayout's ⌥-digit map reads `Digit1`… Non-Alt combos keep
+   * matching `e.key`, which is what every existing entry means. */
+  if (key.length === 1) {
+    if (needsAlt) {
+      const code = codeFor(key)
+      return code ? event.code === code : event.key.toLowerCase() === key.toLowerCase()
+    }
+    return event.key.toLowerCase() === key.toLowerCase()
+  }
   if (key === 'Space') return event.code === 'Space'
   return event.key === key || event.code === key
 }

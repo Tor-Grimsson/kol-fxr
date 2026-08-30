@@ -98,10 +98,24 @@ export default function AppLayout() {
   navRef.current = onNavigate
   useEffect(() => {
     const onKey = (e) => {
-      const m = /^Digit([1-9])$/.exec(e.code)
-      if (!m || !e.altKey || e.metaKey || e.ctrlKey) return
       const t = e.target
       if (t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName)) return
+
+      /* `,` and ⌥, — SETTINGS, FROM ANYWHERE (user, 2026-08-28: "open whatever
+         settings is available at any time"). A chrome answers it with its
+         drawer (EditorShell listens and calls preventDefault on the event); a
+         shell page has no drawer to open, so it goes to the page.
+         Matched on `e.code`: Option rewrites `e.key` on macOS (⌥, is `≤`), and
+         the physical key is the same one either way. */
+      if (e.code === 'Comma' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        const handled = !window.dispatchEvent(new CustomEvent('kol:open-settings', { cancelable: true }))
+        if (!handled) navRef.current('/settings')
+        return
+      }
+
+      const m = /^Digit([1-9])$/.exec(e.code)
+      if (!m || !e.altKey || e.metaKey || e.ctrlKey) return
       const path = KEY_ORDER[Number(m[1]) - 1]
       if (!path) return
       e.preventDefault()

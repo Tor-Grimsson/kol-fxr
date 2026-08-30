@@ -66,7 +66,7 @@ export default function CanvasInspector() {
           value={canvasFill}
           onChange={setCanvasFill}
           palette={palette}
-          autoValue="var(--kol-surface-absolute-split)"
+          autoValue="var(--kol-surface-ab-split)"
         />
         <LabeledControl label="Fill opacity">
           {/* Input, not a slider (user ruling 2026-08-12: one-shot values

@@ -1,10 +1,7 @@
 import { useState } from 'react'
 import { MenuItem, MenuDropdownItem, MenuDropdownDivider, MenuDropdownNest } from '@kolkrabbi/kol-component'
-import { Input, useModal } from '@kolkrabbi/kol-component'
+import { IconFrame, Input, useModal } from '@kolkrabbi/kol-component'
 import EditorIcon from '../icons/EditorIcon'
-import { useTheme } from '@kolkrabbi/kol-framework'
-import { useAppSettings, setAppSetting } from '../lib/appSettings'
-import { THEME_OPTIONS } from '../../loops/lib/themes'
 import { ASPECTS } from './aspects'
 import { useComposeState } from '../compose/state'
 import { useGeneratorLibrary } from '../library/LibraryProvider'
@@ -22,10 +19,17 @@ import { effectCategories } from '../compose/inspectors/effectCategories'
 /**
  * MenuTop — top bar above the editor grid.
  *
- *   [ Frame title ]   [ Tools ▼ ]  [ File ▼ ]  [ Canvas ▼ ]  [ Templates ▼ ]
+ *   [ Frame title ]   [ Tools ▼ ]  [ File ▼ ]  [ Canvas ▼ ]  [ Templates ▼ ]  [ ⚙ ]
  *
  * The top-level entries (Tools / File / Canvas / Templates) are MenuItems;
  * each opens a dropdown panel of MenuDropdownItems.
+ *
+ * THE SETTINGS DROPDOWN IS GONE (2026-08-28). It was the THIRD live copy of
+ * `appSettings` — default aspect, loop theme, autoplay, clip to frame, plus a
+ * theme nest — after the `/settings` page had already replaced its labs twin.
+ * The gear at the end of the row opens `DisplaySettingsDrawer` instead: the
+ * same sections the page renders, over the canvas you are looking at. Only
+ * Show grid was ever local to this menu, and it rides the drawer's host slot.
  */
 const ASPECT_OPTIONS = ASPECTS.map((a) => ({ value: a.id, label: a.label }))
 
@@ -53,11 +57,6 @@ export default function MenuTop() {
   } = useComposeState()
   const { library } = useGeneratorLibrary()
   const modal = useModal()
-  const { mode: themeMode, setTheme: setThemeMode } = useTheme()
-  /* Global app defaults (appSettings) — the loop palette theme / autoplay /
-   * clip-to-frame / default aspect edited from the Settings menu; distinct
-   * from the light/dark UI theme above. */
-  const appSettings = useAppSettings()
 
   const openColorModal = () => window.dispatchEvent(new CustomEvent('kol:open-color-modal'))
 
@@ -388,71 +387,6 @@ export default function MenuTop() {
           </div>
         </MenuItem>
 
-        <MenuItem label="Settings" panelClassName="z-[var(--kol-z-tooltip)]">
-          <div className="py-1 w-[220px]">
-            <MenuDropdownItem
-              onClick={toggleGrid}
-              shortcut={showGrid ? <EditorIcon name="check" size={11} /> : undefined}
-            >
-              Show grid
-            </MenuDropdownItem>
-            <MenuDropdownDivider />
-            <MenuDropdownNest label="Theme">
-              {[
-                { value: 'light',  label: 'Light'  },
-                { value: 'dark',   label: 'Dark'   },
-                { value: 'system', label: 'System' },
-              ].map((opt) => (
-                <MenuDropdownItem
-                  key={opt.value}
-                  onClick={() => setThemeMode(opt.value)}
-                  shortcut={themeMode === opt.value ? <EditorIcon name="check" size={11} /> : undefined}
-                >
-                  {opt.label}
-                </MenuDropdownItem>
-              ))}
-            </MenuDropdownNest>
-            <MenuDropdownDivider />
-            {/* Global defaults (appSettings) — seed new canvases / loop layers.
-                The Loop theme is the generative palette theme, NOT the light/
-                dark UI theme above. */}
-            <MenuDropdownNest label="Default aspect">
-              {ASPECT_OPTIONS.filter((opt) => opt.value !== 'custom').map((opt) => (
-                <MenuDropdownItem
-                  key={opt.value}
-                  onClick={() => setAppSetting('defaultAspect', opt.value)}
-                  shortcut={appSettings.defaultAspect === opt.value ? <EditorIcon name="check" size={11} /> : undefined}
-                >
-                  {opt.label}
-                </MenuDropdownItem>
-              ))}
-            </MenuDropdownNest>
-            <MenuDropdownNest label="Loop theme">
-              {THEME_OPTIONS.map((opt) => (
-                <MenuDropdownItem
-                  key={opt.value}
-                  onClick={() => setAppSetting('defaultTheme', opt.value)}
-                  shortcut={appSettings.defaultTheme === opt.value ? <EditorIcon name="check" size={11} /> : undefined}
-                >
-                  {opt.label}
-                </MenuDropdownItem>
-              ))}
-            </MenuDropdownNest>
-            <MenuDropdownItem
-              onClick={() => setAppSetting('autoplay', !appSettings.autoplay)}
-              shortcut={appSettings.autoplay ? <EditorIcon name="check" size={11} /> : undefined}
-            >
-              Autoplay
-            </MenuDropdownItem>
-            <MenuDropdownItem
-              onClick={() => setAppSetting('clipToFrame', !appSettings.clipToFrame)}
-              shortcut={appSettings.clipToFrame ? <EditorIcon name="check" size={11} /> : undefined}
-            >
-              Clip to frame
-            </MenuDropdownItem>
-          </div>
-        </MenuItem>
-
         <MenuItem label="Templates" align="end" panelClassName="z-[var(--kol-z-tooltip)]" panelStyle={{ maxHeight: '70vh', overflowY: 'auto' }}>
           <div className="py-1 w-[220px]">
             <MenuDropdownNest label={`Starters · ${STARTERS.length}`}>
@@ -504,6 +438,21 @@ export default function MenuTop() {
             })}
           </div>
         </MenuItem>
+        {/* The gear opens the app settings WHERE YOU ARE (the DS SettingsPanel
+            drawer) rather than sending you to `/settings` and back. Same
+            sections, same store — `settings/AppSettings.jsx` defines them once. */}
+        {/* `settings-01`, the COG — kol-r2b2's trigger verbatim (the DS ships it
+            at MediaLibraryPages.jsx:286). NOT `nav-settings`: that is the
+            sliders glyph the rail's Settings row wears, and two identical icons
+            meaning different things on one screen is how this got lost. */}
+        <IconFrame
+          name="settings-01"
+          variant="primary"
+          size="sm"
+          onClick={() => window.dispatchEvent(new CustomEvent('kol:open-settings'))}
+          title="Display settings"
+          aria-label="Display settings"
+        />
       </div>
     </div>
   )

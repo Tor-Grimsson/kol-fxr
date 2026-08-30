@@ -29,7 +29,7 @@ export default function SwatchRow({ label, hex, disabled, unused, locked, edited
         />
         <span
           aria-hidden="true"
-          className={`absolute inset-0 inline-flex items-center justify-center rounded-[2px] transition-opacity bg-fg-absolute-48 text-white pointer-events-none ${
+          className={`absolute inset-0 inline-flex items-center justify-center rounded-[2px] transition-opacity bg-fg-ab-48 text-white pointer-events-none ${
             locked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
           }`}
         >

@@ -547,7 +547,7 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
    * the "disable" state); a `var(--kol-*)` token = themed auto that flips
    * with light/dark. The frame defaults to the absolute black/white pair
    * (white in light mode, black in dark). */
-  const [canvasFill,        setCanvasFill]        = useState('var(--kol-surface-absolute-split)')
+  const [canvasFill,        setCanvasFill]        = useState('var(--kol-surface-ab-split)')
   const [canvasFillOpacity, setCanvasFillOpacity] = useState(1)      /* 0..1 */
   /* Infinite backdrop (the area around the frame). Themed surface token by
    * default so it flips with the theme; overridable via the inspector swatch. */

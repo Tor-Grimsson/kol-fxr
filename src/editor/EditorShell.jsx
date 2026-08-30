@@ -1,7 +1,48 @@
+import { useEffect, useState } from 'react'
+import { LabeledControlSection, SettingsRow, SettingsSwitch } from '@kolkrabbi/kol-component'
 import './styles/kol-editor.css'
 import { panelsForSlot } from './state/panels'
+import { useComposeState } from './compose/state'
+import { DisplaySettingsDrawer } from '../settings/AppSettings'
 import MenuTop from './shell/MenuTop'
 import ShortcutsOverlay from './shell/ShortcutsOverlay'
+
+/**
+ * The settings drawer lives HERE, not in MenuTop — every chrome renders
+ * EditorShell (Compose, Labs, the Randomiser) but only the editor renders that
+ * top bar, so a drawer bound there answered `,` on one route out of three
+ * (user, 2026-08-28: "it should just open whatever settings are available at
+ * any point"). The editor's gear now dispatches `kol:open-settings` rather
+ * than owning the state.
+ *
+ * `,` is declared in keymap.js as `passive` — the cheat sheet lists it, this
+ * binds it — and read back through `matchCombo` so the key is written once.
+ */
+function SettingsDrawerHost() {
+  const [open, setOpen] = useState(false)
+  const { showGrid, toggleGrid } = useComposeState()
+
+  /* NO KEY IS BOUND HERE. AppLayout owns `,` for every route and fires
+     `kol:open-settings`; `preventDefault()` tells it a chrome took it, so it
+     does not also navigate to the /settings page. One listener, one key. */
+  useEffect(() => {
+    const onOpen = (e) => { e.preventDefault?.(); setOpen((v) => !v) }
+    window.addEventListener('kol:open-settings', onOpen)
+    return () => window.removeEventListener('kol:open-settings', onOpen)
+  }, [])
+
+  return (
+    <DisplaySettingsDrawer open={open} onClose={() => setOpen(false)}>
+      {/* Show grid is COMPOSE state, not an app default, so it rides the
+          drawer's host slot rather than the shared sections. */}
+      <LabeledControlSection label="Canvas" divided>
+        <SettingsRow label="Show grid">
+          <SettingsSwitch label="Show grid" on={showGrid} onChange={toggleGrid} />
+        </SettingsRow>
+      </LabeledControlSection>
+    </DisplaySettingsDrawer>
+  )
+}
 
 /**
  * EditorShell — topbar + two-rail + canvas host.
@@ -78,6 +119,7 @@ export default function EditorShell({ registry }) {
         <Rail side="right" panels={registry?.panels} />
       </div>
       <ShortcutsOverlay />
+      <SettingsDrawerHost />
     </div>
   )
 }
