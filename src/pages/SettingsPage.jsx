@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { ContentFilters, Divider, Dropdown, IconFrame, LabeledControlSection, ViewToggle } from '@kolkrabbi/kol-component'
+import { Divider, Dropdown, LabeledControlSection, ViewToggle } from '@kolkrabbi/kol-component'
 import { ThemeToggle } from '@kolkrabbi/kol-framework'
 import { useNavigate } from 'react-router-dom'
-import { PageShell, PageHeader, SettingsShortcuts, SettingsLinks, SettingsColophon } from '@kolkrabbi/kol-shell'
+import { SettingsScaffold, SettingsShortcuts, SettingsLinks, SettingsColophon } from '@kolkrabbi/kol-shell'
 import { useSettingsSections, AppSettingsSections, DisplaySettingsDrawer } from '../settings/AppSettings'
 import { shortcutsBySection, comboLabel } from '../editor/state/keymap'
 import { currentView } from '../editor/mode'
@@ -20,12 +20,29 @@ import { currentView } from '../editor/mode'
  * mod dots. Both wrote the SAME `appSettings` store, so the split was never a
  * separation of concerns — it was one settings surface typed twice.
  *
+ * IT IS `SettingsScaffold` SINCE 2026-08-30 (kol-shell 0.21.0/0.22.0). This
+ * page hand-built `PageShell → PageHeader → ContentFilters → body` because the
+ * scaffold carried its own third header shape; it was filed as
+ * `SettingsScaffoldFromFxrPage`, the user ruled this render correct, and the
+ * scaffold was rebuilt FROM it. So the shape came home — we are the reference
+ * and now also the first consumer, which makes this page the scaffold's first
+ * screen check (no repo had rendered it).
+ *
  * THE HEADER IS `ContentFilters`, THE ACTUAL ORGANISM (user, 2026-08-28: "2
  * different content filters in settings and effexor home why"). It was briefly
  * hand-written here to that grammar, which is how a second one happened: the
  * organism's search is `size="md" iconSize={16} fieldHeight={28}` and a copy
  * that passes none of those renders a different pill in the same row on the
  * next page over. A row that looks like ContentFilters must BE ContentFilters.
+ * The scaffold owns that row now — nothing here composes it.
+ *
+ * THE TWO-ROW SELECTOR IS THE SCAFFOLD'S TOO, since kol-shell 0.23.0. Our page
+ * selector runs across BOTH strip rows — SETTINGS above the rule, ABOUT / REPO
+ * below it (user, 2026-08-28) — writing ONE state. That briefly rode
+ * `filtersProps`; it was filed as `SettingsScaffoldTabRows`, answered yes-it-is-
+ * one-idiom, and returned as `row: 'layout'` on a `tabs` entry. So the override
+ * is gone, `renderContent`'s `tab` argument is the truth, and the masthead
+ * reads its title off the active tab instead of a local `HEADERS` map.
  *
  * It fits without stretching: the SETTINGS / ABOUT / REPO strip is the view
  * strip (the home page's RECENT / SAVED), the section names are one filter
@@ -67,17 +84,17 @@ const CHROMES = [
   { value: 'randomiser', label: 'Randomiser' },
 ]
 
-/* The two SIDE PAGES — the text strip below the rule, where OPTIONS /
-   SHORTCUTS used to read (user, 2026-08-28). */
-/* ABOVE the rule, beside the toggle. */
-const VIEWS = [
-  { value: 'settings', label: 'SETTINGS' },
-]
-
-/* BELOW the rule — where About and Repo were. */
-const SIDE_PAGES = [
-  { value: 'about', label: 'ABOUT' },
-  { value: 'repo', label: 'REPO' },
+/* THE PAGE SELECTOR — one set of destinations across two rows, which is what
+   `row` says (kol-shell 0.23.0, `SettingsScaffoldTabRows`, filed from here).
+   SETTINGS sits above the rule; ABOUT and REPO below it, where the user ruled
+   the two side pages on 2026-08-28. Both strips read and write the scaffold's
+   ONE `tab`, so `renderContent`'s first argument is the truth and the masthead
+   reads `title`/`subtitle` off whichever entry is rendering — no local mirror,
+   no `filtersProps` override, no `HEADERS` map. */
+const TABS = [
+  { value: 'settings', label: 'SETTINGS', title: 'Settings', subtitle: 'Configuration and preferences' },
+  { value: 'about', label: 'ABOUT', row: 'layout', title: 'About', subtitle: 'Effexor FXR by Kolkrabbi' },
+  { value: 'repo', label: 'REPO', row: 'layout', title: 'Repo', subtitle: 'Source and deployments' },
 ]
 
 /* The SMALLER strip, below the rule — the home page's LIST / GRID slot
@@ -87,20 +104,15 @@ const SIDE_PAGES = [
    scroll, and this is the row the estate already uses to say "same page,
    other view". It STAYS on About and Repo too (user, 2026-08-28) — the row is
    the page's furniture, and hiding it there made the header jump by a line
-   every time you left Settings. Picking either one returns you to Settings. */
+   every time you left Settings. Picking either one returns you to Settings —
+   through the `(tab, setTab)` render prop `trailingActions` takes since
+   kol-shell 0.24.0. */
 /* …and the two SETTINGS views are now the icon pair beside them, the shape
    kol-r2b2's row 2 uses for its list/column pair. */
 const LAYOUTS = [
   { value: 'options', label: 'OPTIONS', icon: 'slider-01' },
   { value: 'shortcuts', label: 'SHORTCUTS', icon: 'view-list' },
 ]
-
-
-const HEADERS = {
-  settings: { title: 'Settings', subtitle: 'Configuration and preferences' },
-  about: { title: 'About', subtitle: 'Effexor FXR by Kolkrabbi' },
-  repo: { title: 'Repo', subtitle: 'Source and deployments' },
-}
 
 function AboutContent() {
   return (
@@ -129,9 +141,9 @@ function RepoContent() {
 }
 
 export default function SettingsPage() {
-  /* The text strip picks the PAGE (settings · about · repo); the icon pair
-     beside it picks WHICH settings view (options · shortcuts). */
-  const [view, setView] = useState('settings')
+  /* The text strips pick the PAGE (settings · about · repo) and that state is
+     the SCAFFOLD's since kol-shell 0.23.0 — this page holds only which settings
+     view the icon pair is showing (options · shortcuts). */
   const [settingsView, setSettingsView] = useState('options')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const navigate = useNavigate()
@@ -184,88 +196,72 @@ export default function SettingsPage() {
   }
 
   return (
-    <PageShell mode="fixed">
-      {/* `size="sm"` + `voice="mono"` is the app tier's masthead
+    <>
+    <SettingsScaffold
+      /* `tabs` carries every destination AND its masthead copy; `row: 'layout'`
+         puts ABOUT and REPO below the rule. The scaffold owns the state. */
+      tabs={TABS}
+      defaultTab="settings"
+      /* `size="sm"` + `voice="mono"` is the app tier's masthead
          (PageHeaderMonoTitle, the kol-fxr round-trip) — the same one the home
-         page wears above its filter row. */}
-      {/* THE CLUSTER RIDES THE HEADER, not the filter row (kol-ds-ui `/icons`
-         and kol-r2b2 row 1 are the reference): `PageHeader actions` puts it on
-         the subtitle's baseline, right-aligned, above the rule. */}
-      <PageHeader
-        {...HEADERS[view]}
-        size="sm"
-        voice="mono"
-        actions={
-          <div className="flex items-center gap-2">
-            {/* The three chromes are a DROPDOWN (user, 2026-08-28) — kol-r2b2's
-               row 1 opens on its bucket picker the same way. `tone="sunken"`:
-               the control sits BELOW its plane, since the page wears a wash. */}
-            {/* kol-r2b2's bucket picker: default variant/size, `w-48` —
-               `tone="sunken"` because the page wears a wash and the control
-               sits BELOW its plane. */}
-            <Dropdown
-              className="w-40"
-              tone="sunken"
-              options={CHROMES}
-              value=""
-              onChange={(v) => navigate(`/${v}`)}
-              aria-label="Open a chrome"
-            />
-            <ThemeToggle fill="none" tone="sunken" label={false} size="sm" />
-            <IconFrame
-              name="settings-01"
-              variant="primary"
-              tone="sunken"
-              size="sm"
-              onClick={() => setDrawerOpen(true)}
-              title="Display settings"
-              aria-label="Display settings"
-            />
-          </div>
-        }
-      />
-      <ContentFilters
-        /* forwards to the header's search field (`sunken` is `inverse`'s alias
-           since kol-component 0.120.0) */
-        tone="sunken"
-        items={items}
-        totalCount={items.length}
-        title="Preferences"
-        filterGroups={FILTER_GROUPS}
-        searchKeys={['label', 'section', 'group']}
-        /* BOTH ABOVE THE RULE (user, 2026-08-28): the icon pair rides the
-           header's right slot and the SETTINGS / ABOUT / REPO strip sits beside
-           it, the same row the home page's RECENT / SAVED runs on. The row
-           below the rule is empty here — this page has no second arrangement
-           to offer. */
-        trailingActions={
-          <>
-            <ViewToggle
-              variant="icon"
-              size="sm"
-              tone="sunken"
-              options={LAYOUTS}
-              viewMode={settingsView}
-              onViewChange={(v) => { setSettingsView(v); setView('settings') }}
-            />
-            <Divider variant="vertical" />
-          </>
-        }
-        viewModeOptions={VIEWS}
-        viewMode={view}
-        onViewModeChange={setView}
-        layoutOptions={SIDE_PAGES}
-        layout={view}
-        onLayoutChange={setView}
-        renderItem={(filtered, mode) => (
-          <div style={{ flex: 1, overflow: 'auto', paddingTop: 4, paddingBottom: 4 }}>
-            {mode === 'settings' && renderSettings(filtered, settingsView)}
-            {mode === 'about' && <AboutContent />}
-            {mode === 'repo' && <RepoContent />}
-          </div>
-        )}
-      />
-      <DisplaySettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-    </PageShell>
+         page wears above its filter row. Title and subtitle come off the active
+         tab now, so `header` carries only what is constant. */
+      header={{ size: 'sm', voice: 'mono' }}
+      /* THE MASTHEAD CLUSTER IS THE SCAFFOLD'S since kol-shell 0.27.0 — order,
+         gap, tone and the gear are its rules, off this page's approved render.
+         Only the picker's CONTENTS are ours: three chromes where kol-r2b2's row
+         1 has buckets. `tone="sunken"` because the page wears a wash and the
+         control sits BELOW its plane. The hand-built `header.actions` div this
+         replaced is gone, along with the local `IconFrame`. */
+      picker={
+        <Dropdown
+          className="w-40"
+          tone="sunken"
+          options={CHROMES}
+          value=""
+          onChange={(v) => navigate(`/${v}`)}
+          aria-label="Open a chrome"
+        />
+      }
+      themeToggle={<ThemeToggle fill="none" tone="sunken" label={false} size="sm" />}
+      onOpenSettings={() => setDrawerOpen(true)}
+      /* `sunken` is the scaffold's default and `Preferences` its default title;
+         both are stated anyway — this page is where they were ruled. */
+      tone="sunken"
+      title="Preferences"
+      items={items}
+      filterGroups={FILTER_GROUPS}
+      searchKeys={['label', 'section', 'group']}
+      /* The icon pair rides the row's trailing slot, above the rule. As a
+         FUNCTION (kol-shell 0.24.0, `SettingsScaffoldTabFromTrailing`, filed
+         from here): a node cannot reach state the scaffold owns, so picking
+         OPTIONS or SHORTCUTS from About or Repo had stopped returning you to
+         Settings. `setTab` is the seam that brings that back. */
+      trailingActions={(tab, setTab) => (
+        <>
+          <ViewToggle
+            variant="icon"
+            size="sm"
+            tone="sunken"
+            options={LAYOUTS}
+            viewMode={settingsView}
+            onViewChange={(v) => { setSettingsView(v); setTab('settings') }}
+          />
+          <Divider variant="vertical" />
+        </>
+      )}
+      /* `tab` is the scaffold's, and it is the truth — no override, no mirror. */
+      renderContent={(tab, filtered) => (
+        <>
+          {tab === 'settings' && renderSettings(filtered, settingsView)}
+          {tab === 'about' && <AboutContent />}
+          {tab === 'repo' && <RepoContent />}
+        </>
+      )}
+    />
+    {/* The drawer is the page's OTHER HALF, not part of its body — a sibling of
+        the scaffold, never inside the scrolling region it renders. */}
+    <DisplaySettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+    </>
   )
 }

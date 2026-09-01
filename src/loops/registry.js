@@ -22,6 +22,8 @@ import { SCANLINE_LOOPS, SCANLINE_PRESETS } from './scanline/presets.js'
 import { OPTIC_LOOPS, OPTIC_PRESETS } from './optic/presets.js'
 import { ABSTRACT_LOOPS, ABSTRACT_PRESETS } from './abstract/presets.js'
 import { MATH_LOOPS, MATH_PRESETS } from './math/presets.js'
+import { MODULATOR_LOOPS, MODULATOR_PRESETS } from './modulator/presets.js'
+import { DISTRESS_LOOPS, DISTRESS_PRESETS } from './distress/presets.js'
 import { PARATYPE_LOOPS, PARATYPE_PRESETS } from './paratype/presets.js'
 /* GL catalog is DATA ONLY (groups/defs/presets/schemas) — the three.js
  * engines behind it load lazily via gl/host.js when a layer renders. */
@@ -38,6 +40,8 @@ export const GROUPS = [
   { id: 'abstract', label: 'Abstract' },
   { id: 'math', label: 'Math' },
   { id: 'paratype', label: 'Para-type' },
+  { id: 'modulator', label: 'Modulator' },
+  { id: 'distress', label: 'Distressor' },
   ...GL_GROUPS,
 ]
 export const groupById = (id) => GROUPS.find((g) => g.id === id) || GROUPS[0]
@@ -45,7 +49,7 @@ export const groupById = (id) => GROUPS.find((g) => g.id === id) || GROUPS[0]
 const LOOPS = [
   ...SHAPE_LOOPS, ...FIELD_LOOPS, ...PATTERN_LOOPS, ...PENROSE_LOOPS,
   ...SCANLINE_LOOPS, ...OPTIC_LOOPS, ...ABSTRACT_LOOPS,
-  ...MATH_LOOPS, ...PARATYPE_LOOPS, ...GL_LOOPS,
+  ...MATH_LOOPS, ...PARATYPE_LOOPS, ...MODULATOR_LOOPS, ...DISTRESS_LOOPS, ...GL_LOOPS,
 ]
 const PRESETS_BY_GROUP = {
   shape: SHAPE_PRESETS,
@@ -60,13 +64,15 @@ const PRESETS_BY_GROUP = {
   abstract: ABSTRACT_PRESETS,
   math: MATH_PRESETS,
   paratype: PARATYPE_PRESETS,
+  modulator: MODULATOR_PRESETS,
+  distress: DISTRESS_PRESETS,
   ...GL_PRESETS_BY_GROUP,
 }
 export const PRESETS = [
   ...SHAPE_PRESETS, ...PATTERN_PRESETS, ...PATTERNLOOP_PRESETS, ...PENROSE_PRESETS,
   ...FIELD_PRESETS,
   ...SCANLINE_PRESETS, ...OPTIC_PRESETS, ...MESH_PRESETS, ...ABSTRACT_PRESETS,
-  ...MATH_PRESETS, ...PARATYPE_PRESETS,
+  ...MATH_PRESETS, ...PARATYPE_PRESETS, ...MODULATOR_PRESETS, ...DISTRESS_PRESETS,
   ...Object.values(GL_PRESETS_BY_GROUP).flat(),
 ]
 

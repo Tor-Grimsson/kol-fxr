@@ -410,6 +410,7 @@ function GenerativeSurface({ layer, showMod, tree }) {
   return (
     <Surface
       title={groupLabel} chips={chips} active={layer.presetId} onPick={onChip} pills
+      preStrip={layer.loopGroup === 'distress' ? <SourceStrip layer={layer} /> : undefined}
       tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={GEN_TABS} size="sm" />}
     >
       <LoopFields

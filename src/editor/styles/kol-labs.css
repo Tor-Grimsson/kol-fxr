@@ -11,6 +11,23 @@
  * them. If a string should be uppercase, author it uppercase.
  */
 
+/* THE RIGHT RAIL IS THE LEFT RAIL (user ruling 2026-08-30: "treat the right
+ * like the left"). The gesture converged at kol-framework 0.36.0 —
+ * `useDragResize` runs kol-component's `useGrabEdge`, the same proximity wake,
+ * cursor travel and dwell the shell rail has, and it already click-toggles and
+ * snaps. What still differed was the GEOMETRY: the rail family ships 256 open /
+ * 56 closed while the shell rail is `--kol-sidenav-w` (264, 320 from 1536) open
+ * and 48 closed. Two rails on one screen at two widths.
+ *
+ * So the rail family is pointed at the sidenav's, and the closed rung at the
+ * shell rail's 48. One geometry, one gesture, both edges. The DS deliberately
+ * left the ladders unconverged as policy rather than gesture — this is that
+ * policy call, made here because it is this app's two rails that sit together. */
+:root {
+  --kol-rail-w: var(--kol-sidenav-w);
+  --kol-rail-w-collapsed: 48px;
+}
+
 /* PARAM DENSITY + SECTION HAIRLINE — GONE, adopted 2026-08-15.
  *
  * `.kol-params-section` and its two rules lived here because `Section` had no
@@ -51,6 +68,76 @@
 :root[data-rail="collapsed"] .kol-editor-labs .kol-editor-grid {
   --_rail-track: var(--kol-rail-w-collapsed);
 }
+/* COLLAPSED HIDES THE CONTENT, it does not just narrow the box. This rule used
+ * to be the ONLY collapsed rule the right rail had — the track shrank and the
+ * panel kept rendering at full width, so it overflowed and the viewport sliced
+ * it (the sheared "Type / Categ / Prese / Backg" column). The left rail has
+ * carried the equivalent since 0.17.0 in `:root[data-sidenav="collapsed"]`,
+ * which hides labels, lists and carets so the rail becomes a bare strip.
+ * Collapsed, the right rail is its grab edge and nothing else. */
+:root[data-rail="collapsed"] .kol-editor-labs .kol-compose-inspector-body {
+  display: none;
+}
+/* THE RAIL CANNOT PUSH THE PAGE WIDER — the structural rule, not a per-element
+ * patch. Every horizontal-scroll bug on /labs has been the same shape: some
+ * child of the right rail keeps its expanded width while the rail narrows, and
+ * because the rail was a normal grid cell that width became page scroll. It has
+ * happened for the params body, for the transport dock, and for the loop field.
+ * Clipping at the rail means the NEXT thing that fails to fold is a clipped
+ * control — visibly wrong, and fixable — rather than a scrollbar on the whole
+ * app. `min-width: 0` is the half that makes a grid child actually shrink. */
+.kol-editor-labs .kol-editor-right,
+.kol-editor-labs .kol-compose-rail--inspector {
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* THE RAIL PAINTS ITS OWN GROUND, as the shell rail does (`bg-surface-primary`
+ * on NavRail). `.kol-editor-right` carries only a 1px hairline and inherits the
+ * page, so collapsed there was nothing to see — a border with its contents
+ * floating on the canvas. It stopped reading as a rail at all. */
+.kol-editor-labs .kol-editor-right {
+  background-color: var(--kol-surface-primary);
+}
+
+/* THE SHELL MUST BE ALLOWED TO SHRINK — this is the actual cause of the right
+ * rail sitting off the right edge, and of the horizontal scroll.
+ *
+ * `.kol-editor-shell` and `.kol-editor-grid` both declare `min-height: 0` and
+ * neither declares `min-width: 0`. A grid/flex item defaults to
+ * `min-width: auto`, which means it refuses to shrink below its content — so
+ * the shell rendered at its content width, overflowed the page to the right,
+ * and carried the rail out of the viewport with it. Every symptom downstream of
+ * that (the sheared params column, the sliver at the edge, the scrollbar) is
+ * this one missing declaration. */
+.kol-editor-labs .kol-editor-shell,
+.kol-editor-labs .kol-editor-grid {
+  min-width: 0;
+}
+
+/* THE GRAB EDGE, MIRRORED — the one difference from the left rail. `.kol-rail-grab`
+ * sits on `right: -3.5px` because the shell rail's handle faces right, into the
+ * page. This rail's handle faces LEFT, into the canvas, so the same strip moves
+ * to the other edge. Geometry identical: 8px wide, full height, straddling the
+ * border by 3.5. Nothing else about it changes — same class, same pill, same
+ * wake, drawn by the same rules. */
+.kol-editor-labs .kol-compose-rail--inspector .kol-rail-grab {
+  right: auto;
+  left: -3.5px;
+}
+
+/* THE GRAB SPANS THE WHOLE RAIL, as NavRail's does. It used to anchor to the
+ * params body (`relative` on that div), so it stopped where the body stopped —
+ * 663 against the left rail's 720, missing the entire footer. The rail is the
+ * containing block now. `overflow` stays visible here so the strip can straddle
+ * the border by 3.5px; the body below keeps the clipping, and `min-width: 0`
+ * above is what actually prevents page overflow. */
+.kol-editor-labs .kol-editor-right {
+  position: relative;
+  overflow: visible;
+}
+.kol-editor-labs .kol-compose-inspector-body { overflow: auto; }
+
 /* The rail's hairline is SideNav's own (`hairline`, as the shell rail wears
  * it). `.kol-editor-left`'s border-right doubled it AND ate the 1px that made
  * this rail 55 against the shell's 56 — measured. */

@@ -32,10 +32,22 @@ function useSourceInput(layer) {
   const fileRef = useRef(null)
   const [pickerOpen, setPickerOpen] = useState(false)
 
+  /* The distressor eats VECTOR sources, not pixels: its layer is a loop, the
+   * pick lands on the flat `svgSrc` param (markup when uploaded, URL when
+   * picked from the library — the engine fetches), and the camera pane is
+   * meaningless so it hides. Everything else below is the pixel path. */
+  const svgMode = layer.type === 'loop' && layer.loopGroup === 'distress'
+
   const onUpload = (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''   /* allow re-picking the same file */
     if (!file) return
+    if (svgMode) {
+      const reader = new FileReader()
+      reader.onload = () => patch({ svgSrc: reader.result })
+      reader.readAsText(file)
+      return
+    }
     if (file.type.startsWith('video/')) {
       saveClip(layer.id, file)
       patch({ src: URL.createObjectURL(file), srcType: 'video' })
@@ -47,6 +59,7 @@ function useSourceInput(layer) {
   }
 
   const onLibraryPick = (url, { contentType } = {}) => {
+    if (svgMode) { patch({ svgSrc: proxied(url) }); return }
     patch({ src: proxied(url), srcType: isVideoType(contentType) ? 'video' : 'image' })
   }
 
@@ -61,12 +74,13 @@ function useSourceInput(layer) {
 
   const nodes = (
     <>
-      <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={onUpload} />
-      <MediaPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onPick={onLibraryPick} />
+      <input ref={fileRef} type="file" accept={svgMode ? '.svg,image/svg+xml' : 'image/*,video/*'} className="hidden" onChange={onUpload} />
+      <MediaPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onPick={onLibraryPick} accept={svgMode ? 'svg' : 'all'} />
     </>
   )
   return {
     nodes,
+    svgMode,
     openLibrary: () => setPickerOpen(true),
     openUpload: () => fileRef.current?.click(),
     openCamera: onCamera,
@@ -90,7 +104,7 @@ export function SourceStrip({ layer }) {
       <SegmentedToggle
         value={null}
         onChange={(v) => ({ library: src.openLibrary, upload: src.openUpload, camera: src.openCamera }[v]?.())}
-        options={SOURCE_OPTIONS}
+        options={src.svgMode ? SVG_SOURCE_OPTIONS : SOURCE_OPTIONS}
         size="sm"
         ariaLabel="Source"
       />
@@ -104,6 +118,9 @@ const SOURCE_OPTIONS = [
   { value: 'upload', label: 'Upload' },
   { value: 'camera', label: 'Camera' },
 ]
+
+/* no Camera pane — a webcam yields pixels, the distressor needs paths */
+const SVG_SOURCE_OPTIONS = SOURCE_OPTIONS.slice(0, 2)
 
 export default function LabsSourcePicker({ layer }) {
   const src = useSourceInput(layer)

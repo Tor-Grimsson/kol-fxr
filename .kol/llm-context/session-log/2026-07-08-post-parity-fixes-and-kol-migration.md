@@ -22,7 +22,7 @@
 - **Structure:** `docs/llm-context/` → `.kol/llm-context/`; `docs/_framework/` retired for the **canon `kol-docs-{fm,md,lib}` packages** in `.kol/docs-framework/`; `plan.md`/`history.md` → `.kol/llm-context/`.
 - **`LLM_RULES.md` → symlink** to the generic dotfiles boot file (`~/.dotfiles/.../03-scaffold-llm-context/LLM_RULES.md`), gitignored. (First authored a repo copy — corrected after reading `scaffold-llm-context`; the boot file is generic, repo facts live in `.kol/llm-context/`.)
 - **Docs vault** (`docs/documentation/`, 11 agents, 35 md files, all wikilinks resolve): 00-overview · 01-hierarchy · 02-layers · 03-generative · 04-effects · 05-parameters-binding · 06-camera-motion · 07-type-family · 08-export · 09-media · 10-research; each a folder with INDEX.md (+ sub-docs for the big ones). Plus `docs/operations/` (build/deploy/packaging machinery sibling), `docs/INDEX.md`, `docs/documentation/INDEX.md`, `.obsidian/` (kol-vault shape, gitignored).
-- Section links normalized to `[[NN-section/INDEX|…]]`; cross-vault refs fixed; all `project/kol-design-editor` tags.
+- Section links normalized to `[[NN-section/INDEX|…]]`; cross-vault refs fixed; all `project/kol-fxr` tags.
 - Removed stale repo-local `.claude/` (two old skill copies; everything's dotfiles-backed).
 
 ### Cross-repo side-arc — `~/.dotfiles` skill ecosystem

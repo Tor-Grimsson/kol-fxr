@@ -2,12 +2,12 @@
 
 **Date:** 2026-07-01
 **Agent:** Grim (Claude Opus)
-**Summary:** Set `kol-design-editor` as the single consolidation target for the scattered editor prototypes, scaffolded it from the brand editor on the published DS, attempted (and reverted) a wholesale swap to kol-editor's Konva engine, restored the brand editor, and scaffolded the agent-context protocol.
+**Summary:** Set `kol-fxr` as the single consolidation target for the scattered editor prototypes, scaffolded it from the brand editor on the published DS, attempted (and reverted) a wholesale swap to kol-editor's Konva engine, restored the brand editor, and scaffolded the agent-context protocol.
 
 ## Changes Made
 
 ### Files Modified / Created
-- **Whole directory — brand editor base.** Copied the frame compositor from `kol-monorepo/apps/brand` (`src/editor/` + a 15-file brand slice + `public/fonts`), `package.json` depending on the published `@kolkrabbi/kol-{theme,component,loader,framework}` as an external consumer, `vite.config.js`, `src/index.css` importing the DS. Renamed package to `kol-design-editor`.
+- **Whole directory — brand editor base.** Copied the frame compositor from `kol-monorepo/apps/brand` (`src/editor/` + a 15-file brand slice + `public/fonts`), `package.json` depending on the published `@kolkrabbi/kol-{theme,component,loader,framework}` as an external consumer, `vite.config.js`, `src/index.css` importing the DS. Renamed package to `kol-fxr`.
 - **Agent-context protocol** (via `/init-agent-context`): `LLM_RULES.md`, `docs/llm-context/{README,ARCHITECTURE,AGENT-CONTEXT}.md`, `docs/{history,plan}.md`, `docs/_framework/`, `.claude/skills/{init-agent,log-work}/`, `.gitignore` block.
 - **`docs/llm-context/ARCHITECTURE.md`** — filled with §1–§5 + non-goals (the real decisions below).
 - `pnpm-workspace.yaml` — `allowBuilds: esbuild: true` (needed so `pnpm dev`/`build` don't trip pnpm 11's build-script gate).

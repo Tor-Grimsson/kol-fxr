@@ -12,7 +12,7 @@ import { CANVAS_W, CANVAS_H } from './state'
  * since this panel will grow more categories beyond Logos.
  */
 const VIEW_OPTIONS = [
-  { value: 'list', label: 'List view', icon: 'list' },
+  { value: 'list', label: 'List view', icon: 'view-list' },
   { value: 'grid', label: 'Grid view', icon: 'grid' },
 ]
 

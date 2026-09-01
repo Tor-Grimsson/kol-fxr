@@ -48,4 +48,6 @@ export const PICKER_TREE = GENERATIVE_TREE
 export const LEGACY_GROUP_LABELS = {
   optic:    'Pattern · Effects',
   paratype: 'Para Type · Misc',
+  distress:  'Distressor · Vector',
+  modulator: 'Modulator · Vector',
 }

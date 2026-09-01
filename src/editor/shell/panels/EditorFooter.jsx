@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, Dropdown, Section, SegmentedToggle, FullscreenOverlay } from '@kolkrabbi/kol-component'
 import EditorIcon from '../../icons/EditorIcon'
+import { Icon } from '@kolkrabbi/kol-icons'
 import MediaPicker from '../../library/MediaPicker'
 import { proxied, isVideoType } from '../../library/mediaLibrary'
 import TransportBar from '../../params/TransportBar'
+import { useTransport } from '../../params/transport'
 import AudioInputRow from '../../params/AudioInputRow'
 import { useComposeFile } from '../../compose/useComposeFile'
 import { useComposeState } from '../../compose/state'
@@ -37,6 +39,29 @@ const TABS = [
  * Naming them here puts them in app source → emitted → the component's own
  * identical classes resolve. Duplicates on the shell are harmless. */
 const TOGGLE_FIX = 'h-[26px] border-fg-04'
+
+/* Collapsed, the rail is the LEFT rail's bottom anatomy and nothing else:
+ * a full-bleed rule, then ONE glyph in a `w-8` centring box — the same shape
+ * `NavRail` uses for its pinned rows (`self-stretch -mx-2 border-t border-fg-08`
+ * then a 20px icon in a 32px box, inside `px-2`). The tabbed dock cannot fold
+ * into 48px by clipping, because its first control is a 77px two-cell group,
+ * so collapsed it is replaced rather than squeezed. */
+function useRailCollapsed() {
+  const read = () => document.documentElement.getAttribute('data-rail') === 'collapsed'
+  const [collapsed, setCollapsed] = useState(read)
+  useEffect(() => {
+    /* RE-READ ON ATTACH. `useDragResize` stamps `data-rail` from its persisted
+     * state during mount — between this hook's lazy initial read and the
+     * observer attaching below. The attribute therefore never *changes* after
+     * we start watching, so a page that loads already-collapsed stayed stuck on
+     * the expanded dock while a manual toggle folded it correctly. */
+    setCollapsed(read())
+    const mo = new MutationObserver(() => setCollapsed(read()))
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-rail'] })
+    return () => mo.disconnect()
+  }, [])
+  return collapsed
+}
 
 /* File tab, photo-with-source mode — replace / clear the selected photo
  * layer's src (the ImageFields reader idiom; discrete history → undo-safe).
@@ -158,6 +183,8 @@ export default function EditorFooter() {
     onSaveSettings, onLoadSettings, openOutputWindow, currentPresetId,
   } = useComposeFile()
   const { aspect, setAspect, canvasW, canvasH, selectedId, layers } = useComposeState()
+  const collapsed = useRailCollapsed()
+  const { playing, play, pause } = useTransport()
 
   /* Stop any in-flight live capture if the footer unmounts (route change /
    * rail teardown) — onRecordStop reads the hook-stable recorder ref, so the
@@ -193,6 +220,28 @@ export default function EditorFooter() {
 
   const selectedLayer = selectedId && selectedId !== 'canvas' ? findLayerDeep(layers, selectedId) : null
   const photoLayer = selectedLayer?.type === 'photo' ? selectedLayer : null
+
+  /* THE COLLAPSED DOCK — the left rail's pinned row, mirrored. The rule runs
+     the full rail width out past the padding (`-mx-2`, as NavRail's does), and
+     one glyph sits in a 32px box so it lands on the same x as the left rail's. */
+  if (collapsed) {
+    return (
+      <div className="flex flex-col px-2 pb-4">
+        <div className="self-stretch -mx-2 border-t border-fg-08 mb-2" />
+        <button
+          type="button"
+          onClick={playing ? pause : play}
+          title={playing ? 'Pause' : 'Play'}
+          aria-label={playing ? 'Pause' : 'Play'}
+          className="w-8 h-8 flex items-center justify-center self-center text-oq-96"
+        >
+          {/* the KOL registry, as TransportBar uses — `play`/`pause` live in
+              kol-icons' playback set, not the editor's local svg folder */}
+          <Icon name={playing ? 'pause' : 'play'} size={20} />
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="relative border-t border-fg-08 flex flex-col gap-3" style={{ padding: '16px 20px 24px 20px' }}>

@@ -73,7 +73,7 @@ Nothing structural — fxr is on the DS component either way. On the return:
 bump, drop the side-by-side comparison Dropdown in `src/pages/SettingsPage.jsx`,
 and re-measure the header row against the icon cluster.
 
-**Remainder here:** bump, delete the comparison Dropdown, re-measure the row.
+**Remainder here:** none — adopted 2026-08-28, see below. Returned as: bump to kol-theme 0.90.0, drop the comparison Dropdown in `SettingsPage.jsx`, re-measure the header row.
 **State:** 🟢 closed 2026-08-28 · **kol-theme 0.90.0**
 
 ## ↩ RETURNED — 2026-08-28
@@ -85,3 +85,21 @@ On part 2, your symptom was right and your mechanism was not: lines 45–51 are 
 The lesson worth carrying: a pin-back mirrors a value it does not own, so it must be re-read whenever that value moves.
 
 Remainder here: bump to 0.90.0, drop the comparison Dropdown in `SettingsPage.jsx`, re-measure the header row.
+
+## ✅ ADOPTED — 2026-08-28 · kol-theme 0.90.0
+
+Bumped, the side-by-side comparison `Dropdown` deleted from
+`src/pages/SettingsPage.jsx` — one `Dropdown` on the page now (`:206`), riding
+`PageHeader actions` beside the `IconFrame` cluster and the `ThemeToggle`, all
+`sm`, all `tone="sunken"`.
+
+Part 2 is closed as **my diagnosis being wrong**, not as a fix: `:45-51` are
+pin-backs restating rest colours, not hover states. The real skew was
+`outline`'s pin-back still on `oq-16` after the rest border moved to `oq-08`.
+The 2026-07-15 no-hover ruling stands untouched.
+
+**Re-verified 2026-08-30 on kol-theme 0.96.0** — header row measures 65.203125,
+identical to kol-monitor's `/`; six routes loaded in a browser, zero console
+errors.
+
+**Remainder here:** none — adopted 2026-08-28.

@@ -7,7 +7,7 @@ _template:
 
 # LLM Context Directory
 
-This directory provides context for AI agents working on kol-design-editor.
+This directory provides context for AI agents working on kol-fxr.
 
 ## Files
 

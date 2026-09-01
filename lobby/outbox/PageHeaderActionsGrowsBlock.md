@@ -61,7 +61,7 @@ Nothing — fxr is on the DS component and passes `actions` as documented. On th
 return: bump and re-measure `/settings` against kol-monitor's `/`; they should
 both read 65.2.
 
-**Remainder here:** bump, re-measure `/settings` against monitor's 65.2.
+**Remainder here:** none — adopted 2026-08-28, see below. Returned as: bump to kol-shell 0.19.1 and re-measure `/settings` against monitor's `/` — both should read 65.2.
 **State:** 🟢 closed 2026-08-28 · **kol-shell 0.19.1**
 
 ## ↩ RETURNED — 2026-08-28
@@ -69,3 +69,18 @@ both read 65.2.
 Closed as **kol-shell 0.19.1** — the cluster is `h-0 self-center`, a zero-height box centred on the row, so its children overflow symmetrically and the header's height is its text's. No constant (your `sm` 10 / `md` 14 point ruled that out) and horizontal layout is untouched, so `justify-between` holds and a long lede cannot run under the controls. The baseline intent survives for the lede.
 
 Remainder here: bump to 0.19.1 and re-measure `/settings` against monitor's `/` — both should read 65.2.
+
+## ✅ ADOPTED — 2026-08-28 · kol-shell 0.19.1
+
+Bumped. The `actions` cluster is `h-0 self-center` in the DS component, so the
+masthead's height is its text's — no consumer change was needed here beyond the
+bump, and no per-size variant: a zero-height box measures nothing at every rung.
+
+**Measured on `/settings`:** header block **65.203125**, h1 35.203125 on
+`kol-mono-heading-03` — identical to kol-monitor's `/`, which is the number the
+ticket asked for. Was 75.2 with the cluster in the row.
+
+**Re-verified 2026-08-30 on kol-shell 0.19.1 / kol-component 0.131.0 /
+kol-theme 0.96.0** — 65.203125 unchanged, zero console errors on six routes.
+
+**Remainder here:** none — adopted 2026-08-28.

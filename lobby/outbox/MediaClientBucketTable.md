@@ -31,7 +31,7 @@ On the return: bump, delete the local `BUCKETS` const from
 re-verify all three stores still list and that R2 still renders through the
 proxy.
 
-**Remainder here:** delete the local `BUCKETS` const, pass overrides only, re-verify the three stores.
+**Remainder here:** none — adopted 2026-08-28, see below. Returned as: bump to kol-media-client 0.3.0 and delete the local `BUCKETS` — pass nothing, `buckets: true`, or only your overrides.
 
 ## Related, not part of this ticket
 

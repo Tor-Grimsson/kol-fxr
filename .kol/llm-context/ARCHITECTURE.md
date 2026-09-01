@@ -5,7 +5,7 @@ _template:
   sync: skip
 ---
 
-# kol-design-editor — Architecture
+# kol-fxr — Architecture
 
 Load-bearing decisions and constraints. Anything in this document is "we chose this deliberately and it has downstream consequences." Do not revisit without explicit reason. For decision history (alternatives considered, rejections, and evolution), see `./history.md`.
 
@@ -13,7 +13,7 @@ Load-bearing decisions and constraints. Anything in this document is "we chose t
 
 ## §1 — This directory is the single consolidation target for the scattered editors
 
-There are ~5 half-finished editor prototypes under `kol-apparat/kol-editors/` (`kol-cl-edr`, `kol-draw-3d`, `kol-editor`, `kol-radar`) plus this one. **`kol-design-editor` is the one canonical editor they all converge into.** The others become sources to harvest for parts, then retire — not things to keep maintaining in parallel.
+There are ~5 half-finished editor prototypes under `kol-apparat/kol-editors/` (`kol-cl-edr`, `kol-draw-3d`, `kol-editor`, `kol-radar`) plus this one. **`kol-fxr` is the one canonical editor they all converge into.** The others become sources to harvest for parts, then retire — not things to keep maintaining in parallel.
 
 **Consequence:** new editor work lands **here**. Don't spin up another editor repo; that is the sprawl we are collapsing. Other prototypes are references, not live codebases.
 

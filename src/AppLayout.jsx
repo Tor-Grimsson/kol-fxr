@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { AppShell, useNavHidden } from '@kolkrabbi/kol-shell'
+import { AppShell, useNavHidden, useSettingsToggle } from '@kolkrabbi/kol-shell'
 import logomarkUrl from '@kolkrabbi/kol-brand/svg/favicon-01.svg?url'
 import { useRailExtras, RAIL_EXTRA_PREFIX } from './railExtras'
 
@@ -21,9 +21,9 @@ import { useRailExtras, RAIL_EXTRA_PREFIX } from './railExtras'
  * short to home, library 3 4 5"). AppShell maps ⌥n to `items[n-1]`, which skips
  * HOME entirely — `/` is the logomark, not a rail item — so ⌥1 landed on
  * Library and Home had no key at all. Two further reasons the prop cannot do
- * this: labs APPENDS its category rows to `items` (see railExtras), so ⌥5-9
- * would jump to Effects/Generative rows on that one route; and the digit must
- * stay stable per destination regardless of what a chrome contributes.
+ * this: labs INSERTS its category rows into `items` under Labs (see railExtras),
+ * so ⌥5-9 would jump to Effects/Generative rows on that one route; and the digit
+ * must stay stable per destination regardless of what a chrome contributes.
  *
  * So: ⌥1 Home · ⌥2 Library · ⌥3 Editor · ⌥4 Labs · ⌥5 Randomiser · ⌥6 Settings
  * — the rail read top to bottom, logomark included. kol-mirror runs the same
@@ -70,15 +70,43 @@ function RailFrame({ children }) {
   )
 }
 
+/* `,` and ⌥, — SETTINGS, FROM ANYWHERE (user, 2026-08-28: "open whatever
+   settings is available at any time"). A chrome answers it with its drawer
+   (EditorShell listens and calls preventDefault on the event); a shell page has
+   no drawer, so the SHELL's toggle takes it — which is why this sits inside
+   `AppShell` rather than beside it: `useSettingsToggle` reads the shell's own
+   context and is a no-op outside it.
+
+   The toggle itself is kol-shell's since 0.25.0 (`SettingsToggleGesture`) and
+   reachable since 0.26.0 (`SettingsToggleGestureConsumerSeam`, filed from here)
+   — so the return path is the shell's bookkeeping now, not a `lastPage` ref
+   here. `settingsKey` is deliberately NOT passed: this handler is the gesture,
+   because only the app knows whether a drawer or the page should answer.
+
+   Matched on `e.code`: Option rewrites `e.key` on macOS (⌥, is `≤`), and the
+   physical key is the same one either way. */
+function SettingsKey() {
+  const toggleSettings = useSettingsToggle()
+  const ref = useRef(toggleSettings)
+  ref.current = toggleSettings
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.code !== 'Comma' || e.metaKey || e.ctrlKey) return
+      const t = e.target
+      if (t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName)) return
+      e.preventDefault()
+      const handled = !window.dispatchEvent(new CustomEvent('kol:open-settings', { cancelable: true }))
+      if (!handled) ref.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  return null
+}
+
 export default function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
-
-  /* The pinned Settings rung is a TOGGLE (kol-mirror's Shell, ported
-     2026-08-28): click opens /settings, click again returns to the page it
-     was opened from. */
-  const lastPage = useRef('/')
-  useEffect(() => { if (location.pathname !== '/settings') lastPage.current = location.pathname }, [location.pathname])
 
   /* A route can hand the rail its own rows (labs' categories) — one rail, not
      a second component per chrome. Their paths are sentinels, so they dispatch
@@ -89,7 +117,7 @@ export default function AppLayout() {
      routes that mount and unmount like any page. */
   const onNavigate = (path) => {
     if (path?.startsWith(RAIL_EXTRA_PREFIX)) { extras.dispatch?.(path); return }
-    navigate(path === '/settings' && location.pathname === '/settings' ? lastPage.current : path)
+    navigate(path)
   }
 
   /* ⌥1…⌥6 — the rail top to bottom, HOME included. See the docblock for why
@@ -100,19 +128,6 @@ export default function AppLayout() {
     const onKey = (e) => {
       const t = e.target
       if (t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName)) return
-
-      /* `,` and ⌥, — SETTINGS, FROM ANYWHERE (user, 2026-08-28: "open whatever
-         settings is available at any time"). A chrome answers it with its
-         drawer (EditorShell listens and calls preventDefault on the event); a
-         shell page has no drawer to open, so it goes to the page.
-         Matched on `e.code`: Option rewrites `e.key` on macOS (⌥, is `≤`), and
-         the physical key is the same one either way. */
-      if (e.code === 'Comma' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault()
-        const handled = !window.dispatchEvent(new CustomEvent('kol:open-settings', { cancelable: true }))
-        if (!handled) navRef.current('/settings')
-        return
-      }
 
       const m = /^Digit([1-9])$/.exec(e.code)
       if (!m || !e.altKey || e.metaKey || e.ctrlKey) return
@@ -127,15 +142,27 @@ export default function AppLayout() {
 
   return (
     <AppShell
-      items={extras.items.length ? [...NAV_ITEMS, ...extras.items] : NAV_ITEMS}
+      /* Labs' category rows sit DIRECTLY UNDER Labs, not after the whole nav —
+         they belong to that destination, and appending them put them below
+         Randomiser. `KEY_ORDER` is derived from NAV_ITEMS, not from this, so
+         ⌥-digit is unaffected by where they land. */
+      items={extras.items.length
+        ? NAV_ITEMS.flatMap((n) => (n.path === '/labs' ? [n, ...extras.items] : [n]))
+        : NAV_ITEMS}
       bottomItems={BOTTOM_ITEMS}
       logomark={{ svgUrl: logomarkUrl, title: 'Effexor FXR' }}
       currentPath={location.pathname}
       onNavigate={onNavigate}
       railToggleKey={'\\'}
+      /* The pinned Settings rung TOGGLES — click opens /settings, click again
+         returns to the page it was opened from. The shell owns that return path
+         since kol-shell 0.25.0; the local `lastPage` ref it replaced is gone.
+         No `settingsKey` — `SettingsKey` below is the gesture (see its note). */
+      settingsPath="/settings"
       touch="bare"
       pageWash="var(--kol-fg-02)"
     >
+      <SettingsKey />
       <RailFrame>
         <Outlet />
       </RailFrame>

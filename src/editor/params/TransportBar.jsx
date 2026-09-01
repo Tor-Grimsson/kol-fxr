@@ -94,12 +94,20 @@ function LoopField({ seconds, onCommit, size }) {
   )
 }
 
+/* THE ROW WRAPS RATHER THAN OVERFLOWS. The two transport groups are fixed-size
+ * icon cells (`shrink-0` — shrinking them clips the glyphs) and the loop field
+ * has a floor below which it shows nothing, so at a narrow rail the three
+ * genuinely do not fit on one line: 77 + 77 + gaps against 215. It used to
+ * overflow — 12px of horizontal page scroll on `/labs`, at EVERY rail width —
+ * and letting the centre cell collapse instead (`min-w-0`) rendered the input
+ * at 0px wide. So it wraps: the second group drops to its own line and every
+ * control stays readable. */
 export default function TransportBar({ size = 'sm' }) {
   const cfg = SIZES[size] ?? SIZES.sm
   const { playing, loopSeconds, play, pause, stop, rewind, setLoopSeconds } = useTransport()
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <div className="inline-flex rounded overflow-hidden bg-surface-secondary shrink-0">
         <Cell name="play" title="Play" active={playing} onClick={play} cfg={cfg} />
         <Cell name="pause" title="Pause" active={!playing} onClick={pause} divider cfg={cfg} />
@@ -108,7 +116,10 @@ export default function TransportBar({ size = 'sm' }) {
       {/* The DS property field IS this anatomy — dim affordance, hugging
           numeric value, adjacent unit (Input variant="property", 0.36.0).
           The old authored chrome predated it. */}
-      <div className="flex-1 flex justify-center">
+      {/* `min-w-16` is the floor that makes the wrap happen instead of the
+          collapse — without it this cell shrinks toward 0 and the value goes
+          invisible before anything wraps. */}
+      <div className="flex-1 min-w-16 flex justify-center">
         <LoopField seconds={loopSeconds} onCommit={setLoopSeconds} size={size} />
       </div>
 

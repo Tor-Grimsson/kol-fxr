@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Button } from '@kolkrabbi/kol-component'
 import { GENERATIVE_TREE } from '../../loops/taxonomy'
-import { GROUP_ICONS } from '../labs/LabsNav'
+import { GROUP_ICONS } from '../labs/catalog'
 import { transport } from '../params/transport'
 
 /* Full-width card row: label pinned left, glyph pinned right (Button centers

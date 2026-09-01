@@ -3,6 +3,10 @@ import { Button, Input, Dropdown, FullscreenOverlay, MediaViewer } from '@kolkra
 import EditorIcon from '../icons/EditorIcon'
 import { listMedia, mediaUrl, mediaSrc, isImageType, isVideoType, formatSize, BUCKET_OPTIONS, DEFAULT_BUCKET } from './mediaLibrary'
 
+/* SVG is an image/* type, so 'image' still matches it — 'svg' narrows to
+ * vector-only for consumers that need real paths (the distress engine). */
+const isSvgType = (t) => /svg/i.test(t || '')
+
 /**
  * MediaPicker — modal browser over the kol-media CDN bucket (the labs
  * LibraryPage model). Folder drill-down + breadcrumb over the flat key list,
@@ -12,7 +16,7 @@ import { listMedia, mediaUrl, mediaSrc, isImageType, isVideoType, formatSize, BU
  * Pick contract (unchanged — called from EditorFooter + LayerInspector):
  * onPick(url, { contentType }); the caller rewrites the URL through
  * `proxied()` before storing it on a layer. `accept`: 'image' | 'video' |
- * 'all' filters which files are pickable/shown.
+ * 'svg' | 'all' filters which files are pickable/shown.
  *
  * The whole bucket is listed once on open (listMedia('')) and the folder tree
  * is derived client-side from key path segments — `prefix` is the current
@@ -83,6 +87,7 @@ function MediaLightbox({ files, index, onClose, onIndexChange, onUse, accept, bu
         const pickable =
           accept === 'video' ? isVideoType(f.contentType)
           : accept === 'image' ? isImageType(f.contentType)
+          : accept === 'svg' ? isSvgType(f.contentType)
           : isImageType(f.contentType) || isVideoType(f.contentType)
         return (
           <div className="flex flex-col items-center gap-2">
@@ -152,6 +157,7 @@ export default function MediaPicker({ open, onClose, onPick, accept = 'all' }) {
   const wanted = (o) =>
     accept === 'video' ? isVideoType(o.contentType)
     : accept === 'image' ? isImageType(o.contentType)
+    : accept === 'svg' ? isSvgType(o.contentType)
     : isImageType(o.contentType) || isVideoType(o.contentType)
 
   const scoped = prefix ? allObjects.filter((o) => o.key.startsWith(prefix)) : allObjects

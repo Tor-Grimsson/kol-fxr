@@ -45,6 +45,60 @@ const TABS_LOOP  = [
  * with nothing but Transport and Output. */
 const TABS_MEDIA = TABS_LOOP.filter((t) => t.value !== 'generate')
 
+/* Scoped rolls as stateless ACTION STRIPS (user, 2026-09-01): the 2-col lg
+ * button grid cost a 40px row per two scopes; the same scopes as
+ * SegmentedToggle strips in `value={null}` action mode (SourceStrip's
+ * pattern) fit four per row at the same 40px touch height. md buttons were
+ * rejected for the height fix: the ladder is 26/32/40 and a 32px target is
+ * too small for touch. Cells carry a `run` beside the DS's value/label.
+ * Same overflow clamp as the tab strip below (a flex cell's default
+ * min-width:auto pins it to its nowrap text — the strip-must-never-overflow
+ * law), tighter padding since four labels share a phone width. */
+const STRIP_CLAMP = '[&_.kol-seg-cell]:min-w-0 [&_.kol-seg-cell]:px-1 [&_.kol-seg-cell]:overflow-hidden'
+
+/* Width-aware row packing — a blind 4-per-row mangled the long labels
+ * ("Motion Frame" → "otion Fram" on a 390 screen). Cells share a strip
+ * equally, so a row fits only while (cells × widest label) stays inside the
+ * panel; labels are the schema's and stay verbatim (the copy law), so the
+ * ROWS bend instead. ponytail: 9.6px/char is lg mono-16's real advance —
+ * an estimate, not a measurement; swap for a canvas measure if a font
+ * change ever drifts it. */
+const CH = 9.6
+const CELL_PAD = 10
+function packRows(cells) {
+  /* px-3 panel inset both sides; 480 caps the budget on tablets so rows
+   * don't stretch to six thin cells. */
+  const budget = Math.min(window.innerWidth, 480) - 24
+  const rows = []
+  let row = []
+  let maxW = 0
+  for (const c of cells) {
+    const w = c.label.length * CH + CELL_PAD
+    const m = Math.max(maxW, w)
+    if (row.length && (row.length + 1) * m > budget) {
+      rows.push(row); row = [c]; maxW = w
+    } else {
+      row.push(c); maxW = m
+    }
+  }
+  if (row.length) rows.push(row)
+  return rows
+}
+
+function ScopeStrips({ cells }) {
+  return packRows(cells).map((row, i) => (
+    <SegmentedToggle
+      key={i}
+      value={null}
+      onChange={(v) => row.find((c) => c.value === v)?.run()}
+      options={row}
+      size="lg"
+      ariaLabel="Randomize scope"
+      className={STRIP_CLAMP}
+    />
+  ))
+}
+
 /* Loop-length quick chips (own component so the per-tick useTransport
  * re-render stays scoped here, not the whole overlay). */
 const LOOP_CHIP_OPTS = [2, 4, 8, 16].map((s) => ({ value: String(s), label: `${s}s` }))
@@ -122,10 +176,22 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
     if (filters) updateLayer(layer.id, { filters })
   }
 
-  /* Collapsed: Randomize all left, the open pill right. */
+  /* Collapsed: the disclosure pill FIRST and the row LEFT-ANCHORED (user,
+   * 2026-09-01: it sat far right of a centred cluster while the expanded
+   * header's label+chevron sat left — the same control jumping sides on
+   * every open/close). px-3 matches the expanded header's inset, so the
+   * label+chevron holds one x in both states. */
   if (!open) {
     return (
-      <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-10 flex -translate-x-1/2 gap-2">
+      <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[var(--fxr-rail,0px)] z-10 flex gap-2 px-3">
+        {/* Pill shows the preset name only — the group·preset long form
+            stays on the expanded header (user ruling 2026-08-12). */}
+        <Button variant="primary" size="lg" onClick={() => setOpen(true)}>
+          <span className="flex items-center gap-2">
+            {isLoop ? layer.presetLabel : 'Media'}
+            <EditorIcon name="chevron-down" size={16} className="rotate-180" />
+          </span>
+        </Button>
         {/* Media has no generator schema, but an effect chain is still
             rollable — computeRoll's filter half carries it (2026-08-27).
             Before that this button was loop-only, so an image or video
@@ -135,14 +201,6 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
         )}
         {/* Capture without re-expanding the sheet (2026-08-12). */}
         <Button variant="primary" size="lg" onClick={() => onExportPng(2)}>Download</Button>
-        {/* Pill shows the preset name only — the group·preset long form
-            stays on the expanded header (user ruling 2026-08-12). */}
-        <Button variant="primary" size="lg" onClick={() => setOpen(true)}>
-          <span className="flex items-center gap-2">
-            {isLoop ? layer.presetLabel : 'Media'}
-            <EditorIcon name="chevron-down" size={16} className="rotate-180" />
-          </span>
-        </Button>
       </div>
     )
   }
@@ -223,20 +281,14 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
                 Randomize all
               </Button>
               {scopes.length > 0 && (
-                <div className="grid grid-cols-2 gap-2">
-                  {scopes.map((s) => (
-                    <Button key={s.id} variant="primary" size="lg" onClick={() => rollScope(s)}>
-                      {s.label}
-                    </Button>
-                  ))}
-                  {/* Re-trigger — restart the sim clock (rewind: t=0 + a new
+                <ScopeStrips cells={[
+                  ...scopes.map((s) => ({ value: s.id, label: s.label, run: () => rollScope(s) })),
+                  /* Re-trigger — restart the sim clock (rewind: t=0 + a new
                       reset epoch, keeps playing). Accumulative sims (penrose
                       growth, trails, diffusion) re-run from seed; pure loops
-                      just restart their phase. Fills the odd grid cell. */}
-                  <Button variant="primary" size="lg" onClick={() => transport.rewind()}>
-                    Re-trigger
-                  </Button>
-                </div>
+                      just restart their phase. Rides the strip as a cell. */
+                  { value: '__retrigger', label: 'Re-trigger', run: () => transport.rewind() },
+                ]} />
               )}
             </div>
           )}
@@ -249,19 +301,39 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
                   regardless of array position, so what you read top-to-bottom
                   here is what the pixels go through. A row IS its remove
                   button; reorder within a tier stays desk work. */}
-              {chain.map((stage, i) => (
-                <Button
-                  key={stage.key}
-                  variant="grey"
-                  size="lg"
-                  className={SPREAD}
-                  iconLeft="trash"
-                  iconRight="trash"
-                  onClick={() => removeFilter(layer.id, i)}
-                >
-                  {`${i + 1}. ${stage.def?.label ?? stage.id}`}
-                </Button>
-              ))}
+              {chain.map((stage, i) => {
+                /* Per-stage scoped rolls — StageRolls' derivation (labs has
+                   had these since the effect tab shipped; mobile's media
+                   sheet was the one surface without them, user 2026-09-01).
+                   The stage VIEW and the bare-stage write are LabsParams'
+                   `paramsView` / `patchStageParams` verbatim, generalised to
+                   index i. Strips sit under their own chain row so a
+                   two-stage chain keeps each Colour with its effect. */
+                const view = { ...layer, ...stage.params, id: layer.id }
+                const stageScopes = stage.def ? deriveScopes(stage.def.params, view) : []
+                const rollStage = (sc) => {
+                  const patch = computeRoll(view, sc.params, seed.take(), { stripNoRandom: !!sc.motion })
+                  const bare = chain.map(({ def: _def, ...s }) => s)
+                  updateLayer(layer.id, { filters: bare.map((s, j) => (j === i ? { ...s, params: { ...s.params, ...patch } } : s)) })
+                }
+                return (
+                  <div key={stage.key} className="flex flex-col gap-2">
+                    <Button
+                      variant="grey"
+                      size="lg"
+                      className={SPREAD}
+                      iconLeft="trash"
+                      iconRight="trash"
+                      onClick={() => removeFilter(layer.id, i)}
+                    >
+                      {`${i + 1}. ${stage.def?.label ?? stage.id}`}
+                    </Button>
+                    {stageScopes.length > 0 && (
+                      <ScopeStrips cells={stageScopes.map((sc) => ({ value: sc.id, label: sc.label, run: () => rollStage(sc) }))} />
+                    )}
+                  </div>
+                )
+              })}
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="primary" size="lg" onClick={() => setShowFx(true)}>Add effect</Button>
                 <Button variant="primary" size="lg" disabled={!chain.length} onClick={rollFilters}>Randomize</Button>

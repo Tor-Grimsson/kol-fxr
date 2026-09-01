@@ -28,7 +28,7 @@
 
 - **Deleted 38 files / ~4,900 lines** (registry/, 16 mode bodies incl. TypeFrame.jsx, PaletteInspector cluster, color *Ref set, decks/molecules, kol-typography-fonts-full.css, bbox.js, viewport.js, ColorRamp→`src/editor/color/cssVar.js` extraction, orphan CSS rules). `modes/*/state.jsx` + 14 support files verified load-bearing and kept.
 - **package.json:** react/react-dom/@kolkrabbi/* out of `dependencies` (peers aligned + devDeps added); **react-router-dom and embla-carousel-react removed entirely** — App.jsx renders `<Editor/>` directly, no router anywhere; lockfile synced.
-- **Lib no longer restyles host pages:** new `src/index.lib.css` (Tailwind theme+utilities only, no preflight; kol-framework.css dropped — verified unused by editor), scoped preflight substitute under new `.kol-design-editor` root class (PaletteModal portal gets the class too); dist css verified zero bare html/body/* selectors.
+- **Lib no longer restyles host pages:** new `src/index.lib.css` (Tailwind theme+utilities only, no preflight; kol-framework.css dropped — verified unused by editor), scoped preflight substitute under new `.kol-fxr` root class (PaletteModal portal gets the class too); dist css verified zero bare html/body/* selectors.
 - **Theme boot:** DesignEditor applies persisted mode on mount only when one is stored (`hasStoredThemeMode()`), so embedded Settings menu is truthful without stomping host defaults.
 
 ## Wave 4 — consolidation + perf

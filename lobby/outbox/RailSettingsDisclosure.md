@@ -19,7 +19,7 @@ behave identically; fxr's file is the reference.
 On the return: bump; delete `RailSettings.jsx` and the local action-leaf wiring
 for the DS's shape; re-measure the pair.
 
-**Remainder here:** none yet — nothing is owed until the DS returns it.
+**Remainder here:** none — retired 2026-08-30, see below.
 
 ## ↩ RETURNED — 2026-08-28
 
@@ -58,3 +58,16 @@ panel is still the shape you want, since the ticket that closed it was aimed at
 a component that is no longer in the tree.
 
 **Remainder here:** blocked on that ruling. On ⚫ — retire `RailSettings.jsx` to `_tmp/` and close the row. On re-file — a new ticket against `NavRail`, this one stays history.
+
+
+## ⚫ RETIRED — 2026-08-30 · user ruling
+
+Dead. `src/editor/labs/RailSettings.jsx` had no importer and the shape it was
+built for was deleted from the DS (kol-shell 0.16.0) before fxr ever adopted it.
+The need it served is met anyway: the rail's Settings row toggles, and `,` opens
+the settings drawer from anywhere without leaving the page.
+
+Moved to `_tmp/2026-08-30-railsettings-dead/`. Build green. Nothing in the app
+changed — nothing referenced it.
+
+**Remainder here:** none — retired 2026-08-30.

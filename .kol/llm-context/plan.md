@@ -5,7 +5,7 @@ _template:
   sync: skip
 ---
 
-# kol-design-editor — future roadmap
+# kol-fxr — future roadmap
 
 Where the editor goes next: a **unicorn.studio / effect.app-class** motion-and-effects tool built on the vector base already shipped. Target capabilities: a pipeable **effects** repo, a **3D layer**, **motion** on a timeline/loop *and* as live modulation (mouse / joystick / audio), arbitrary **canvas sizing**, per-layer **controls exposed to the inspector**, and the **color modes** packaged as a first-class feature.
 

@@ -5,7 +5,7 @@ _template:
   sync: skip
 ---
 
-# kol-design-editor — history & decisions
+# kol-fxr — history & decisions
 
 Knowledge base tracking the conversation that produced this project, the alternatives considered, and the reasoning behind core decisions. Reference for humans or future AI sessions that need the *why* rather than the *what*.
 

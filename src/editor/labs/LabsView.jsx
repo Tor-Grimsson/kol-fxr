@@ -149,11 +149,87 @@ function LabsRail() {
    * kol-labs.css no longer declares the width. */
   const railRef = useRef(null)
   const { grabProps } = useDragResize(railRef, { token: 'kol-rail', side: 'right' })
+
+  /* THE TWO RAILS MOVE TOGETHER (user, 2026-08-30: "right left nav sync").
+   * On /labs both rails are on screen at once, so one open and one shut reads
+   * as a bug rather than two independent controls. The shell rail's live width
+   * is `--kol-shell-rail-width` on :root, and this rail's state is
+   * `data-rail` on the same element — so watching the root covers both.
+   *
+   * BOTH DIRECTIONS. Left → right is a variable read. Right → left cannot just
+   * write `--kol-shell-rail-width`: `NavRail` keeps `railOpen` in its own state
+   * and gates the L2 rows on it, so writing the width would widen an empty
+   * rail. Instead the left rail is toggled through its OWN gesture — a
+   * pointerdown/up on its grab strip with no travel is the click-toggle the
+   * component already implements, so its state updates the way it does when
+   * the user does it by hand. */
+  useEffect(() => {
+    const root = document.documentElement
+    const CLOSED = 48
+    let busy = false
+
+    const leftCollapsed = () => {
+      const w = parseFloat(getComputedStyle(root).getPropertyValue('--kol-shell-rail-width'))
+      return Number.isFinite(w) ? w <= CLOSED + 1 : null
+    }
+    const rightCollapsed = () => root.getAttribute('data-rail') === 'collapsed'
+
+    /* the shell rail's grab strip — the left one, whichever is nearest x 0 */
+    const leftGrab = () =>
+      [...document.querySelectorAll('.kol-rail-grab')]
+        .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left)[0]
+
+    const clickLeft = () => {
+      const el = leftGrab()
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      const opts = { bubbles: true, cancelable: true, pointerId: 1, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }
+      el.dispatchEvent(new PointerEvent('pointerdown', opts))
+      el.dispatchEvent(new PointerEvent('pointerup', opts))
+    }
+
+    const sync = () => {
+      if (busy) return
+      const left = leftCollapsed()
+      if (left === null || left === rightCollapsed()) return
+      busy = true
+      if (left) root.setAttribute('data-rail', 'collapsed')
+      else root.removeAttribute('data-rail')
+      busy = false
+    }
+
+    const syncBack = () => {
+      if (busy) return
+      const left = leftCollapsed()
+      if (left === null || left === rightCollapsed()) return
+      busy = true
+      clickLeft()
+      busy = false
+    }
+
+    sync()
+    const fromLeft = new MutationObserver(sync)
+    fromLeft.observe(root, { attributes: true, attributeFilter: ['style'] })
+    const fromRight = new MutationObserver(syncBack)
+    fromRight.observe(root, { attributes: true, attributeFilter: ['data-rail'] })
+    return () => { fromLeft.disconnect(); fromRight.disconnect() }
+  }, [])
   return (
-    <div ref={railRef} className="kol-compose-rail kol-compose-rail--inspector relative">
+    <div ref={railRef} className="kol-compose-rail kol-compose-rail--inspector">
       {/* Same DS grab chrome as the left rail, mirrored to the INNER edge —
-          the one facing the canvas is the one you reach for. */}
-      <div className="kol-sidenav-grab absolute top-0 left-0 bottom-0 z-[1]" {...grabProps} />
+          the one facing the canvas is the one you reach for.
+          `grabProps` SPREADS FIRST and its className is MERGED, not applied
+          over ours: since kol-framework 0.36.0 it carries `kol-rail-grab` (the
+          pill `useGrabEdge` draws), and spreading it last silently replaced the
+          positioning classes — the strip dropped to the screen edge at 40px
+          tall instead of running the rail's inner edge. */}
+      {/* EXACTLY THE LEFT RAIL'S MARKUP — `NavRail` renders `<div ref={grabRef}
+          className="kol-rail-grab" />` and nothing else. The class already
+          carries position/top/bottom/width; the utilities that used to be here
+          (`absolute top-0 left-0 bottom-0`) fought its own `right: -3.5px` and
+          put the strip in the wrong place. The only difference is which edge,
+          and that is one mirror rule in kol-labs.css — not markup. */}
+      <div {...grabProps} />
       {/* inspector-body IS the rail's scroller (kol-editor.css §4) */}
       <div className="kol-compose-inspector-body">
         <LabsParams />

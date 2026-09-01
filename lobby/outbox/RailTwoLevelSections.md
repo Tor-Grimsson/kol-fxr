@@ -81,7 +81,7 @@ On the return: bump, delete `src/shell/AppRail.jsx` and
 `AppShell` from `@kolkrabbi/kol-shell`, drop the direct `gsap` dependency the
 fork needed, and re-measure both levels on `/labs`.
 
-**Remainder here:** delete both forked files, restore the kol-shell import, drop `gsap`, re-measure.
+**Remainder here:** none — adopted 2026-08-28, see below. Returned as: bump to kol-shell 0.17.0, delete `AppRail.jsx` + `AppShellLocal.jsx`, point `AppLayout` at `AppShell`, drop the direct `gsap` dep and the local `MARKS`/`STICK`, re-measure both levels on `/labs`.
 **State:** 🟢 closed 2026-08-28 · **kol-shell 0.17.0**
 
 ## ↩ RETURNED — 2026-08-28

@@ -156,6 +156,15 @@
    single-occupant compose rail does. */
 .kol-editor-rail-body .kol-compose-rail { height: auto; }
 
+/* …EXCEPT the inspector rail, which IS the single occupant and carries the
+   grab edge. The rule above collapsed it to its content — 40px — and the grab
+   strip is `top-0 bottom-0` inside it, so the whole resize edge shrank to 40px
+   with it. The body is a flex column, so it fills by growing, not by height. */
+.kol-editor-rail-body .kol-compose-rail--inspector {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 /* Rail footer — pinned below the scrolling body (transport dock). */
 .kol-editor-rail-footer { flex: 0 0 auto; }
 
