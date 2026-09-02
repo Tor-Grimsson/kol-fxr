@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ColorSwatch, Input, LabeledControl, PopoverPanel, usePopover } from '@kolkrabbi/kol-component'
 import { resolveColor } from '../state'
+import { useControlSize } from '../../params/controlSize'
 
 /* Palette-ref grid shown in the swatch popover. */
 export const PALETTE_REFS = [
@@ -20,6 +21,7 @@ export const PALETTE_REFS = [
  * AutoControls can consume it without an import cycle.
  */
 export function ColorField({ value, onChange, palette, label = 'Color', hideLabel = false, autoValue = null, inline = false }) {
+  const cs = useControlSize()
   const isPaletteRef = typeof value === 'string' && value.startsWith('palette:')
   const isNone       = value == null
   /* A `var(--kol-*)` value is a themed token that flips with light/dark — the
@@ -91,7 +93,7 @@ export function ColorField({ value, onChange, palette, label = 'Color', hideLabe
   const hexInput = (
     <Input
       variant="filled"
-      size="sm"
+      size={cs}
       slotLeft={inline && hideLabel ? swatchBtn : undefined}
       prefix="#"
       chars={6}
@@ -106,8 +108,10 @@ export function ColorField({ value, onChange, palette, label = 'Color', hideLabe
   const row = inline ? (
     <div className={hideLabel ? 'flex items-center gap-2' : 'flex items-center gap-3'}>
       {!hideLabel && swatchBtn}
+      {/* the labs row: uppercase like every SettingsRow beside it (the
+          editor's paint bar hides the label; its inspector is label-above) */}
       {!hideLabel && (
-        <span className="kol-helper-10 tracking-widest text-meta whitespace-nowrap">{label}</span>
+        <span className="kol-helper-10 tracking-widest text-meta whitespace-nowrap">{String(label).toUpperCase()}</span>
       )}
       {!hideLabel && <div className="flex-1" />}
       {hexInput}

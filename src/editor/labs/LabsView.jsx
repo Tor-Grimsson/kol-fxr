@@ -1,5 +1,6 @@
 import '../styles/kol-labs.css'
-import { useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { Button } from '@kolkrabbi/kol-component'
 import { EditorProviders } from '../Editor'
 import EditorShell from '../EditorShell'
 import { useFps } from '../shell/Canvas'
@@ -18,6 +19,8 @@ import { transport } from '../params/transport'
 import { getAppSettings } from '../lib/appSettings'
 import { groupOfPreset, presetById, presetLayerPatch } from '../../loops/registry'
 import { useLabsLayer } from './useLabsLayer'
+import { isMobileDevice, wantsDesktop } from '../mobile/device'
+import { ControlSizeContext } from '../params/controlSize'
 
 /**
  * LabsView — the labs chrome (plan.md Phase 11), mounted at `?view=labs`.
@@ -238,6 +241,42 @@ function LabsRail() {
   )
 }
 
+/* ── TOUCH: THE PARAMS RAIL IS A DRAWER (user, 2026-09-01: "labs needs both
+ * sidebars, just via hamburger menu to open close, otherwise labs doesn't work
+ * on mobile, it has parametric controls") ──
+ *
+ * The LEFT sidebar is the shell's: `AppShell touch="drawer"` (kol-shell 0.31.0,
+ * adopted here the same day) takes the rail off-canvas under 768px with its own
+ * hamburger fixed top-right, and labs' catalog rows ride it as L1/L2 exactly as
+ * on desktop — nothing labs-side to draw. The RIGHT one is this: on a coarse
+ * pointer the params column would take 264 of a 390px screen, so a top bar
+ * carries its toggle (left — the shell's trigger owns the right corner) and
+ * kol-labs.css slides the rail in under the bar, over the stage. Nothing is
+ * re-skinned; the rail is moved off the grid, that is all. */
+const TouchRails = createContext(null)
+
+function LabsTouchBar() {
+  const { paramsOpen, toggleParams } = useContext(TouchRails)
+  return (
+    <div className="flex h-12 shrink-0 items-center border-b border-fg-08 bg-surface-primary px-2">
+      <Button variant="nav" size="lg" iconOnly="panel-right" aria-label="Parameters" pressed={paramsOpen} onClick={toggleParams} />
+    </div>
+  )
+}
+
+/* The desktop rail minus its grab: no `useDragResize`, so nothing stamps a
+ * stored desktop `data-rail` / `--kol-rail-w` on :root, and the footer's
+ * collapsed fold never fires. Open/closed is the wrapper's `data-params`. */
+function LabsTouchRail() {
+  return (
+    <div className="kol-compose-rail kol-compose-rail--inspector">
+      <div className="kol-compose-inspector-body">
+        <LabsParams />
+      </div>
+    </div>
+  )
+}
+
 /* NO TOPBAR (user, 2026-08-27: "skip the top bar … so we can maintain the
  * Kolkrabbi logo and have a much more normal explanation"). Everything it
  * carried has a home: the "Labs" wordmark is the lit row in the rail; Mode
@@ -260,10 +299,22 @@ const LABS_REGISTRY = {
   ],
 }
 
+const LABS_REGISTRY_TOUCH = {
+  ...LABS_REGISTRY,
+  topbar: LabsTouchBar,
+  panels: LABS_REGISTRY.panels.map((p) => (p.Component === LabsRail ? { ...p, Component: LabsTouchRail } : p)),
+}
+
 function LabsBody() {
   const { setAspect, selectedId, select } = useComposeState()
   const { layer, setOnly } = useLabsLayer()
   const bootedRef = useRef(false)
+
+  /* Coarse pointer without the desktop opt-in (the `kol-desktop` key
+   * `mobile/device.js` writes): read once — a device does not change
+   * mid-mount. */
+  const touch = isMobileDevice() && !wantsDesktop()
+  const [paramsOpen, setParamsOpen] = useState(false)
 
   /* ONE RAIL, NOT TWO (user ruling 2026-08-27) — and since 2026-08-28 it is
    * literally ONE COMPONENT: labs no longer hides the shell rail and mounts
@@ -359,10 +410,20 @@ function LabsBody() {
   /* `.kol-editor-labs` scopes kol-labs.css to this chrome; `contents` keeps the
    * wrapper out of layout so the shell's grid is untouched. */
   return (
-    <div className="kol-editor-labs contents">
+    <div className="kol-editor-labs contents" data-touch={touch || undefined} data-params={paramsOpen ? 'open' : undefined}>
       {/* draws nothing — hands labs' categories to the shell rail */}
       <LabsNav />
-      <EditorShell registry={LABS_REGISTRY} />
+      {touch ? (
+        <TouchRails.Provider value={{ paramsOpen, toggleParams: () => setParamsOpen((v) => !v) }}>
+          {/* ONE SIZE GROUP IN THE DRAWER — 'md', the rung where the DS's
+              ladders agree (see controlSize.js). */}
+          <ControlSizeContext.Provider value="md">
+            <EditorShell registry={LABS_REGISTRY_TOUCH} />
+          </ControlSizeContext.Provider>
+        </TouchRails.Provider>
+      ) : (
+        <EditorShell registry={LABS_REGISTRY} />
+      )}
       {/* S = the "Animate any value" card (labs' shortcuts overlay). */}
       <LabsShortcuts />
     </div>

@@ -15,6 +15,7 @@ import { KINETIC_KNOBS, knobOptions, knobRange, randomiseComp } from '../../../k
 import { OPENTYPE_FEATURES } from '../../../kinetic/features'
 import { DEFAULT_POINTS, buildPath } from '../../../kinetic/paths'
 import { THEME_OPTIONS, DEFAULT_THEME, resolveTheme } from '../../../loops/lib/themes'
+import { useControlSize } from '../../params/controlSize'
 
 /**
  * KineticPanel — the kinetic-type layer's control surface (extracted from
@@ -74,6 +75,7 @@ const iconBtnStyle = { lineHeight: 0, display: 'inline-flex', alignItems: 'cente
 const groupTag = (gid, groups) => (gid ? String.fromCharCode(97 + (groups.indexOf(gid) % 26)) : null)
 
 export default function KineticPanel({ layer, setProp, updateLayer, palette, renderAnimate, tab, tabStrip, picker = true }) {
+  const cs = useControlSize()
   const comp = layer.comp ?? { bg: '#0b0d12', instances: [] }
   const insts = comp.instances ?? []
 
@@ -231,7 +233,7 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
           marked={marked} onMark={toggleMark} onGroup={groupMarked} onUngroup={ungroupMarked}
         />
         <Button
-          variant="primary" size="sm" className="w-full"
+          variant="primary" size={cs} className="w-full"
           title="Edit elements on the canvas (click to select, drag to move, corners to scale)"
           onClick={() => window.dispatchEvent(new CustomEvent('kol:kinetic-edit', { detail: { id: layer.id, index: idx } }))}
         >
@@ -245,7 +247,7 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
         <>
           <LabeledControl label="Text">
             <Textarea
-              variant="filled" size="sm" rows={2} axis="y"
+              variant="filled" size={cs} rows={2} axis="y"
               value={insts[idx]?.text ?? ''}
               onChange={(e) => patchInstance(idx, { text: e.target.value })}
             />
@@ -253,7 +255,7 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
           <div className="grid grid-cols-2 gap-2">
             <LabeledControl label="Theme">
               <Dropdown
-                variant="subtle" size="sm" className="w-full"
+                variant="subtle" size={cs} className="w-full"
                 options={THEME_OPTIONS}
                 value={layer.themeId ?? DEFAULT_THEME}
                 onChange={(id) => applyTheme(id, !!layer.themeInvert)}
@@ -274,10 +276,10 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
             palette={palette}
           />
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="primary" size="sm" onClick={onRandomise}>
+            <Button variant="primary" size={cs} onClick={onRandomise}>
               Randomise
             </Button>
-            <Button variant="primary" size="sm" onClick={onRandomiseAll}>
+            <Button variant="primary" size={cs} onClick={onRandomiseAll}>
               All elements
             </Button>
           </div>
@@ -354,6 +356,7 @@ function KineticPicker({ layer, onPreset }) {
  * rows for Group/Ungroup (labs LayoutControls); grouped rows show a tag chip.
  */
 function ElementList({ insts, idx, onSelect, onWrite, marked, onMark, onGroup, onUngroup }) {
+  const cs = useControlSize()
   const uid = () => {
     let n = insts.length
     while (insts.some((x) => x.id === `i${n}`)) n++
@@ -411,12 +414,12 @@ function ElementList({ insts, idx, onSelect, onWrite, marked, onMark, onGroup, o
               <span className="truncate flex-1 min-w-0">{ins.text || '—'}</span>
               {tag && <span className="shrink-0 kol-helper-10 text-meta">grp {tag}</span>}
               <Button iconComponent={EditorIcon}
-                variant="ghost" size="sm" quiet iconOnly="duplicate" iconSize={12}
+                variant="ghost" size={cs} quiet iconOnly="duplicate" iconSize={12}
                 aria-label="Duplicate element" title="Duplicate element"
                 onClick={(e) => { e.stopPropagation(); duplicate(i) }}
               />
               <Button iconComponent={EditorIcon}
-                variant="ghost" size="sm" quiet iconOnly="close" iconSize={10}
+                variant="ghost" size={cs} quiet iconOnly="close" iconSize={10}
                 aria-label="Remove element" title="Remove element"
                 disabled={insts.length <= 1}
                 onClick={(e) => { e.stopPropagation(); remove(i) }}
@@ -426,26 +429,26 @@ function ElementList({ insts, idx, onSelect, onWrite, marked, onMark, onGroup, o
         })}
       </div>
       <div className="grid grid-cols-2 gap-1">
-        <Button variant="primary" size="sm" disabled={marked.length < 2} onClick={onGroup}>
+        <Button variant="primary" size={cs} disabled={marked.length < 2} onClick={onGroup}>
           Group
         </Button>
-        <Button variant="primary" size="sm" disabled={!marked.length} onClick={onUngroup}>
+        <Button variant="primary" size={cs} disabled={!marked.length} onClick={onUngroup}>
           Ungroup
         </Button>
       </div>
       <div className="flex items-center gap-1">
-        <Button iconComponent={EditorIcon} variant="primary" size="sm" className="flex-1" iconLeft="plus" iconSize={12} onClick={add}>
+        <Button iconComponent={EditorIcon} variant="primary" size={cs} className="flex-1" iconLeft="plus" iconSize={12} onClick={add}>
           Add element
         </Button>
         <Button
-          variant="ghost" size="sm" quiet style={iconBtnStyle}
+          variant="ghost" size={cs} quiet style={iconBtnStyle}
           aria-label="Move element up" title="Move element up"
           disabled={idx <= 0} onClick={() => move(-1)}
         >
           <EditorIcon name="chevron-down" size={12} style={{ transform: 'rotate(180deg)' }} />
         </Button>
         <Button
-          variant="ghost" size="sm" quiet style={iconBtnStyle}
+          variant="ghost" size={cs} quiet style={iconBtnStyle}
           aria-label="Move element down" title="Move element down"
           disabled={idx >= insts.length - 1} onClick={() => move(1)}
         >
@@ -463,6 +466,7 @@ function ElementList({ insts, idx, onSelect, onWrite, marked, onMark, onGroup, o
  * trade-off as "Edit in Pattern mode"). min/max resolve via knobRange (the
  * VF axis knobs track the instance font's real fvar range). */
 function KineticKnob({ knob: k, comp, idx, palette, onWrite }) {
+  const cs = useControlSize()
   const value = k.get(comp, idx)
   const write = (v) => onWrite(k, v)
   if (k.type === 'color') {
@@ -471,7 +475,7 @@ function KineticKnob({ knob: k, comp, idx, palette, onWrite }) {
   if (k.type === 'select') {
     return (
       <LabeledControl label={k.label}>
-        <Dropdown variant="subtle" size="sm" className="w-full" options={knobOptions(k, comp, idx)} value={value} onChange={write} />
+        <Dropdown variant="subtle" size={cs} className="w-full" options={knobOptions(k, comp, idx)} value={value} onChange={write} />
       </LabeledControl>
     )
   }
@@ -487,6 +491,7 @@ function KineticKnob({ knob: k, comp, idx, palette, onWrite }) {
  * segment per layer (1 = the primary `motion`, 2.. = the `motions` extras),
  * plus add/remove. The single-motion knobs below edit the selected layer. */
 function MotionStack({ motions, mIdx, onSelect, onAdd, onRemove }) {
+  const cs = useControlSize()
   const options = [
     { value: '0', label: '1' },
     ...motions.map((_, i) => ({ value: String(i + 1), label: String(i + 2) })),
@@ -499,11 +504,11 @@ function MotionStack({ motions, mIdx, onSelect, onAdd, onRemove }) {
           <SegmentedToggle value={String(mIdx)} onChange={(v) => onSelect(Number(v))} options={options} />
         </div>
         <Button iconComponent={EditorIcon}
-          variant="ghost" size="sm" quiet iconOnly="plus" iconSize={12}
+          variant="ghost" size={cs} quiet iconOnly="plus" iconSize={12}
           aria-label="Add motion layer" title="Add motion layer" onClick={onAdd}
         />
         <Button iconComponent={EditorIcon}
-          variant="ghost" size="sm" quiet iconOnly="close" iconSize={10}
+          variant="ghost" size={cs} quiet iconOnly="close" iconSize={10}
           aria-label="Remove motion layer" title="Remove motion layer (the primary can only be set to None)"
           disabled={mIdx === 0} onClick={onRemove}
         />
@@ -576,6 +581,7 @@ function OpenTypeMenu({ value = {}, onToggle }) {
  * PathControls' Points actions). The preview curve is the same Catmull-Rom
  * build the engine walks (buildPath 'custom'). */
 function CustomPathPoints({ inst, layer, onPoints }) {
+  const cs = useControlSize()
   const boxRef = useRef(null)
   const drag = useRef(null)
   const stored = inst?.path?.points
@@ -629,10 +635,10 @@ function CustomPathPoints({ inst, layer, onPoints }) {
         ))}
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <Button variant="primary" size="sm" onClick={() => onPoints([...points, [0.5, 0.5]])}>
+        <Button variant="primary" size={cs} onClick={() => onPoints([...points, [0.5, 0.5]])}>
           Add point
         </Button>
-        <Button variant="primary" size="sm" disabled={points.length <= 2} onClick={() => onPoints(points.slice(0, -1))}>
+        <Button variant="primary" size={cs} disabled={points.length <= 2} onClick={() => onPoints(points.slice(0, -1))}>
           Remove point
         </Button>
       </div>

@@ -16,6 +16,7 @@ import {
 import { MAX_FILTERS, resolvedChain } from '../filterChain'
 import { categoryOf, presetParamOf, presetPatchFor, effectHost, flatCategories } from './effectCategories'
 import Hint from '../../components/Hint'
+import { useControlSize } from '../../params/controlSize'
 
 /**
  * EffectsPanel — the Effects tab of the right rail, now hosting the labs
@@ -300,7 +301,8 @@ function LayerEffects({ layer }) {
  * the range clamp all behave exactly as they do for a generator — one
  * implementation, not a second dialect.
  */
-export function StageRolls({ def, view, tab, onPatch }) {
+export function StageRolls({ def, view, tab, onPatch, inline = false }) {
+  const cs = useControlSize()
   const seed = useRollSeed(view)
   const motion = tab === 'anim'
   /* Split by TAB, not by section name — the same rule AutoControls renders
@@ -326,9 +328,9 @@ export function StageRolls({ def, view, tab, onPatch }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <SeedField seed={seed} />
+      <SeedField seed={seed} inline={inline} />
       {allParams.length > 0 && (
-        <Button variant="primary" size="sm" className="w-full"
+        <Button variant="primary" size={cs} className="w-full"
           onClick={(e) => (e.altKey ? reset(allParams) : roll(allParams))}>
           {motion ? 'Randomize motion' : 'Randomize all'}
         </Button>
@@ -337,7 +339,7 @@ export function StageRolls({ def, view, tab, onPatch }) {
         /* Odd counts keep the lone half-width cell — Generate's grid does. */
         <div className="grid grid-cols-2 gap-2">
           {scopes.map((sc) => (
-            <Button key={sc.id} variant="primary" size="sm"
+            <Button key={sc.id} variant="primary" size={cs}
               onClick={(e) => (e.altKey ? reset(sc.params) : roll(sc.params, sc))}>
               {sc.label}
             </Button>
@@ -394,6 +396,7 @@ function StageRow({ stage, selected, onSelect, onToggle, onRemove, onUp, onDown,
  * is its skin — enable becomes the DS ToggleSwitch and the sliders go
  * label-left with a value readout (the labs sweep card). */
 export function SweepStack({ sweeps, onChange, inline = false }) {
+  const cs = useControlSize()
   const shapeLabel = (v) => SWEEP_SHAPE_OPTIONS.find((s) => s.value === v)?.label ?? v
   const add = (preset) => onChange([...sweeps, preset ? makeSweep(preset.shape, preset) : makeSweep()])
   const removeAt = (i) => onChange(sweeps.filter((_, j) => j !== i))
@@ -433,7 +436,7 @@ export function SweepStack({ sweeps, onChange, inline = false }) {
                   <span className={`kol-helper-10 tracking-widest ${enabled ? 'text-emphasis' : 'text-meta'}`}>
                     {shapeLabel(sw.shape ?? 'linear')}
                   </span>
-                  <ToggleSwitch size="sm" checked={enabled} onChange={(v) => setField(i, 'enabled', v)} />
+                  <ToggleSwitch size={cs} checked={enabled} onChange={(v) => setField(i, 'enabled', v)} />
                   <div className="flex-1" />
                 </>
               ) : (
@@ -481,7 +484,7 @@ export function SweepStack({ sweeps, onChange, inline = false }) {
           </div>
         )
       })}
-      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="plus" iconSize={12} onClick={() => add()}>
+      <Button iconComponent={EditorIcon} variant="primary" size={cs} className="w-full" iconLeft="plus" iconSize={12} onClick={() => add()}>
         Add custom sweep
       </Button>
     </div>

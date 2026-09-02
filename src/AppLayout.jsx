@@ -12,10 +12,12 @@ import { useRailExtras, RAIL_EXTRA_PREFIX } from './railExtras'
  *
  * EVERYTHING SITS UNDER THE RAIL (user ruling 2026-08-27). `railToggleKey`
  * hides it (`\` — H is the editor's layer-visibility key) and the rail comes
- * back on every route change; `touch="bare"` renders the routes with no shell
- * on a coarse-pointer device unless localStorage `kol-desktop` is '1' — the
- * key `mobile/device.js` writes. Both are AppShell's since kol-shell 0.8.0
- * (ShellHomeSystem); the logomark ships from kol-brand.
+ * back on every route change; `touch="drawer"` (kol-shell 0.31.0) takes the
+ * rail OFF-CANVAS under 768px — a hamburger top-right brings it in over a
+ * scrim, and labs' catalog rows ride it exactly as they do the desktop rail.
+ * It was `bare` until 2026-09-01: no shell at all on a coarse pointer, which
+ * left a phone's `/labs` with nowhere to render its nav (user: "labs needs
+ * both sidebars, just via hamburger menu"). The logomark ships from kol-brand.
  *
  * ⌥-DIGIT IS LOCAL, NOT AppShell's `navKeys` (user, 2026-08-28: "alt 1 should
  * short to home, library 3 4 5"). AppShell maps ⌥n to `items[n-1]`, which skips
@@ -116,7 +118,15 @@ export default function AppLayout() {
   /* Every hop is an SPA transition since 2026-08-27 — the chromes are lazy
      routes that mount and unmount like any page. */
   const onNavigate = (path) => {
-    if (path?.startsWith(RAIL_EXTRA_PREFIX)) { extras.dispatch?.(path); return }
+    if (path?.startsWith(RAIL_EXTRA_PREFIX)) {
+      /* A labs pick swaps the layer without a route change, and the touch
+         drawer only closes itself on `currentPath` — so it stayed open over
+         the thing just picked. The scrim is the DS's own close control; press
+         it. ponytail: DOM poke — replace with a shell seam if kol-shell ships
+         one (a drawer that closes on any onNavigate, or a setDrawerOpen). */
+      if (extras.dispatch?.(path)) document.querySelector('.kol-shell-drawer-scrim')?.click()
+      return
+    }
     navigate(path)
   }
 
@@ -159,7 +169,7 @@ export default function AppLayout() {
          since kol-shell 0.25.0; the local `lastPage` ref it replaced is gone.
          No `settingsKey` — `SettingsKey` below is the gesture (see its note). */
       settingsPath="/settings"
-      touch="bare"
+      touch="drawer"
       pageWash="var(--kol-fg-02)"
     >
       <SettingsKey />

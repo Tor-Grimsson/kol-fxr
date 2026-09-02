@@ -23,6 +23,7 @@ import { computeRoll, allScopeParams } from '../params/rolls'
 import { useAppSettings, getAppSettings, setAppSetting } from '../lib/appSettings'
 import { useLabsLayer } from './useLabsLayer'
 import Hint from '../components/Hint'
+import { useControlSize, stripClamp } from '../params/controlSize'
 
 /* R = reset (re-pick the selection at its defaults) · Shift+R = reroll —
  * labs' keys, bound by whichever surface is mounted (one layer, one surface).
@@ -70,6 +71,14 @@ const GEN_TABS = [
   { value: 'generate', label: 'Generate' },
   { value: 'style',    label: 'Style' },
   { value: 'anim',     label: 'Animation' },
+]
+/* the touch rail's 264 gives three cells ~77px each — "Generate" and
+   "Animation" at mono-14 do not fit, so the strip reads short there (user,
+   2026-09-01: "shorten gen style ani") */
+const GEN_TABS_TOUCH = [
+  { value: 'generate', label: 'Gen' },
+  { value: 'style',    label: 'Style' },
+  { value: 'anim',     label: 'Anim' },
 ]
 
 /* The trio row — labs' RailVariantNav: BARE kol-helper-12 text links,
@@ -141,6 +150,7 @@ function Surface({ chips, active, onPick, spread, pills, title, tabStrip, preStr
  * EffectsPanel: stage params spread over a layer-shaped bag, writes rebuild
  * `filters` through coalesced history. Labs is one-effect, so stage 0. */
 function EffectSurface({ layer, showMod }) {
+  const cs = useControlSize()
   const [tab, setTab] = useState('effect')
   /* The nav's effect pick flips back to the Effect tab. */
   useEffect(() => {
@@ -206,7 +216,7 @@ function EffectSurface({ layer, showMod }) {
       })),
     ]
     return (
-      <Surface title="Effects" fx tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size="sm" />}>
+      <Surface title="Effects" fx tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size={cs} className={stripClamp(cs)} />}>
         {tab === 'effect' && (
           <>
             <LabeledControlSection label="Effect Stack" divided>
@@ -216,7 +226,7 @@ function EffectSurface({ layer, showMod }) {
             <Divider />
             <LabeledControlSection label={rackGroup.label} divided>
               <Dropdown
-                variant="subtle" size="sm" className="w-full"
+                variant="subtle" size={cs} className="w-full"
                 options={rackOptions}
                 value=""
                 disabled={chain.length >= MAX_FILTERS}
@@ -239,7 +249,7 @@ function EffectSurface({ layer, showMod }) {
   /* Bare photo (uploaded, no effect picked yet): fit params, nothing else. */
   if (!stage) {
     return (
-      <Surface chips={chips} active={null} onPick={onChip} spread={isTrio} fx tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size="sm" />}>
+      <Surface chips={chips} active={null} onPick={onChip} spread={isTrio} fx tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size={cs} className={stripClamp(cs)} />}>
         <AutoControls schema={PHOTO_SCHEMA} layer={layer} setProp={edit.setProp} palette={palette} renderAnimate={(p) => <BindDot layer={layer} param={p} setProp={edit.setProp} />} tab={tab === 'anim' ? 'anim' : 'style'} emptyHint="Pick an effect from the nav." />
       </Surface>
     )
@@ -269,7 +279,7 @@ function EffectSurface({ layer, showMod }) {
   return (
     <Surface chips={chips} active={stage.id} onPick={onChip} spread={isTrio} title={title} fx
       preStrip={<SourceStrip layer={layer} />}
-      tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size="sm" />}>
+      tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size={cs} className={stripClamp(cs)} />}>
       {tab === 'effect' && (
         <>
           {head.length > 0 && <AutoControls schema={head} {...auto} />}
@@ -278,7 +288,7 @@ function EffectSurface({ layer, showMod }) {
               internal gap stays the tight one. */}
           <LabeledControlSection divided>
             <AutoControls schema={cluster} {...auto} />
-            <StageRolls def={stage.def} view={paramsView} tab="effect" onPatch={patchStageParams} />
+            <StageRolls inline def={stage.def} view={paramsView} tab="effect" onPatch={patchStageParams} />
           </LabeledControlSection>
           <Divider />
           {cut < params.length && (
@@ -297,7 +307,7 @@ function EffectSurface({ layer, showMod }) {
       {tab === 'anim' && (
         <>
           <AutoControls schema={stage.def.params} {...auto} tab="anim" />
-          <StageRolls def={stage.def} view={paramsView} tab="anim" onPatch={patchStageParams} />
+          <StageRolls inline def={stage.def} view={paramsView} tab="anim" onPatch={patchStageParams} />
           {stage.def.sweeps && (
             <SweepStack
               sweeps={Array.isArray(stage.params.sweeps) ? stage.params.sweeps : []}
@@ -316,6 +326,7 @@ function EffectSurface({ layer, showMod }) {
  * `from` slices the chain — 0 for the rack (the stack IS the page), 1 for a
  * page's Post-Processing block. */
 function StackCards({ chain, from = 0, layer, hostView, toggleFilter, removeFilter, setStagePropAt, palette, showMod }) {
+  const cs = useControlSize()
   return chain.slice(from).map((s, i) => {
     const idx = i + from
     const enabled = s.enabled !== false
@@ -325,7 +336,7 @@ function StackCards({ chain, from = 0, layer, hostView, toggleFilter, removeFilt
       <div key={s.key ?? idx} className="flex flex-col gap-2 p-2 rounded bg-fg-04">
         <div className="flex items-center gap-2">
           <ToggleSwitch
-            size="sm" checked={enabled}
+            size={cs} checked={enabled}
             onChange={() => toggleFilter(layer.id, idx)}
             label={s.def?.label ?? s.id}
           />
@@ -355,6 +366,7 @@ function StackCards({ chain, from = 0, layer, hostView, toggleFilter, removeFilt
  * effect. The adder draws from labs' CANVAS_FX_DEFS equivalent — the rack's
  * Post-Processing category — never the whole catalog. ── */
 function PostProcessing({ chain, layer, hostView, addFilter, removeFilter, toggleFilter, setStagePropAt, palette, showMod }) {
+  const cs = useControlSize()
   const options = [
     { value: '', label: 'Add FX...' },
     ...postProcessingFilters(FILTERS).map((f) => ({ value: f.id, label: f.label ?? f.id })),
@@ -367,7 +379,7 @@ function PostProcessing({ chain, layer, hostView, addFilter, removeFilter, toggl
         setStagePropAt={setStagePropAt} palette={palette} showMod={showMod}
       />
       <Dropdown
-        variant="subtle" size="sm" className="w-full"
+        variant="subtle" size={cs} className="w-full"
         options={options}
         value=""
         disabled={chain.length >= MAX_FILTERS}
@@ -382,6 +394,7 @@ function PostProcessing({ chain, layer, hostView, addFilter, removeFilter, toggl
  * dropdown pair (LoopPicker = labs' Section "Preset"). No chips — the one
  * exception is Para Type's glyph set, labs' own pill ChipsRow. ── */
 function GenerativeSurface({ layer, showMod, tree }) {
+  const cs = useControlSize()
   const [tab, setTab] = useState('generate')
   const { updateLayer, palette } = useComposeState()
   const { setOnly } = useLabsLayer()
@@ -411,7 +424,7 @@ function GenerativeSurface({ layer, showMod, tree }) {
     <Surface
       title={groupLabel} chips={chips} active={layer.presetId} onPick={onChip} pills
       preStrip={layer.loopGroup === 'distress' ? <SourceStrip layer={layer} /> : undefined}
-      tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={GEN_TABS} size="sm" />}
+      tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={cs === 'sm' ? GEN_TABS : GEN_TABS_TOUCH} size={cs} className={stripClamp(cs)} />}
     >
       <LoopFields
         layer={layer} setProp={edit.setProp} patch={edit.patch} updateLayer={updateLayer}
@@ -425,6 +438,7 @@ function GenerativeSurface({ layer, showMod, tree }) {
 /* ── Kinetic: labs' composition shape — title, three tabs, the TreePicker
  * stack restored (labs picks kinetic scenes via nav + pickers, no chips). ── */
 function KineticSurface({ layer, showMod }) {
+  const cs = useControlSize()
   const [tab, setTab] = useState('generate')
   const { updateLayer, palette } = useComposeState()
   const { setOnly } = useLabsLayer()
@@ -445,7 +459,7 @@ function KineticSurface({ layer, showMod }) {
   )
 
   return (
-    <Surface title={title} tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={GEN_TABS} size="sm" />}>
+    <Surface title={title} tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={cs === 'sm' ? GEN_TABS : GEN_TABS_TOUCH} size={cs} className={stripClamp(cs)} />}>
       <KineticPanel
         layer={layer} setProp={edit.setProp} updateLayer={updateLayer} palette={palette}
         /* noop, not undefined — MorphBlendKnob calls it unconditionally */

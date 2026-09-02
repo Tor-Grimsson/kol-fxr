@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <!-- kol-theme-boot: THEME_BOOT_SCRIPT from kol-framework, injected by vite.config.js -->
     <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- maximum-scale=1 stops iOS Safari's zoom-on-focus for fields under 16px
+         (the touch rail runs the md rung at 14px, see controlSize.js); iOS ≥10
+         still pinch-zooms regardless, and the stage has its own pinch. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
     <title>Effexor FXR</title>
   </head>

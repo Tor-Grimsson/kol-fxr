@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { LabeledControl } from '@kolkrabbi/kol-component'
+import { LabeledControl, SettingsRow } from '@kolkrabbi/kol-component'
 import { NumberField } from '../compose/inspectors/NumberField'
 import { mulberry32, randomSeed, randomizeSchema, mergeRoll } from '../lib/rng'
 import { presetsInGroup, presetLayerPatch, isToolPreset } from '../../loops/registry'
 import { resolvedChain } from '../compose/filterChain'
 import { visibleParams } from './schema'
+import { useControlSize, RAIL_LABEL_W } from './controlSize'
 
 /**
  * rolls — the scoped, seeded Randomize surface shared by the inspector
@@ -162,17 +163,23 @@ export function useRollSeed(layer) {
 
 /** The editable seed field — commit (Enter/blur) arms the seed for the next
  * roll press. Draft/commit via the shared NumberField idiom. */
-export function SeedField({ seed }) {
-  return (
-    <LabeledControl label="Seed">
+export function SeedField({ seed, inline = false }) {
+  const cs = useControlSize()
+  const field = (
       <NumberField
-        variant="filled" size="sm" chars={10}
+        variant="filled" size={cs} chars={10}
         value={seed.value}
         onCommit={(raw) => {
           const n = Math.floor(Number(raw))
           if (Number.isFinite(n) && n >= 0) seed.commit(n)
         }}
       />
-    </LabeledControl>
   )
+  /* `inline` (the labs skin) is the DS SettingsRow — the uppercase helper
+   * label in the rail's column — the row every other labs control renders.
+   * Two branches, not a per-render wrapper component: a new component type
+   * each render would remount the field and drop the draft mid-type. */
+  return inline
+    ? <SettingsRow label="Seed" align="fill" labelWidth={RAIL_LABEL_W}>{field}</SettingsRow>
+    : <LabeledControl label="Seed">{field}</LabeledControl>
 }

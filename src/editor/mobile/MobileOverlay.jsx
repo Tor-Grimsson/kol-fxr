@@ -54,7 +54,13 @@ const TABS_MEDIA = TABS_LOOP.filter((t) => t.value !== 'generate')
  * Same overflow clamp as the tab strip below (a flex cell's default
  * min-width:auto pins it to its nowrap text — the strip-must-never-overflow
  * law), tighter padding since four labels share a phone width. */
-const STRIP_CLAMP = '[&_.kol-seg-cell]:min-w-0 [&_.kol-seg-cell]:px-1 [&_.kol-seg-cell]:overflow-hidden'
+/* …and NO HOVER ON TOUCH. `.kol-seg-cell:hover` (kol-theme) is unguarded, and
+ * iOS keeps :hover on the last element tapped until the next touch — so the
+ * scope you pressed stayed lit at oq-64 and read as a SELECTED tab on a strip
+ * that has no selection (user, 2026-09-01: "wrong selected states"). Rest ink
+ * wins where hover cannot exist. The token, not `.text-oq-48` — that class is
+ * kol-theme CSS, not a utility, so a variant on it generates nothing. */
+const STRIP_CLAMP = '[&_.kol-seg-cell]:min-w-0 [&_.kol-seg-cell]:px-1 [&_.kol-seg-cell]:overflow-hidden [@media(hover:none)]:[&_.kol-seg-cell:hover]:text-[var(--kol-oq-48)]'
 
 /* Width-aware row packing — a blind 4-per-row mangled the long labels
  * ("Motion Frame" → "otion Fram" on a 390 screen). Cells share a strip
@@ -295,6 +301,15 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
 
           {activeTab === 'effects' && (
             <div className="flex flex-col gap-2 pt-3">
+              {/* THE SAME SHAPE AS GENERATE (user, 2026-09-01: "reference how it's
+                  done in Generate"): the actions on top — add, then the roll —
+                  and the scoped strips UNDER the thing they scope. They sat
+                  below the chain, so the strips read as tabs with nothing
+                  behind them and the Randomize they belong to was last. */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="primary" size="lg" onClick={() => setShowFx(true)}>Add effect</Button>
+                <Button variant="primary" size="lg" disabled={!chain.length} onClick={rollFilters}>Randomize</Button>
+              </div>
               {/* THE CHAIN, IN RENDER ORDER. The array is already tier-sorted
                   by addFilter (canvas → pixi GPU → the single terminal GL
                   engine) and the renderer applies stages in tier order
@@ -334,10 +349,6 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
                   </div>
                 )
               })}
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="primary" size="lg" onClick={() => setShowFx(true)}>Add effect</Button>
-                <Button variant="primary" size="lg" disabled={!chain.length} onClick={rollFilters}>Randomize</Button>
-              </div>
             </div>
           )}
 

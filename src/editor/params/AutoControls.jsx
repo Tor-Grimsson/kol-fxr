@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Input, Dropdown, ViewToggle, ToggleSwitch, LabeledControl, SettingsRow, LabeledControlSection, Textarea } from '@kolkrabbi/kol-component'
+import { Input, Dropdown, ViewToggle, ToggleSwitch, SegmentedToggle, LabeledControl, SettingsRow, LabeledControlSection, Textarea } from '@kolkrabbi/kol-component'
 import Hint from '../components/Hint'
 import { visibleParams, isAnimatable, paramTab, paramSection } from './schema'
 import { isBinding, resolveValue } from './resolve'
 import { useTransportCtx } from './transport'
 import { compileExpr } from './expr'
 import { ColorField } from '../compose/inspectors/ColorField'
+import { useControlSize, RAIL_LABEL_W, stripClamp } from './controlSize'
 
 /**
  * AutoControls — renders a layer's tunable params from a declared schema
@@ -131,6 +132,7 @@ export default function AutoControls({ schema, layer, setProp, palette, renderAn
  * and the box shows the expression (editable) or the live value. Subscribes to
  * the transport only when bound, so unbound params pay nothing. */
 function RangeField({ param: p, layer, setProp }) {
+  const cs = useControlSize()
   const raw = layer[p.key]
   const bound = isBinding(raw)
   const boundExpr = bound && raw.bind === 'mod' && raw.source === 'expr'
@@ -178,7 +180,10 @@ function RangeField({ param: p, layer, setProp }) {
         style={bound ? { opacity: 0.7 } : undefined}
       />
       <Input
-        type="text" variant="filled" size="sm" chars={6}
+        /* 5 chars holds "0.025" and a 4-digit value; 6 was a third of a touch
+           row (user, 2026-09-01: "unnecessarily wide"). An expression still
+           types in — the field scrolls. */
+        type="text" variant="filled" size={cs} chars={5}
         value={draft}
         title="Number sets a constant · an expression like sin(t) binds it"
         onFocus={(e) => { setEditing(true); e.target.select() }}
@@ -194,10 +199,12 @@ function RangeField({ param: p, layer, setProp }) {
   )
 }
 
-/* labs' inline label column — wide enough for "ORIGINAL COLOR". */
-const INLINE_LABEL_W = 96
+/* the labs rail's label column — `RAIL_LABEL_W`, shared with the picker stack
+   and LoopFields' rows so every control in the rail starts on one x */
+const INLINE_LABEL_W = RAIL_LABEL_W
 
 function ParamControl({ param: p, layer, setProp, palette, bound, animate, inline }) {
+  const cs = useControlSize()
   const raw = layer[p.key]
   const value = raw === undefined ? p.default : raw
 
@@ -218,6 +225,12 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
   let rowInline = inline
   let control = null
   if (p.type === 'range') {
+    /* ON TOUCH THE SLIDER GETS THE ROW. Any rung above the desktop's 'sm'
+     * is the touch rail, where the box plus the 96px label column left a
+     * 32px slider (user, 2026-09-01: "no space for the slider") — so the
+     * label goes above and the track takes the width. Desktop keeps the
+     * inline ruling. */
+    if (cs !== 'sm') rowInline = false
     /* Direct input + live modulation readout, both in one field (RangeField):
      * type a number for a constant or an expression to bind it; a bound track
      * shows the resolved value moving. */
@@ -225,15 +238,28 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
   } else if (p.type === 'select') {
     control = (
       <Dropdown
-        variant="subtle" size="sm" className="w-full"
+        variant="subtle" size={cs} className="w-full"
         options={p.options ?? []}
         value={value}
         onChange={(v) => setProp(p.key, p.numeric ? Number(v) : v)}
       />
     )
   } else if (p.type === 'segmented') {
-    control = (
+    /* THE LABS SKIN HAS ONE SEGMENTED CONTROL (user, 2026-09-01): the DS
+     * SegmentedToggle — one group radius, dividers, the sunken selected cell
+     * (kol-labs.css) — for tab strips and option pairs alike. ViewToggle's
+     * bare tiles beside it were two answers to one question. The editor
+     * keeps ViewToggle with the rest of its inspector. */
+    control = inline ? (
+      <SegmentedToggle
+        size={cs} className={`w-full ${stripClamp(cs) ?? ''}`}
+        options={p.options ?? []}
+        value={value}
+        onChange={(v) => setProp(p.key, v)}
+      />
+    ) : (
       <ViewToggle
+        size={cs}
         options={p.options ?? []}
         viewMode={value}
         onViewChange={(v) => setProp(p.key, v)}
@@ -248,11 +274,23 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
       /* The switch sits at the row's right edge; the label column is
        * LabeledControl's, same as every other inline row. */
       /* No local justify-end wrapper: SettingsRow's align="end" owns it. */
-      control = <ToggleSwitch size="sm" checked={!!value} onChange={(v) => setProp(p.key, v)} />
+      control = <ToggleSwitch size={cs} checked={!!value} onChange={(v) => setProp(p.key, v)} />
+    } else if (inline) {
+      /* labelled pair in the labs skin: the same SegmentedToggle as
+       * `segmented`, spanning the control column like a dropdown */
+      control = (
+        <SegmentedToggle
+          size={cs} className={`w-full ${stripClamp(cs) ?? ''}`}
+          options={[{ value: 'off', label: offLabel }, { value: 'on', label: onLabel }]}
+          value={value ? 'on' : 'off'}
+          onChange={(v) => setProp(p.key, v === 'on')}
+        />
+      )
     } else {
       rowInline = false
       control = (
         <ViewToggle
+          size={cs}
           options={[{ value: 'off', label: offLabel }, { value: 'on', label: onLabel }]}
           viewMode={value ? 'on' : 'off'}
           onViewChange={(v) => setProp(p.key, v === 'on')}
@@ -265,7 +303,7 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
      * 2026-07-08 chrome law, and text inputs are filled in this app. */
     control = (
       <Textarea
-        variant="filled" size="sm" rows={p.rows ?? 2} axis="y"
+        variant="filled" size={cs} rows={p.rows ?? 2} axis="y"
         value={value ?? ''}
         onChange={(e) => setProp(p.key, e.target.value)}
         placeholder={p.placeholder}
@@ -282,7 +320,10 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
   /* A bare switch is the only control that sits at the row's right edge;
    * everything else spans it. r2b2's rule, verbatim. */
   const align = p.type === 'toggle' && !p.labels ? 'end' : 'fill'
+  /* The labs skin has ONE label convention — SettingsRow's uppercase helper —
+   * so a row that falls back to label-above there (a textarea, a touch range)
+   * uppercases too, instead of reading as the odd sentence-case line out. */
   return rowInline
     ? <SettingsRow label={p.label} hint={hint} align={align} labelWidth={INLINE_LABEL_W}>{body}</SettingsRow>
-    : <LabeledControl label={p.label} hint={hint} labelWidth={INLINE_LABEL_W}>{body}</LabeledControl>
+    : <LabeledControl label={inline ? String(p.label).toUpperCase() : p.label} hint={hint} labelWidth={INLINE_LABEL_W}>{body}</LabeledControl>
 }

@@ -6,6 +6,7 @@ import { proxied, isVideoType } from '../library/mediaLibrary'
 import { useLayerEdit } from '../compose/useLayerEdit'
 import { saveClip } from '../lib/clipStore'
 import { ensureWebcam } from '../lib/webcam'
+import { useControlSize, stripClamp } from '../params/controlSize'
 
 /**
  * LabsSourcePicker — the two-pane empty state an effect shows while its
@@ -98,6 +99,7 @@ function useSourceInput(layer) {
  * both yield image OR video depending on the file, so there is no honest way
  * to map a live `srcType` back onto one cell. */
 export function SourceStrip({ layer }) {
+  const cs = useControlSize()
   const src = useSourceInput(layer)
   return (
     <>
@@ -105,8 +107,9 @@ export function SourceStrip({ layer }) {
         value={null}
         onChange={(v) => ({ library: src.openLibrary, upload: src.openUpload, camera: src.openCamera }[v]?.())}
         options={src.svgMode ? SVG_SOURCE_OPTIONS : SOURCE_OPTIONS}
-        size="sm"
+        size={cs}
         ariaLabel="Source"
+        className={stripClamp(cs)}
       />
       {src.nodes}
     </>

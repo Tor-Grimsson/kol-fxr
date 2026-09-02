@@ -13,7 +13,6 @@ import { isTabletSized, goDesktop, isMobileDevice, wantsDesktop } from './device
 import { goLabs, modeById } from '../mode'
 import { MODE_ICONS } from '../labs/catalog'
 import CategoryScreen, { SPREAD } from './CategoryScreen'
-import LabsBrowseScreen from './LabsBrowseScreen'
 import MobileOverlay from './MobileOverlay'
 
 /**
@@ -30,16 +29,18 @@ import MobileOverlay from './MobileOverlay'
  * clobbered. Reload = fresh start.
  */
 
-function EntryScreen({ onGenerate, onLabs }) {
+function EntryScreen({ onGenerate }) {
   /* A welcome CARD, not three floating buttons (user ruling 2026-08-12):
    * the chrome chooser — one line, then the doors. Media insert lives on
    * the category screen (it's a randomiser action, not a chrome).
    *
-   * Every touch device gets a Labs door now (plan 02 step 5). On a tablet it
-   * routes to the real labs chrome, which a tablet can drive; on a phone the
-   * desktop rails are unusable, so the door opens the in-chrome labs browse
-   * (LabsBrowseScreen) over this same stage instead. The Editor door stays
-   * tablet-only — the compositor needs a fine pointer. */
+   * Every touch device gets a Labs door, and it is THE labs chrome (user,
+   * 2026-09-01: "labs needs both sidebars … it has parametric controls, not
+   * the same setup as generator"). Until then a phone's door opened the
+   * catalog over this stage and landed on the randomiser sheet — a generator
+   * UI wearing labs' name. `/labs` now carries its own touch layout (the two
+   * rails as drawers, see LabsView), so both device sizes route there. The
+   * Editor door stays tablet-only — the compositor needs a fine pointer. */
   return (
     <div className="fixed inset-y-0 right-0 left-[var(--fxr-rail,0px)] kol-overlay-scrim flex flex-col items-center justify-center p-6" style={{ zIndex: 'var(--kol-z-modal)' }}>
       <div
@@ -52,20 +53,14 @@ function EntryScreen({ onGenerate, onLabs }) {
         </div>
         <div className="flex flex-col gap-2">
           <Button variant="primary" size="lg" className={SPREAD} iconLeft={MODE_ICONS.randomiser} iconRight={MODE_ICONS.randomiser} onClick={onGenerate}>Generate</Button>
-          {isTabletSized() ? (
-            <>
-              <Button variant="primary" size="lg" className={SPREAD} iconLeft={MODE_ICONS.editor} iconRight={MODE_ICONS.editor} onClick={goDesktop}>
-                {modeById('editor').label}
-              </Button>
-              <Button variant="primary" size="lg" className={SPREAD} iconLeft={MODE_ICONS.labs} iconRight={MODE_ICONS.labs} onClick={goLabs}>
-                {modeById('labs').label}
-              </Button>
-            </>
-          ) : (
-            <Button variant="primary" size="lg" className={SPREAD} iconLeft={MODE_ICONS.labs} iconRight={MODE_ICONS.labs} onClick={onLabs}>
-              {modeById('labs').label}
+          {isTabletSized() && (
+            <Button variant="primary" size="lg" className={SPREAD} iconLeft={MODE_ICONS.editor} iconRight={MODE_ICONS.editor} onClick={goDesktop}>
+              {modeById('editor').label}
             </Button>
           )}
+          <Button variant="primary" size="lg" className={SPREAD} iconLeft={MODE_ICONS.labs} iconRight={MODE_ICONS.labs} onClick={goLabs}>
+            {modeById('labs').label}
+          </Button>
         </div>
       </div>
     </div>
@@ -79,7 +74,7 @@ function MobileBody() {
      chooser — so the randomiser opens on the generator list; the entry card
      is for touch-only devices, which have no rail (user, 2026-08-27). */
   const start = () => (isMobileDevice() && !wantsDesktop() ? 'entry' : 'category')
-  const [screen, setScreen] = useState(start)   /* entry | category | labs | live */
+  const [screen, setScreen] = useState(start)   /* entry | category | live */
   const [activeId, setActiveId] = useState(null)
   const [stageFit, setStageFit] = useState('contain')  /* contain = 4:5 letterbox · cover = fill display */
 
@@ -241,16 +236,10 @@ function MobileBody() {
         <OutputStage fit={stageFit} />
       </div>
       {screen === 'entry' && (
-        <EntryScreen onGenerate={() => setScreen('category')} onLabs={() => setScreen('labs')} />
+        <EntryScreen onGenerate={() => setScreen('category')} />
       )}
       {screen === 'category' && (
         <CategoryScreen onPick={startGenerative} onInsert={startInsert} onBack={start() === 'entry' ? () => setScreen('entry') : undefined} />
-      )}
-      {screen === 'labs' && (
-        <LabsBrowseScreen
-          onPicked={() => { transport.play(); setScreen('live') }}
-          onBack={() => setScreen(start())}
-        />
       )}
       {screen === 'live' && (
         <MobileOverlay

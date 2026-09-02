@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Dropdown, Section, SegmentedToggle, FullscreenOverlay } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, LabeledControlSection, SegmentedToggle, FullscreenOverlay } from '@kolkrabbi/kol-component'
 import EditorIcon from '../../icons/EditorIcon'
 import { Icon } from '@kolkrabbi/kol-icons'
 import MediaPicker from '../../library/MediaPicker'
@@ -15,6 +15,7 @@ import { saveClip } from '../../lib/clipStore'
 import { ensureWebcam } from '../../lib/webcam'
 import { ASPECTS } from '../aspects'
 import BatchExportModal from './BatchExportModal'
+import { useControlSize, stripClamp } from '../../params/controlSize'
 
 /**
  * EditorFooter — the tabbed rail footer, ported from the labs standard
@@ -33,6 +34,14 @@ const TABS = [
   { value: 'output', label: 'Output' },
   { value: 'file', label: 'File' },
 ]
+/* THE TOUCH FOOTER FOLDS THE TRANSPORT INTO ONE GLYPH (user, 2026-09-01 —
+ * "transport folding into an icon or button, shown as overlay, such that the
+ * sidenav can be more narrow on mobile"): the same ▶ the collapsed dock below
+ * already shows, sitting left of an Output · File strip; a tap opens the full
+ * bar (▶ ❚❚ · Loop / N s · ■ ◀◀) as a sheet along the bottom of the viewport,
+ * where it has the whole width. That takes the transport row out of the
+ * drawer's width budget, so the drawer is the desktop rail's 264 again. */
+const TABS_TOUCH = TABS.filter((t) => t.value !== 'transport')
 
 /* Tailwind v4 doesn't scan node_modules, so kol-component-only classes
  * (`h-[26px]`, `border-fg-04`) never get generated and the toggle collapses.
@@ -70,6 +79,7 @@ function useRailCollapsed() {
  * canvas filters don't taint). Every write sets srcType so image ↔ video
  * swaps render correctly. */
 function PhotoFileTab({ layer }) {
+  const cs = useControlSize()
   const { patch } = useLayerEdit(layer.id)
   const fileRef = useRef(null)
   const videoRef = useRef(null)
@@ -113,20 +123,20 @@ function PhotoFileTab({ layer }) {
     <div className="flex flex-col gap-2">
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
       <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={onPickVideo} />
-      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="upload" iconSize={12} onClick={() => fileRef.current?.click()}>
+      <Button iconComponent={EditorIcon} variant="primary" size={cs} className="w-full" iconLeft="upload" iconSize={12} onClick={() => fileRef.current?.click()}>
         Upload image
       </Button>
-      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="upload" iconSize={12} onClick={() => videoRef.current?.click()}>
+      <Button iconComponent={EditorIcon} variant="primary" size={cs} className="w-full" iconLeft="upload" iconSize={12} onClick={() => videoRef.current?.click()}>
         Upload video
       </Button>
-      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="image" iconSize={12} onClick={() => setPickerOpen(true)}>
+      <Button iconComponent={EditorIcon} variant="primary" size={cs} className="w-full" iconLeft="image" iconSize={12} onClick={() => setPickerOpen(true)}>
         From library
       </Button>
-      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="camera" iconSize={12} onClick={onWebcam}>
+      <Button iconComponent={EditorIcon} variant="primary" size={cs} className="w-full" iconLeft="camera" iconSize={12} onClick={onWebcam}>
         Webcam
       </Button>
       {(layer.src || layer.srcType === 'webcam') && (
-        <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="trash" iconSize={12} onClick={onClear}>
+        <Button iconComponent={EditorIcon} variant="primary" size={cs} className="w-full" iconLeft="trash" iconSize={12} onClick={onClear}>
           Clear image
         </Button>
       )}
@@ -138,6 +148,7 @@ function PhotoFileTab({ layer }) {
 /* File tab, default mode — document .json save/load (file lane) above the
  * library Save/Save as (library lane); a divider keeps the lanes distinct. */
 function SettingsFileTab({ onSaveSettings, onLoadSettings, onSave, onSaveAs, currentPresetId }) {
+  const cs = useControlSize()
   const fileRef = useRef(null)
   const [err, setErr] = useState('')
   const onPick = (e) => {
@@ -150,10 +161,10 @@ function SettingsFileTab({ onSaveSettings, onLoadSettings, onSave, onSaveAs, cur
   }
   return (
     <div className="flex flex-col gap-2">
-      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="download" iconSize={12} onClick={onSaveSettings}>
+      <Button iconComponent={EditorIcon} variant="primary" size={cs} className="w-full" iconLeft="download" iconSize={12} onClick={onSaveSettings}>
         Save to file
       </Button>
-      <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="upload" iconSize={12} onClick={() => fileRef.current?.click()}>
+      <Button iconComponent={EditorIcon} variant="primary" size={cs} className="w-full" iconLeft="upload" iconSize={12} onClick={() => fileRef.current?.click()}>
         Load from file
       </Button>
       <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onPick} />
@@ -161,10 +172,10 @@ function SettingsFileTab({ onSaveSettings, onLoadSettings, onSave, onSaveAs, cur
       {/* kol Divider's h-px never generates (Tailwind skips node_modules) —
           use the footer's own border-t divider idiom instead. */}
       <div className="border-t border-fg-08 my-1" />
-      <Button variant="primary" size="sm" className="w-full" onClick={onSave}>
+      <Button variant="primary" size={cs} className="w-full" onClick={onSave}>
         {currentPresetId ? 'Save' : 'Save…'}
       </Button>
-      <Button variant="primary" size="sm" className="w-full" onClick={onSaveAs}>
+      <Button variant="primary" size={cs} className="w-full" onClick={onSaveAs}>
         Save as…
       </Button>
     </div>
@@ -172,7 +183,12 @@ function SettingsFileTab({ onSaveSettings, onLoadSettings, onSave, onSaveAs, cur
 }
 
 export default function EditorFooter() {
-  const [tab, setTab] = useState('transport')
+  const cs = useControlSize()
+  /* every rung above the desktop's 'sm' is the touch rail */
+  const touch = cs !== 'sm'
+  const tabs = touch ? TABS_TOUCH : TABS
+  const [tab, setTab] = useState(touch ? 'output' : 'transport')
+  const [transportOpen, setTransportOpen] = useState(false)
   const [pngScale, setPngScale] = useState(1)
   const [batchOpen, setBatchOpen] = useState(false)
   const [recording, setRecording] = useState(false)
@@ -245,45 +261,65 @@ export default function EditorFooter() {
 
   return (
     <div className="relative border-t border-fg-08 flex flex-col gap-3" style={{ padding: '16px 20px 24px 20px' }}>
-      <SegmentedToggle value={tab} onChange={setTab} options={TABS} size="sm" className={TOGGLE_FIX} />
-      <div className={tab === 'transport' ? undefined : 'hidden'}>
-        <TransportBar />
+      <div className="flex items-center gap-2">
+        {touch && (
+          <Button variant="primary" size={cs} iconOnly="play" aria-label="Transport" pressed={transportOpen} onClick={() => setTransportOpen((v) => !v)} />
+        )}
+        {/* the 26px pin is 'sm' geometry — above it the strip is on the ladder */}
+        <SegmentedToggle value={tab} onChange={setTab} options={tabs} size={cs} className={`${touch ? 'flex-1 min-w-0 ' : ''}${cs === 'sm' ? TOGGLE_FIX : (stripClamp(cs) ?? '')}`.trim()} />
       </div>
+      {/* stays mounted hidden on desktop so playback chrome never re-inits on a
+          tab switch; on touch the bar lives in the sheet below */}
+      <div className={tab === 'transport' ? undefined : 'hidden'}>
+        <TransportBar size={cs} />
+      </div>
+      {touch && transportOpen && (
+        <div
+          className="fixed inset-x-0 bottom-0 flex items-center gap-3 border-t border-fg-08 bg-surface-primary px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          style={{ zIndex: 'var(--kol-z-modal)' }}
+        >
+          <div className="flex-1 min-w-0"><TransportBar size={cs} /></div>
+          <Button variant="nav" size={cs} iconOnly="x" aria-label="Close transport" onClick={() => setTransportOpen(false)} />
+        </div>
+      )}
       {tab === 'output' && (
         <div className="flex flex-col gap-3">
-          <Section label="Aspect">
-            <Dropdown size="sm" variant="subtle" className="w-full" options={aspectOptions} value={aspect} onChange={setAspect} />
-          </Section>
-          <Section label="Export">
+          {/* LabeledControlSection, not Section — the rail's one section
+              organism (eyebrow + 8px rows); Section's label was the
+              sentence-case helper the estate stopped writing */}
+          <LabeledControlSection label="Aspect">
+            <Dropdown size={cs} variant="subtle" className="w-full" options={aspectOptions} value={aspect} onChange={setAspect} />
+          </LabeledControlSection>
+          <LabeledControlSection label="Export">
             <div className="flex items-center gap-3">
               {/* 'w-full' in className opts out of Dropdown's fixed inline width
                   so flex-1 can actually size the control. */}
-              <Dropdown size="sm" variant="subtle" className="flex-1 w-full" options={scaleOptions} value={pngScale} onChange={setPngScale} />
+              <Dropdown size={cs} variant="subtle" className="flex-1 w-full" options={scaleOptions} value={pngScale} onChange={setPngScale} />
               <span className="kol-helper-10 text-meta whitespace-nowrap">{canvasW * pngScale} × {canvasH * pngScale} px</span>
             </div>
-            <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="download" iconSize={12} onClick={() => onExportPng(pngScale)}>
+            <Button iconComponent={EditorIcon} variant="primary" size={cs} className="w-full" iconLeft="download" iconSize={12} onClick={() => onExportPng(pngScale)}>
               Export PNG
             </Button>
-            <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="download" iconSize={12} onClick={exportWebm}>
+            <Button iconComponent={EditorIcon} variant="primary" size={cs} className="w-full" iconLeft="download" iconSize={12} onClick={exportWebm}>
               Export loop (webm)
             </Button>
             {/* Live capture — records the composed frame in real time (transport
                 running, params being tweaked), complementing the deterministic
                 loop bake above. */}
-            <Button iconComponent={EditorIcon} variant={recording ? 'secondary' : 'primary'} size="sm" className="w-full" iconLeft={recording ? 'eye-on' : 'download'} iconSize={12} onClick={toggleRecord}>
+            <Button iconComponent={EditorIcon} variant={recording ? 'secondary' : 'primary'} size={cs} className="w-full" iconLeft={recording ? 'eye-on' : 'download'} iconSize={12} onClick={toggleRecord}>
               {recording ? 'Stop recording' : 'Record'}
             </Button>
             {/* Chromeless output in its own tab — a clean surface to screen-
                 record with OS / tab capture (bypasses the in-app Record path). */}
-            <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="maximize" iconSize={12} onClick={openOutputWindow}>
+            <Button iconComponent={EditorIcon} variant="primary" size={cs} className="w-full" iconLeft="maximize" iconSize={12} onClick={openOutputWindow}>
               Open output window
             </Button>
             {/* Multi-size matrix — tick aspects × scales, bundle every PNG into
                 one .zip. */}
-            <Button iconComponent={EditorIcon} variant="primary" size="sm" className="w-full" iconLeft="duplicate" iconSize={12} onClick={() => setBatchOpen(true)}>
+            <Button iconComponent={EditorIcon} variant="primary" size={cs} className="w-full" iconLeft="duplicate" iconSize={12} onClick={() => setBatchOpen(true)}>
               Batch export
             </Button>
-          </Section>
+          </LabeledControlSection>
         </div>
       )}
       {tab === 'file' && (

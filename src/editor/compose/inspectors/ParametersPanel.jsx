@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Dropdown } from '@kolkrabbi/kol-component'
-import { LabeledControl } from '@kolkrabbi/kol-component'
+import { LabeledControl, SettingsRow, LabeledControlSection } from '@kolkrabbi/kol-component'
 import { SegmentedToggle } from '@kolkrabbi/kol-component'
 import { ViewToggle } from '@kolkrabbi/kol-component'
 import { useComposeState } from '../state'
@@ -36,6 +36,7 @@ import Hint from '../../components/Hint'
 import KineticPanel from './KineticPanel'
 import { themeParams } from '../../../loops/theme'
 import { THEME_OPTIONS, DEFAULT_THEME } from '../../../loops/lib/themes'
+import { useControlSize, RAIL_LABEL_W, stripClamp } from '../../params/controlSize'
 
 /**
  * ParametersPanel — the Parameters tab of the right rail (Phase 6-A).
@@ -185,7 +186,30 @@ const motionOpts = (presets, val) => {
  * `tab="labs-effect"` renders Generate + Style as ONE flow — labs' two-tab
  * Effect · Motion model over the same three-tab surface.
  */
+/* One row shape per skin (2026-09-01): the labs skin (`inline`) is the DS
+ * SettingsRow — uppercase helper label in the rail's column — the same row
+ * AutoControls and the picker stack render, so THEME · INVERT · LOOK · FRAME
+ * stop being the sentence-case exceptions in an uppercase rail. The editor
+ * keeps its label-above LabeledControl. */
+function Row({ inline, label, align = 'fill', children }) {
+  return inline
+    ? <SettingsRow label={label} align={align} labelWidth={RAIL_LABEL_W}>{children}</SettingsRow>
+    : <LabeledControl label={label}>{children}</LabeledControl>
+}
+
+/* An on/off pair. Labs skin: the rail's one segmented control — the DS
+ * SegmentedToggle, spanning the control column like a dropdown
+ * (user, 2026-09-01: Invert was parked at the row's edge as if it were a
+ * switch). Editor: ViewToggle, with the rest of its inspector. */
+const ONOFF = [{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]
+function OnOff({ inline, cs, on, onChange }) {
+  return inline
+    ? <SegmentedToggle size={cs} className={`w-full ${stripClamp(cs) ?? ''}`} options={ONOFF} value={on ? 'on' : 'off'} onChange={(v) => onChange(v === 'on')} />
+    : <ViewToggle size={cs} options={ONOFF} viewMode={on ? 'on' : 'off'} onViewChange={(v) => onChange(v === 'on')} />
+}
+
 export function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate, tab, tabStrip, tree, picker = true, inline = false }) {
+  const cs = useControlSize()
   const loop = loopById(layer.loopId)
   const schema = loop?.params ?? []
 
@@ -272,9 +296,27 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
   const showKeyframes = loop?.engine === 'scene'
     && (layer.animMode === 'keyframes' || layer.animMode === 'keyframe')
 
+  /* Camera is driven by the Orbit tool (C) — a viewport mode, not a per-layer
+   * toggle, so it never fights layer dragging. 3D loops orbit; field/pattern
+   * loops rotate + zoom; shape loops zoom. Rendered under the theme rows in
+   * both skins (the editor's grid spans it across both columns). */
+  const cameraKeys = loop?.orbit ? { yaw: 1, dist: 1 } : resolveCameraKeys(loop)
+  const cameraHint = cameraKeys ? (
+    <p className={`kol-mono-10 text-meta${inline ? '' : ' col-span-2'}`}>
+      Press C (Orbit tool) to move the camera — {loop?.orbit ? 'drag to orbit, scroll to zoom' : cameraKeys.yaw ? 'drag to rotate, scroll to zoom' : 'scroll to zoom'}.
+    </p>
+  ) : null
+
   return (
     <>
-      {picker && <LoopPicker layer={layer} tree={tree} />}
+      {/* THE LABS SKIN GROUPS IN SECTIONS, named or not (user, 2026-09-01):
+          `LabeledControlSection` sets the row rhythm (8px) and `divided` the
+          hairline between groups — the picker stack and the theme rows were
+          bare children of the surface's 20px column, three rhythms in one
+          rail. The editor keeps its own stacking. */}
+      {picker && (inline
+        ? <LabeledControlSection divided><LoopPicker layer={layer} tree={tree} inline /></LabeledControlSection>
+        : <LoopPicker layer={layer} tree={tree} />)}
 
       {tabStrip}
 
@@ -283,55 +325,64 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
           {/* Soft Forms per-form scene editing (labs Layers tab) — the
               primary control surface, above Look/Theme. */}
           {(layer.loopId === 'softforms' || layer.loopId === 'softforms3d') && <SoftformsLayers layer={layer} />}
-          {looks && (
-            <LabeledControl label="Look">
+          {looks && !inline && (
+            <Row inline={inline} label="Look">
               <Dropdown
-                variant="subtle" size="sm" className="w-full"
+                variant="subtle" size={cs} className="w-full"
                 options={motionOpts(lookList, layer._lookPreset)}
                 value={layer._lookPreset ?? 'custom'}
                 onChange={applyLook}
               />
-            </LabeledControl>
+            </Row>
           )}
+          {/* the labs skin stacks these as full rows in ONE section (a 96px
+              label column has no room in half a rail); the editor keeps its
+              2-up grid. Look joins the section there — it is a theme-tier pick. */}
+          {inline && (
+          <LabeledControlSection divided>
+            {looks && (
+              <Row inline label="Look">
+                <Dropdown
+                  variant="subtle" size={cs} className="w-full"
+                  options={motionOpts(lookList, layer._lookPreset)}
+                  value={layer._lookPreset ?? 'custom'}
+                  onChange={applyLook}
+                />
+              </Row>
+            )}
+            <Row inline label="Theme">
+              <Dropdown variant="subtle" size={cs} className="w-full" options={THEME_OPTIONS} value={themeId} onChange={onTheme} />
+            </Row>
+            <Row inline label="Invert">
+              <OnOff inline cs={cs} on={invert} onChange={onInvert} />
+            </Row>
+            {loopBgToggleable(loop) && (
+              <Row inline label="Background">
+                <OnOff inline cs={cs} on={layer.bgOn !== false} onChange={(v) => setProp('bgOn', v)} />
+              </Row>
+            )}
+            {cameraHint}
+          </LabeledControlSection>
+          )}
+          {!inline && (
           <div className="grid grid-cols-2 gap-2">
-            <LabeledControl label="Theme">
-              <Dropdown variant="subtle" size="sm" className="w-full" options={THEME_OPTIONS} value={themeId} onChange={onTheme} />
-            </LabeledControl>
-            <LabeledControl label="Invert">
-              <ViewToggle
-                options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
-                viewMode={invert ? 'on' : 'off'}
-                onViewChange={(v) => onInvert(v === 'on')}
-              />
-            </LabeledControl>
+            <Row inline={false} label="Theme">
+              <Dropdown variant="subtle" size={cs} className="w-full" options={THEME_OPTIONS} value={themeId} onChange={onTheme} />
+            </Row>
+            <Row inline={false} label="Invert">
+              <OnOff inline={false} cs={cs} on={invert} onChange={onInvert} />
+            </Row>
             {/* Background on/off — only for loops whose bg is a pure backdrop
                 fill (loopBgToggleable); hidden where bg feeds colour math or
                 the loop is a GL engine. */}
             {loopBgToggleable(loop) && (
-              <LabeledControl label="Background">
-                <ViewToggle
-                  options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
-                  viewMode={layer.bgOn === false ? 'off' : 'on'}
-                  onViewChange={(v) => setProp('bgOn', v === 'on')}
-                />
-              </LabeledControl>
+              <Row inline={false} label="Background">
+                <OnOff inline={false} cs={cs} on={layer.bgOn !== false} onChange={(v) => setProp('bgOn', v)} />
+              </Row>
             )}
-            {/* Camera is driven by the Orbit tool (C) — a viewport mode, not a
-                per-layer toggle, so it never fights layer dragging. 3D loops
-                orbit; field/pattern loops rotate + zoom; shape loops zoom. */}
-            {(() => {
-              const ck = loop?.orbit ? { yaw: 1, dist: 1 } : resolveCameraKeys(loop)
-              if (!ck) return null
-              const verb = loop?.orbit ? 'drag to orbit, scroll to zoom'
-                : ck.yaw ? 'drag to rotate, scroll to zoom'
-                : 'scroll to zoom'
-              return (
-                <p className="kol-mono-10 text-meta col-span-2">
-                  Press C (Orbit tool) to move the camera — {verb}.
-                </p>
-              )
-            })()}
+            {cameraHint}
           </div>
+          )}
 
           {/* Schema params flagged tab:'generate' (penrose shape/glyph/font/
               weight/seed) — pickers above the randomize block, labs order. */}
@@ -340,7 +391,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
           {/* Rolls WHICH PRESET you are on — the axis the rail had no button
               for. Hidden when the group holds nothing else to move to. */}
           {presetRollPool(layer).length > 0 && (
-            <Button variant="primary" size="sm" className="w-full" onClick={() => {
+            <Button variant="primary" size={cs} className="w-full" onClick={() => {
               const s = seed.take()
               const patch = computePresetRoll(layer, s)
               if (patch) updateLayer(layer.id, patch)
@@ -348,7 +399,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
               Randomize preset
             </Button>
           )}
-          <Button variant="primary" size="sm" className="w-full" onClick={(e) => (e.altKey ? resetScope(allScopeParams(schema, layer)) : roll(allScopeParams(schema, layer), undefined, { withFilters: true }))}>
+          <Button variant="primary" size={cs} className="w-full" onClick={(e) => (e.altKey ? resetScope(allScopeParams(schema, layer)) : roll(allScopeParams(schema, layer), undefined, { withFilters: true }))}>
             Randomize all
           </Button>
           {scopes.length > 0 && (
@@ -356,7 +407,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
              * (Pattern's 5, Penrose's 6-plus-reset), verified 2026-08-09. */
             <div className="grid grid-cols-2 gap-2">
               {scopes.map((s) => (
-                <Button key={s.id} variant="primary" size="sm" onClick={(e) => (e.altKey ? resetScope(s.params) : roll(s.params, s))}>
+                <Button key={s.id} variant="primary" size={cs} onClick={(e) => (e.altKey ? resetScope(s.params) : roll(s.params, s))}>
                   {s.label}
                 </Button>
               ))}
@@ -367,7 +418,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
               {layer.loopId === 'math-expression' && (
                 <Button
                   variant="primary"
-                  size="sm"
+                  size={cs}
                   onClick={(e) => {
                     if (e.altKey) return resetScope(scopes.find((s) => s.id === 'Expression')?.params ?? [])
                     const s = seed.take()
@@ -402,10 +453,10 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
               min/max to the curve; Reset restores the View section. */}
           {layer.loopId === 'math-expression' && (
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="primary" size="sm" onClick={() => updateLayer(layer.id, fitBounds(layer))}>
+              <Button variant="primary" size={cs} onClick={() => updateLayer(layer.id, fitBounds(layer))}>
                 Fit
               </Button>
-              <Button variant="primary" size="sm" onClick={() => resetScope(scopes.find((s) => s.id === 'View')?.params ?? [])}>
+              <Button variant="primary" size={cs} onClick={() => resetScope(scopes.find((s) => s.id === 'View')?.params ?? [])}>
                 Reset
               </Button>
             </div>
@@ -418,22 +469,22 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
           {tables && (
             <>
               <span className="kol-helper-10 text-meta">Motion</span>
-              <LabeledControl label="Frame">
+              <Row inline={inline} label="Frame">
                 <Dropdown
-                  variant="subtle" size="sm" className="w-full"
+                  variant="subtle" size={cs} className="w-full"
                   options={motionOpts(tables.frame, layer._framePreset)}
                   value={layer._framePreset ?? 'custom'}
                   onChange={applyMotionPreset('_framePreset', tables.frame)}
                 />
-              </LabeledControl>
-              <LabeledControl label="Form">
+              </Row>
+              <Row inline={inline} label="Form">
                 <Dropdown
-                  variant="subtle" size="sm" className="w-full"
+                  variant="subtle" size={cs} className="w-full"
                   options={motionOpts(tables.form, layer._formPreset)}
                   value={layer._formPreset ?? 'custom'}
                   onChange={applyMotionPreset('_formPreset', tables.form)}
                 />
-              </LabeledControl>
+              </Row>
             </>
           )}
           <ModulationList layer={layer} schema={schema} setProp={setParamProp} />

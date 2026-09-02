@@ -15,6 +15,15 @@ import { useTransport } from './transport'
  * Center = loop length in seconds (labs centers tempo; our clock is a
  * normalized loop). Drives the module-level `transport` singleton.
  *
+ * ONE LINE AT EVERY RAIL (2026-09-01). The cells used to be 38 wide (px-3
+ * around a 14px glyph), and 77 + 77 + a ~110px field never fit the desktop's
+ * 264 rail (232 of content) nor the touch drawer — the row wrapped and the
+ * stop group dropped under a half-row. The user's design is the one-liner, so
+ * the parts got smaller, not the row taller: the cells are SQUARE on the
+ * button ladder (26 / 32 / 40 — the DS icon-only geometry) and the field holds
+ * 3 chars. sm: 104 + 16 + ~104 in 232 · md: 128 + 16 + ~122 in 288. The
+ * loop length was briefly in the Output tab; it belongs here.
+ *
  * Space is NOT bound to play/pause here — Space is pan in this editor.
  * The fps readout lives in the canvas corner, not here.
  */
@@ -24,8 +33,9 @@ import { useTransport } from './transport'
  * (matches `size="lg"` buttons/toggles, ~40px tall). The loop readout takes
  * its own scale from the DS Input's `size`. */
 const SIZES = {
-  sm: { cell: 'px-3 py-1.5', icon: 14 },
-  lg: { cell: 'px-4 py-2.5', icon: 20 },
+  sm: { cell: 'size-[26px]', icon: 14 },
+  md: { cell: 'size-8', icon: 16 },
+  lg: { cell: 'size-10', icon: 20 },
 }
 
 function Cell({ name, title, active, onClick, divider, cfg }) {
@@ -37,7 +47,7 @@ function Cell({ name, title, active, onClick, divider, cfg }) {
       aria-pressed={active}
       onClick={onClick}
       className={[
-        `${cfg.cell} inline-flex items-center cursor-pointer transition-colors`,
+        `${cfg.cell} inline-flex items-center justify-center cursor-pointer transition-colors`,
         divider ? 'border-l border-fg-08' : '',
         /* Icons paint OPAQUE (oq-* — the baked-grey mirror of the fg alpha
          * scale): multi-path glyphs (rewind's two triangles) compound where
@@ -79,7 +89,7 @@ function LoopField({ seconds, onCommit, size }) {
       size={size}
       affordance="Loop /"
       unit="s"
-      chars={4}
+      chars={3}
       title="Loop length (seconds)"
       value={draft}
       onFocus={(e) => { setEditing(true); e.target.select() }}
@@ -94,41 +104,36 @@ function LoopField({ seconds, onCommit, size }) {
   )
 }
 
-/* THE ROW WRAPS RATHER THAN OVERFLOWS. The two transport groups are fixed-size
- * icon cells (`shrink-0` — shrinking them clips the glyphs) and the loop field
- * has a floor below which it shows nothing, so at a narrow rail the three
- * genuinely do not fit on one line: 77 + 77 + gaps against 215. It used to
- * overflow — 12px of horizontal page scroll on `/labs`, at EVERY rail width —
- * and letting the centre cell collapse instead (`min-w-0`) rendered the input
- * at 0px wide. So it wraps: the second group drops to its own line and every
- * control stays readable. */
 export default function TransportBar({ size = 'sm' }) {
   const cfg = SIZES[size] ?? SIZES.sm
   const { playing, loopSeconds, play, pause, stop, rewind, setLoopSeconds } = useTransport()
 
+  const playGroup = (
+    <div className="inline-flex rounded overflow-hidden bg-surface-secondary shrink-0">
+      <Cell name="play" title="Play" active={playing} onClick={play} cfg={cfg} />
+      <Cell name="pause" title="Pause" active={!playing} onClick={pause} divider cfg={cfg} />
+    </div>
+  )
+  const stopGroup = (
+    <div className="inline-flex rounded overflow-hidden bg-surface-secondary shrink-0">
+      <Cell name="stop" title="Stop" onClick={stop} cfg={cfg} />
+      <Cell name="rewind" title="Rewind" onClick={rewind} divider cfg={cfg} />
+    </div>
+  )
+
+  /* Stop / rewind bump the transport's reset epoch — stateful consumers
+     (sims, trails, video) restart fresh. Pause (left group) never does.
+     `flex-wrap` is the safety net, not the layout: if a font ever widens the
+     field past the sums above, the stop group folds rather than overflows. */
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="inline-flex rounded overflow-hidden bg-surface-secondary shrink-0">
-        <Cell name="play" title="Play" active={playing} onClick={play} cfg={cfg} />
-        <Cell name="pause" title="Pause" active={!playing} onClick={pause} divider cfg={cfg} />
-      </div>
-
+      {playGroup}
       {/* The DS property field IS this anatomy — dim affordance, hugging
-          numeric value, adjacent unit (Input variant="property", 0.36.0).
-          The old authored chrome predated it. */}
-      {/* `min-w-16` is the floor that makes the wrap happen instead of the
-          collapse — without it this cell shrinks toward 0 and the value goes
-          invisible before anything wraps. */}
+          numeric value, adjacent unit (Input variant="property", 0.36.0). */}
       <div className="flex-1 min-w-16 flex justify-center">
         <LoopField seconds={loopSeconds} onCommit={setLoopSeconds} size={size} />
       </div>
-
-      {/* Stop / rewind bump the transport's reset epoch — stateful consumers
-          (sims, trails, video) restart fresh. Pause (left group) never does. */}
-      <div className="inline-flex rounded overflow-hidden bg-surface-secondary shrink-0">
-        <Cell name="stop" title="Stop" onClick={stop} cfg={cfg} />
-        <Cell name="rewind" title="Rewind" onClick={rewind} divider cfg={cfg} />
-      </div>
+      {stopGroup}
     </div>
   )
 }

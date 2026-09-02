@@ -24,7 +24,7 @@ import { PickerRow, PickerDropdown } from './TreePicker'
  * layers) shows its identity read-only instead — those groups are not
  * pickable generative types (optic → EFFECTS > Pattern, paratype → misc).
  */
-export function LoopPicker({ layer, tree = PICKER_TREE }) {
+export function LoopPicker({ layer, tree = PICKER_TREE, inline = false }) {
   const { updateLayer } = useComposeState()
   const group = layer.loopGroup ?? 'shape'
   const parent = tree.find((t) => t.groups.includes(group)) ?? null
@@ -60,8 +60,10 @@ export function LoopPicker({ layer, tree = PICKER_TREE }) {
   return (
     <>
       {tree.length > 1 || !parent ? (
-        <PickerRow label="Type">
-          <div className="flex flex-col gap-1">
+        <PickerRow label="Type" inline={inline}>
+          {/* w-full: inside SettingsRow's inline-flex the stack would hug, and
+              the TYPE dropdown sat shorter than CATEGORY's */}
+          <div className="flex flex-col gap-1 w-full">
             {parent ? (
               <PickerDropdown
                 options={tree.map((t) => ({ value: t.label, label: t.label }))}
@@ -85,6 +87,7 @@ export function LoopPicker({ layer, tree = PICKER_TREE }) {
       ) : null}
       {subs.length > 1 && (
         <PickerRow
+          inline={inline}
           label="Category"
           options={subs.map((s) => ({ value: s, label: s }))}
           value={sub}
@@ -92,6 +95,7 @@ export function LoopPicker({ layer, tree = PICKER_TREE }) {
         />
       )}
       <PickerRow
+        inline={inline}
         label="Preset"
         options={subPresets.map((p) => ({ value: p.id, label: p.label }))}
         value={layer.presetId}

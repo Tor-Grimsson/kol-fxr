@@ -150,3 +150,77 @@
   transition: none;
 }
 
+
+/* ───── TOUCH — the params rail is a DRAWER (2026-09-01) ─────
+ * A bare shell (a phone, or a tablet not opted into desktop) has no shell
+ * rail, so the catalog rows had nowhere to render and the params column took
+ * 264 of a 390px screen. `LabsView` stamps `data-touch` on the wrapper and
+ * swaps in a top bar with one toggle per rail. The nav is the catalog SHEET
+ * (its own fixed layer); THIS is the params rail — off the grid, sliding in
+ * from the right, under that bar, over the stage. Same rail, same footer. */
+.kol-editor-labs[data-touch] .kol-editor-grid {
+  --_rail-track: 0px;
+}
+.kol-editor-labs[data-touch] .kol-editor-right {
+  position: fixed;
+  top: 48px;                         /* the touch bar (h-12) holds the toggle that closes this */
+  right: 0;
+  bottom: 0;
+  /* THE DESKTOP RAIL'S WIDTH — `--kol-sidenav-w` (264), the same rail on every
+     device. It got there by taking width OUT of the content, not by widening
+     the drawer: the transport is a glyph opening a viewport-wide sheet
+     (EditorFooter), the generative strip reads Gen · Style · Anim on touch,
+     the range box is 5 chars. */
+  width: min(var(--kol-sidenav-w), calc(100vw - 48px));
+  z-index: var(--kol-z-overlay);
+  overflow: hidden;
+  transform: translateX(100%);
+  transition: transform 150ms ease;
+}
+.kol-editor-labs[data-touch][data-params="open"] .kol-editor-right {
+  transform: none;
+}
+/* THE COARSE-POINTER INPUT FLOOR IS OFF IN THE TOUCH RAIL. kol-theme 0.112.0
+ * bumps every `.kol-control input` to 16px/22px under (pointer: coarse) so iOS
+ * does not zoom on focus — but only the INPUT: beside it the md dropdown,
+ * segmented strip and switch stay 14px/32px, and the one size group this rail
+ * renders at splits into two type sizes (user, 2026-09-01: "consistency!!").
+ * The rail keeps the md rung (mono-14: 14/18 — the numbers Input's own
+ * `h-[18px]` already assumes) and the zoom the floor guards against is closed
+ * by `maximum-scale=1` in index.html instead, which is the app-level answer. */
+@media (pointer: coarse) {
+  .kol-editor-labs[data-touch] .kol-control input,
+  .kol-editor-labs[data-touch] .kol-control--bare input,
+  .kol-editor-labs[data-touch] .kol-control textarea {
+    font-size: 14px;
+    line-height: 18px;
+  }
+  .kol-editor-labs[data-touch] .kol-control input,
+  .kol-editor-labs[data-touch] .kol-control--bare input {
+    height: 18px;
+  }
+}
+
+/* Immune to a stale desktop `data-rail="collapsed"` on :root — the touch rail
+ * mounts no drag hook, but the attribute can outlive a desktop mount in the
+ * same session. `:root` matches the collapsed rule's specificity; later wins. */
+:root .kol-editor-labs[data-touch] .kol-compose-inspector-body {
+  display: block;
+}
+
+/* THE SEGMENTED STRIP WEARS THE SUNKEN TONE (user, 2026-09-01: "sunken on one
+ * side and primary on the other … rounded as a group with dividers"). The DS's
+ * default SegmentedToggle already has the anatomy — one group radius, 1px
+ * dividers, rest cells on surface-secondary (the primary button's fill) — but
+ * a 1px shell and a transparent selected cell. ControlToneSunken, which
+ * Dropdown · Input · Button · IconFrame · ThemeToggle · ViewToggle(icon) take as
+ * `tone="sunken"`, is "the dark well + fg-96 ink + transparent border"; the
+ * SegmentedToggle alone has no `tone`, so the same three lines land here,
+ * scoped to the labs rail. Both go the day it grows the prop in kol-component. */
+.kol-editor-labs .kol-seg {
+  border-color: transparent;
+}
+.kol-editor-labs .kol-seg-cell.is-active {
+  background: var(--kol-surface-sunken);
+  color: var(--kol-fg-96);
+}
