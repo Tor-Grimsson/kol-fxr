@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { Button } from '@kolkrabbi/kol-component'
 import { CatalogPage } from '@kolkrabbi/kol-shell'
 import { useNavigate } from 'react-router-dom'
-import { MODES, setMode, withView } from '../editor/mode'
-import { GeneratorLibraryProvider, useGeneratorLibrary } from '../editor/library/LibraryProvider'
+import { MODES, setMode, withView, GeneratorLibraryProvider, useGeneratorLibrary } from '@kolkrabbi/design-editor'
 
 /**
  * HomePage — the front door, at `/`, on kol-shell's `CatalogPage` (ShellHomeSystem,

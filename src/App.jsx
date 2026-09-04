@@ -4,16 +4,55 @@ import AppLayout from './AppLayout'
 import HomePage from './pages/HomePage'
 import LibraryPage from './pages/LibraryPage'
 import SettingsPage from './pages/SettingsPage'
-import { isMobileDevice, wantsDesktop, setWantsDesktop } from './editor/mobile/device'
-import { VIEW_PATHS, setNavigator } from './editor/mode'
+/* The router bridge and the device gate come from the PACKAGE, not a local
+   copy — `mode.js` holds `let navigator` as module state, so registering the
+   router on our copy left the package's null and every in-package hop fell
+   back to `window.location.assign`: a full reload dressed as a working
+   navigation. Same single-copy rule as railExtras. */
+import {
+  isMobileDevice, wantsDesktop, setWantsDesktop, VIEW_PATHS, setNavigator,
+} from '@kolkrabbi/design-editor'
 
 /* The chromes are LAZY routes (2026-08-27): each carries its own engines, so
    none of them rides the shell tier's bundle, and a hop between two chromes
    is an SPA transition — the previous chrome unmounts, the next one mounts. */
-const Editor = lazy(() => import('./editor/Editor'))
-const LabsView = lazy(() => import('./editor/labs/LabsView'))
-const MobileView = lazy(() => import('./editor/mobile/MobileView'))
-const OutputView = lazy(() => import('./editor/OutputView'))
+/* The editor is the PACKAGE now (@kolkrabbi/design-editor, built and gated in
+   kol-ds-ui) — this app is its consumer, not its publisher. Its stylesheet
+   rides the lazy chunk so the shell tier never carries it. `mediaProxyBase`
+   is the same-origin path vercel.json rewrites to the CDN; without it the
+   filter and export paths taint the canvas. */
+const Editor = lazy(async () => {
+  const [{ DesignEditor }] = await Promise.all([
+    import('@kolkrabbi/design-editor'),
+    import('@kolkrabbi/design-editor/style.css'),
+  ])
+  return { default: () => <DesignEditor mediaProxyBase="/media/" /> }
+})
+/* Labs and mobile are alternate CHROME over the same engine, not consumers of
+   it — they read the editor's stores directly — so they ship inside the package
+   too (0.4.0). Two copies of `compose/state` meant two React contexts and the
+   package's provider could never satisfy a local hook. */
+const LabsView = lazy(async () => {
+  const [m] = await Promise.all([
+    import('@kolkrabbi/design-editor'),
+    import('@kolkrabbi/design-editor/style.css'),
+  ])
+  return { default: m.LabsView }
+})
+const MobileView = lazy(async () => {
+  const [m] = await Promise.all([
+    import('@kolkrabbi/design-editor'),
+    import('@kolkrabbi/design-editor/style.css'),
+  ])
+  return { default: m.MobileView }
+})
+const OutputView = lazy(async () => {
+  const [m] = await Promise.all([
+    import('@kolkrabbi/design-editor'),
+    import('@kolkrabbi/design-editor/style.css'),
+  ])
+  return { default: m.OutputView }
+})
 
 /* Hands the router's navigate to mode.js so its goMode/goChooser and
    device.js's goDesktop/goMobile hop in-app instead of reloading. */

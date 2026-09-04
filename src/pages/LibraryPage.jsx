@@ -5,7 +5,7 @@ import {
   GeneratorLibraryProvider,
   useGeneratorLibrary,
   LIBRARY_SLOT_KEYS,
-} from '../editor/library/LibraryProvider'
+} from '@kolkrabbi/design-editor'
 
 /**
  * LibraryPage — `/library`, on kol-shell's `CatalogPage` (ShellHomeSystem,

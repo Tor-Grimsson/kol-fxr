@@ -2,7 +2,10 @@ import { useEffect, useRef } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AppShell, useNavHidden, useSettingsToggle } from '@kolkrabbi/kol-shell'
 import logomarkUrl from '@kolkrabbi/kol-brand/svg/favicon-01.svg?url'
-import { useRailExtras, RAIL_EXTRA_PREFIX } from './railExtras'
+/* The rail-extras store moved into the package with labs (0.4.0): labs WRITES
+   it and this layout READS it, so two module copies meant subscribing to a
+   store nothing ever touched. One copy, one store. */
+import { useRailExtras, RAIL_EXTRA_PREFIX } from '@kolkrabbi/design-editor'
 
 /**
  * AppLayout — the shell tier's layout root: kol-shell's fixed 48px `AppShell`

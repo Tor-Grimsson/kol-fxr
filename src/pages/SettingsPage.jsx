@@ -3,9 +3,10 @@ import { Divider, Dropdown, LabeledControlSection, ViewToggle } from '@kolkrabbi
 import { ThemeToggle } from '@kolkrabbi/kol-framework'
 import { useNavigate } from 'react-router-dom'
 import { SettingsScaffold, SettingsShortcuts, SettingsLinks, SettingsColophon } from '@kolkrabbi/kol-shell'
-import { useSettingsSections, AppSettingsSections, DisplaySettingsDrawer } from '../settings/AppSettings'
-import { shortcutsBySection, comboLabel } from '../editor/state/keymap'
-import { currentView } from '../editor/mode'
+import {
+  useSettingsSections, AppSettingsSections, DisplaySettingsDrawer,
+  shortcutsBySection, comboLabel, currentView,
+} from '@kolkrabbi/design-editor'
 
 /**
  * SettingsPage — ONE settings page, at `/settings`: Display · Defaults ·
@@ -50,7 +51,7 @@ import { currentView } from '../editor/mode'
  * all land. `renderItem` gets the surviving rows and regroups them under their
  * section eyebrows.
  *
- * THE ROWS ARE NOT AUTHORED HERE. `settings/AppSettings.jsx` owns the sections
+ * THE ROWS ARE NOT AUTHORED HERE. `@kolkrabbi/design-editor` owns the sections
  * and the editor's drawer renders the same ones, so the page and the in-place
  * panel cannot drift the way the two topbar menus did.
  *

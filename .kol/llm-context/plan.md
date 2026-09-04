@@ -238,3 +238,110 @@ A three.js / r3f layer, architecturally a specialized GL layer.
 ---
 
 Nothing here is committed. Items graduate to `llm-context/AGENT-CONTEXT.md` when they become real work; the two RFCs resolve before their phases start.
+
+---
+
+# The estate split — DRAFT, awaiting approval (2026-09-03)
+
+Now that the editor is `@kolkrabbi/design-editor` in kol-ds-ui, the question is
+whether the engine inside it should stay one block or come apart into packages
+that fxr, kol-monitor, kol-mirror and the client decks can each take what they
+need from.
+
+**The evidence that this is not premature:** `kol-client-olina/apps/brand/src/
+components/loaders/decks/SlideStage.jsx` is 156 lines rendering at 1920×1080
+under a zoom, dividing pointer deltas by the live scale — the editor's
+virtual-coordinate contract and `CanvasArea`'s pointer router, hand-rolled at a
+different resolution, today. Beside it: `SlideRenderer`, `SlideInspector`,
+`SlideThumb`. The second consumer already exists and is re-implementing the seam.
+
+**The rule this replaces:** "extract when a second consumer exists" was the wrong
+test. The design-editor set failed for being a HALF port — nobody could adopt it
+even wanting to — not for lack of consumers. The right rule is **extract the
+whole seam, then adopt it in one consumer immediately as the proof.** That is
+what the 2026-09-03 move did, and it worked.
+
+## Phase 1 — export + history (REORDERED 2026-09-04, user-approved)
+
+kol-client-olina asked for these two by name, with a spec, after copying both
+on our own advice. They displace `kol-signals` because the plan's own rule is
+*extract the whole seam, then adopt it in one consumer immediately* — and the
+consumer is already holding the adoption.
+
+**Export.** The seam is `svgToPngBlob(svgString, scale)` plus font embedding.
+NOT `buildLayersSvg` — the builder welds to each app's layer schema, and olina's
+is theirs. Their copy is ~180 lines; the rasteriser and the font half are the
+only reusable parts.
+
+- **Web fonts must rewrite whole `@font-face` blocks and swap only the `src`.**
+  Harvesting bare `url(...)` and emitting a synthesized face drops Google's
+  `unicode-range`, which is the ONLY thing distinguishing its latin /
+  latin-ext / cyrillic / greek subsets — so the first subset wins, matches
+  nothing, and every glyph silently exports in a system fallback while the
+  screen looks perfect. Cost olina a real bug.
+- **The test has to compare rendered ink**, not structure. Theirs asserted css
+  fetched, urls found, bytes non-zero — all passed, pixels identical.
+- design-editor's own exporter has the same shape (synthesized `@font-face`, no
+  `unicode-range`) but is safe today: its faces are self-hosted full-range
+  variable files. It becomes the same bug the day a subsetted family joins that
+  list. Its font fetch is also a bare `catch {}` — a failed fetch exports in
+  fallback with nothing logged.
+
+**History.** Generic over the value: `useHistory(initialValue)` returning
+`set / begin / end / undo / redo / reset`, the consumer owning what is in the
+snapshot. The two things worth packaging are selection riding *inside* the
+snapshot and a transaction so a drag is one entry. If it knows about layers it
+stops being reusable — olina's value is `{slides, active, selectedIds}`, ours is
+compose state.
+
+- **Never push history inside a `setState` updater.** StrictMode calls updaters
+  twice and every entry doubles. Compute the next value against a ref, outside.
+
+## Phase 2 — `kol-signals`
+
+The modulation system: source registry (time · mouse · layer-local · LFO ·
+audio · MIDI · gamepad · expression), the transform (range · invert · smooth ·
+curve), and the input backends with their permission gates. Takes no layers, no
+canvas, no React tree — it produces numbers.
+
+- **Plus a new ADSR envelope generator** as a source family, math lifted from
+  kol-monitor.
+- Pairs with the shipped `kol-controls` — that package is the hands (knob,
+  fader, transport, LED), this is the nerves.
+- Consumers in sight: the editor, kol-monitor's rack, kol-mirror.
+- The clock (`transport`) stays app-side, per the specs ticket's own row.
+
+## Phase 3 — `kol-fx`, and what is NOT `kol-fx`
+
+Three homes, not two:
+
+| | what | where |
+|---|---|---|
+| the catalog | `fxCore` · `dither` · `scanline` · `sweeps` · the pixi + gl engines — pure functions, zero React | **`kol-fx`** |
+| the chain UI | `EffectsPanel` — chain list, add-fx picker, per-effect param groups | **`fx-panels`** |
+| instrument chrome | the transport bar and its kin | **`kol-controls`** (exists) |
+
+The test for the third column: *would a synth want this?* Transport yes,
+effect-chain list no.
+
+## Phase 4 — `kinetic`
+
+**Keep the name.** The path sampling, arc-length march, catmull-rom and morph
+interpolation are not font-specific — the distress engine runs the same math on
+arbitrary SVG. Renaming it `type` would narrow it to one of its uses; fonts are
+an input, not the subject.
+
+## Phase 5 — the deck
+
+Once 1–4 land, put the slide deck on the real stage instead of its hand-rolled
+one: the virtual-coordinate stage, the inspector rail, the text fields. That is
+the adoption that proves the split, the same way fxr proved the editor move.
+
+## Open
+
+- Sequence RESOLVED 2026-09-04: export + history first, `kol-signals` second.
+  The old assumption (signals first, as the piece with two consumers today) was
+  overtaken — olina asked for export and undo by name, with a spec, and neither
+  was in any phase of the draft.
+- `loops/` (28,421 lines) is deliberately not in any phase. It is the generator,
+  it is shared by every chrome, and no ticket has ever examined it.

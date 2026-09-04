@@ -1,42 +1,17 @@
 {
-  "name": "@kolkrabbi/design-editor",
-  "private": false,
+  "name": "kol-fxr",
+  "private": true,
   "version": "0.1.0",
-  "license": "MIT",
   "type": "module",
-  "files": [
-    "dist"
-  ],
-  "main": "./dist/design-editor.js",
-  "module": "./dist/design-editor.js",
-  "exports": {
-    ".": {
-      "import": "./dist/design-editor.js"
-    },
-    "./style.css": "./dist/design-editor.css"
-  },
-  "sideEffects": [
-    "**/*.css"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "scripts": {
     "dev": "vite --force",
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.js",
     "preview": "vite preview"
   },
-  "peerDependencies": {
-    "@kolkrabbi/kol-component": "0.152.0",
-    "@kolkrabbi/kol-framework": "0.36.0",
-    "@kolkrabbi/kol-icons": "0.25.0",
-    "@kolkrabbi/kol-media-client": "0.3.2",
-    "@kolkrabbi/kol-theme": "0.121.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
   "dependencies": {
+    "@kolkrabbi/design-editor": "0.10.0",
     "@tailwindcss/vite": "^4.3.3",
     "colord": "^2.9.3",
     "d3-delaunay": "^6.0.4",
@@ -52,17 +27,23 @@
   },
   "devDependencies": {
     "@kolkrabbi/kol-brand": "0.1.3",
-    "@kolkrabbi/kol-component": "0.152.0",
-    "@kolkrabbi/kol-framework": "0.36.0",
-    "@kolkrabbi/kol-icons": "0.25.0",
-    "@kolkrabbi/kol-media-client": "0.3.2",
-    "@kolkrabbi/kol-shell": "0.35.0",
-    "@kolkrabbi/kol-theme": "0.121.0",
+    "@kolkrabbi/kol-component": "0.212.0",
+    "@kolkrabbi/kol-framework": "0.44.0",
+    "@kolkrabbi/kol-icons": "0.27.0",
+    "@kolkrabbi/kol-media-client": "0.4.0",
+    "@kolkrabbi/kol-shell": "0.56.0",
+    "@kolkrabbi/kol-theme": "0.145.0",
     "@vitejs/plugin-react": "^6.0.5",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2",
     "vite": "^8.2.1",
     "vite-plugin-svgr": "^5.2.0"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }
