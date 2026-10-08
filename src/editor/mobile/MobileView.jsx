@@ -11,7 +11,7 @@ import { firstPresetPatch, loopById, resolveCameraKeys } from '../../loops/regis
 import { useTool } from '../state/tools'
 import LabsSourcePicker from '../labs/LabsSourcePicker'
 import { isTabletSized, goDesktop, isMobileDevice, wantsDesktop, useNarrow } from './device'
-import { goLabs, modeById, setMountedView } from '../mode'
+import { goLabs, modeById, navigateTo, setMountedView } from '../mode'
 import { MODE_ICONS } from '../labs/catalog'
 import CategoryScreen, { SPREAD } from './CategoryScreen'
 import MobileOverlay from './MobileOverlay'
@@ -67,6 +67,12 @@ function EntryScreen({ onGenerate, onEffects, chromes }) {
           {chromes && (
             <Button tone="primary" size="lg" className={SPREAD} iconLeft={MODE_ICONS.labs} iconRight={MODE_ICONS.labs} onClick={goLabs}>
               {modeById('labs').label}
+            </Button>
+          )}
+          {/* Morph is a labs chrome (plan 10) — on a phone this card covers the rail, so it needs its own door */}
+          {chromes && (
+            <Button tone="primary" size="lg" className={SPREAD} iconLeft="swap" iconRight="swap" onClick={() => navigateTo('/morph')}>
+              Morph
             </Button>
           )}
         </div>

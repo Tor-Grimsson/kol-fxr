@@ -104,6 +104,7 @@ export const goChooser = () => {
 const PATH_TO_MODE = {
   '/editor': 'editor',
   '/labs': 'labs',
+  '/morph': 'labs', /* the labs chrome, Morph rail open (plan 10) */
   '/randomiser': 'randomiser',
 }
 

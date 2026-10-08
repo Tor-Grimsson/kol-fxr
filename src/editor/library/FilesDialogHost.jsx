@@ -5,6 +5,7 @@ import { matchCombo } from '../state/keymap'
 import { useComposeState } from '../compose/state'
 import { useComposeFile } from '../compose/useComposeFile'
 import { useGeneratorLibrary } from './LibraryProvider'
+import { currentView } from '../mode'
 
 /**
  * FilesDialogHost — binds `FilesDialog` to the editor's own verbs and mounts it
@@ -26,6 +27,9 @@ export default function FilesDialogHost() {
    * chrome that mounts the host answers it; preventDefault stops the browser's own Open. */
   useEffect(() => {
     const onKey = (e) => {
+      /* ⌘S / Ctrl+S — Save patch (user, 2026-10-08), labs + morph + the randomiser: the dialog opens on
+       * its name field and Save current writes a NEW file each time, so rolls collect as morph steps */
+      if (matchCombo(e, 'Mod+S') && ['labs', 'randomiser'].includes(currentView())) { e.preventDefault(); openFiles({ focusName: true }); return }
       if (!matchCombo(e, 'Mod+O')) return
       e.preventDefault()
       if (open) closeFiles(); else openFiles()

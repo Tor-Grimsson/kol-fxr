@@ -52,12 +52,12 @@ import {
  *
  * THE KEYS, split by route — read in kol-shell 0.62.0 and design-editor 0.21.0:
  *
- *   ⌥1…⌥6   LOCAL, not AppShell's `navKeys`. `navKeys` walks mark → items →
+ *   ⌥1…⌥7   LOCAL, not AppShell's `navKeys`. `navKeys` walks mark → items →
  *           bottom rows now, but indexes `items` exactly as passed — and labs
  *           INSERTS its category rows under Labs, so on `/labs` ⌥5 would land
  *           on Effects instead of Randomiser. The digit must stay stable per
  *           destination regardless of what a chrome contributes.
- *           ⌥1 Home · ⌥2 Library · ⌥3 Editor · ⌥4 Labs · ⌥5 Randomiser · ⌥6 Settings.
+ *           ⌥1 Home · ⌥2 Library · ⌥3 Editor · ⌥4 Labs · ⌥5 Morph · ⌥6 Randomiser · ⌥7 Settings.
  *   ,       On a shell page (`/` · `/library` · `/settings`) the shell's own
  *           `settingsKey` toggles `/settings` and remembers the return path.
  *           On a chrome route the shell's key is OFF and `ChromeSettingsKey`
@@ -84,6 +84,9 @@ export const NAV_ITEMS = [
   { icon: 'nav-library', path: '/library', label: 'Library' },
   { icon: 'desktop', path: '/editor', label: 'Editor' },
   { icon: 'globe', path: '/labs', label: 'Labs' },
+  /* MORPH is a destination (plan 10, user 2026-10-08: "how the fuck is MORPH NOT IN THE SIDERAIL") — the labs
+     chrome with the Morph rail open, not a row labs contributes only while you are on it */
+  { icon: 'swap', path: '/morph', label: 'Morph' },
   { icon: 'refresh', path: '/randomiser', label: 'Randomiser' },
 ]
 
@@ -101,7 +104,7 @@ const SIGN_IN_PATH = '#sign-in'
 const KEY_ORDER = ['/', ...NAV_ITEMS.map((n) => n.path), SETTINGS_PATH]
 
 /* The chrome routes — where the PACKAGE owns `,` and `S`. */
-const CHROME_PATHS = new Set(['/editor', '/labs', '/randomiser'])
+const CHROME_PATHS = new Set(['/editor', '/labs', '/morph', '/randomiser'])
 
 const APP = {
   name: 'Effexor FXR',
@@ -152,7 +155,7 @@ const RECENT_FILES = 12
 const recentFiles = () => savedCards().sort((a, b) => stampOf(b.file) - stampOf(a.file)).slice(0, RECENT_FILES)
 /* where a file opens: its stored `mode` (plan 09 — labs · editor · morph, a morph opens in labs);
    files from before carry none and keep the guess — a single generator layer is a labs file */
-const chromeOf = (p) => (p.mode === 'labs' || p.mode === 'morph' ? 'labs' : p.mode === 'editor' ? 'editor' : (Array.isArray(p.layers) && p.layers.length === 1 && p.layers[0]?.type === 'loop' ? 'labs' : 'editor'))
+const chromeOf = (p) => (p.mode === 'morph' ? 'morph' : p.mode === 'labs' ? 'labs' : p.mode === 'editor' ? 'editor' : (Array.isArray(p.layers) && p.layers.length === 1 && p.layers[0]?.type === 'loop' ? 'labs' : 'editor'))
 
 /* ponytail: placeholder steps — monitor's five-step tour has no fxr copy yet.
    The last step's `actions` is a FUNCTION so HubHome can hand it `close`. */
@@ -292,7 +295,7 @@ export default function AppLayout() {
   const [, setTick] = useState(0)
   const bump = () => setTick((n) => n + 1)
 
-  /* ⌥1…⌥6 — the rail top to bottom, HOME included. See the docblock for why
+  /* ⌥1…⌥7 — the rail top to bottom, HOME included. See the docblock for why
      this is local rather than AppShell's `navKeys`. */
   const navRef = useRef(onNavigate)
   navRef.current = onNavigate
@@ -326,7 +329,8 @@ export default function AppLayout() {
          they belong to that destination, and appending them put them below
          Randomiser. `KEY_ORDER` is derived from NAV_ITEMS, not from this, so
          ⌥-digit is unaffected by where they land. */
-      items={extras.items.length
+      /* …and only on `/labs`: the same chrome serves `/morph`, whose rail is the Morph rail */
+      items={extras.items.length && location.pathname.startsWith('/labs')
         ? NAV_ITEMS.flatMap((n) => (n.path === '/labs' ? [n, ...extras.items] : [n]))
         : NAV_ITEMS}
       currentPath={location.pathname}

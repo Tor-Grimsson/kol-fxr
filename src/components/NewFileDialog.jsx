@@ -19,7 +19,7 @@ const DOORS = [
   { id: 'editor', label: 'Editor', detail: 'The full compositor — an empty frame.', to: '/editor?new=1' },
   { id: 'labs', label: 'Labs', detail: 'One generator on a standardized output.', to: '/labs?new=1' },
   { id: 'randomiser', label: 'Randomiser', detail: 'Roll the dice: pick a category and randomize.', to: '/randomiser' },
-  { id: 'morph', label: 'Morph', detail: 'Tween between steps of one generator.', to: '/labs?new=morph' },
+  { id: 'morph', label: 'Morph', detail: 'Tween between steps of one generator.', to: '/morph?new=morph' },
 ]
 
 export default function NewFileDialog() {

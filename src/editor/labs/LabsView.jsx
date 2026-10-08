@@ -10,7 +10,7 @@ import { useTool } from '../state/tools'
 import { useGlobalShortcuts } from '../state/useGlobalShortcuts'
 import EditorFooter from '../shell/panels/EditorFooter'
 import StepPicker from '../morph/StepPicker'
-import { useMorph } from '../morph/morphStore'
+import { useMorph, setMorph } from '../morph/morphStore'
 import { urlIntent } from '../library/UrlIntents'
 import FilesDialogHost from '../library/FilesDialogHost'
 import TimelineDock from '../params/TimelineDock'
@@ -350,6 +350,15 @@ function LabsBody() {
      pairing), which opens closed, so a pick landed on a 48px strip and nothing to turn. Dropping
      the collapsed stamp here lets the pairing bring the shell rail out with it. */
   useEffect(() => { if (layer && !touch) document.documentElement.removeAttribute('data-rail') }, [layer?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  /* …and so does arriving on the Morph rail (plan 13): with the rail folded, /morph was a 48px strip.
+     On arrival the shell rail has not reported its width yet, so an immediate unfold is re-folded by
+     the pairing's first sync; two frames later the pairing reads both rails and opens the left too. */
+  useEffect(() => {
+    if (!morph.active || touch) return undefined
+    let a = 0, b = 0
+    a = requestAnimationFrame(() => { b = requestAnimationFrame(() => document.documentElement.removeAttribute('data-rail')) })
+    return () => { cancelAnimationFrame(a); cancelAnimationFrame(b) }
+  }, [morph.active, touch])
   /* a pick from the nav brings a collapsed sheet back */
   useEffect(() => {
     if (!touch) return undefined
@@ -494,6 +503,11 @@ function LabsBody() {
 export const LABS_DRAFT_KEY = 'kol.editor.labs-draft'
 
 export default function LabsView() {
+  /* THE ROUTE SAYS WHICH RAIL (plan 10): `/morph` is labs with the Morph rail, `/labs` is labs. The
+     steps are module state and survive the hop either way. Runs after UrlIntents (a child), so a
+     morph file opened on `/morph` keeps the steps it loaded. */
+  const onMorph = /\/morph\/?$/.test(typeof window === 'undefined' ? '' : window.location.pathname)
+  useEffect(() => { setMorph(onMorph ? { active: true } : { active: false, editing: null }) }, [onMorph])
   return (
     <EditorProviders draftKey={LABS_DRAFT_KEY}>
       <LabsBody />

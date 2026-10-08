@@ -4,7 +4,6 @@ import { useComposeState } from '../compose/state'
 import { useLabsLayer } from './useLabsLayer'
 import { buildLabsCatalog, SECTION_ICONS } from './catalog'
 import { transport } from '../params/transport'
-import { getMorph, setMorph } from '../morph/morphStore'
 import { isMobileDevice, wantsDesktop } from '../mobile/device'
 
 /**
@@ -104,17 +103,8 @@ export default function LabsNav() {
        lands a still and Space runs it — but a phone has no Space and its ▶ sits
        in the params drawer, closed; a pick that lands a frozen frame reads as
        broken there (the randomiser has always played on pick). */
-    /* MORPH — an L1 row after the sections (plan 10): pressing it makes the Morph rail the surface;
-       pressing any catalog row steps out of it, steps kept, so a misclick loses nothing */
-    const morphPath = `${RAIL_EXTRA_PREFIX}morph`
-    items.push({ icon: 'swap', path: morphPath, label: 'Morph' })
     const touch = isMobileDevice() && !wantsDesktop()
-    setRailExtras({ items, dispatch: (p) => {
-      if (p === morphPath) { setMorph({ active: true }); if (touch) window.dispatchEvent(new CustomEvent('kol:open-params')); return true }
-      const fn = dispatch.get(p); if (!fn) return false
-      if (getMorph().active) setMorph({ active: false, editing: null })
-      fn(); if (touch) transport.play(); return true
-    } })
+    setRailExtras({ items, dispatch: (p) => { const fn = dispatch.get(p); if (!fn) return false; fn(); if (touch) transport.play(); return true } })
     return () => setRailExtras(null)
   })
 

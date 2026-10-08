@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Button, ContentRow, EmptyState, FullscreenOverlay, SearchInput, SegmentedToggle } from '@kolkrabbi/kol-component'
+import { ShellSearchOverlay } from '@kolkrabbi/kol-component'
 import { PRESETS, isToolPreset, groupOfPreset, groupById, loopById, presetParams } from '../../loops/registry'
 import { loadLibrary } from '../library/LibraryProvider'
 import { loopSnapshot } from './buildMorph'
@@ -7,31 +7,30 @@ import { useMorph, setMorph, addStep, pickParams } from './morphStore'
 import { useLabsLayer } from '../labs/useLabsLayer'
 
 /**
- * StepPicker — the Morph rail's picker (plans 09 + 10): a modal over the page (the overlay's
- * `scrim`, the labs ruling of 2026-10-07), a search field, *From presets* grouped by generator and
- * *From my files*, plus *From the stage* while the stage holds a plain generator. A pick adds a
- * step; the first pick also puts that generator on the stage. In Blend mode the first step fixes
- * the generator (one schema to tween); Shape mode spans generators. Mounted once in labs.
+ * StepPicker — the Morph rail's picker on `ShellSearchOverlay`, the DS search modal (plan 13; the
+ * user: *"USE THE ASSETS AVAILABLE … we dont need 3 views and a filter system, we just need to make
+ * the picker WORK"*). A field, rows grouped by generator, ↑ ↓ Enter, Escape — all the overlay's.
+ *
+ * Rows, in order: *Current stage* (the generator on the stage as dialled, while it can be a step),
+ * *My files* (saved labs files — randomiser rolls save as labs), then every catalog preset under its
+ * generator. In Blend mode after a first step only that generator is listed (one schema to tween).
+ * Ids are prefixed (`stage` · `file:` · `preset:`) — a file id and a preset id can collide.
+ *
+ * The overlay closes itself after a pick (`onSelect`, then `onClose`), so `onSelect` only adds the
+ * step and `onClose` alone clears `morph.picker`. The first step also puts its generator on the stage.
+ * The browse-panel version it replaces is in `_tmp/2026-10-08-step-picker-browse/`.
  */
-const DOORS = [
-  { value: 'preset', label: 'From presets' },
-  { value: 'file', label: 'From my files' },
-]
-
-/* the step a catalog preset makes */
 function stepFromPreset(p) {
   const group = groupOfPreset(p.id)
   const schema = loopById(p.loop)?.params ?? []
   return { loopId: p.loop, loopGroup: group, presetId: p.id, presetLabel: p.label, params: pickParams(presetParams(p), schema), source: { kind: 'preset', id: p.id, label: p.label } }
 }
-/* the step a saved labs file makes — its one generator layer */
 function stepFromFile(item, loopId) {
   const l = loopId ? loopSnapshot(item, loopId) : (item.layers ?? []).find((x) => x?.type === 'loop')
   if (!l) return null
   const schema = loopById(l.loopId)?.params ?? []
   return { loopId: l.loopId, loopGroup: l.loopGroup, presetId: l.presetId, presetLabel: l.presetLabel, params: pickParams(l, schema), source: { kind: 'file', id: item.id, label: item.name || 'Untitled' } }
 }
-/* the step the stage makes — the plain generator on it, as dialled */
 function stepFromLayer(layer) {
   const schema = loopById(layer.loopId)?.params ?? []
   return { loopId: layer.loopId, loopGroup: layer.loopGroup, presetId: layer.presetId, presetLabel: layer.presetLabel, params: pickParams(layer, schema), source: { kind: 'stage', label: layer.presetLabel || 'Stage' } }
@@ -41,72 +40,57 @@ export default function StepPicker() {
   const morph = useMorph()
   const { layer, setOnly } = useLabsLayer()
   const open = !!morph.picker
-  const door = morph.picker === 'file' ? 'file' : 'preset'
   const only = morph.mode === 'blend' ? morph.loopId : null
-  const [q, setQ] = useState('')
-
-  const presets = useMemo(() => PRESETS.filter((p) => !isToolPreset(p) && (!only || p.loop === only)), [only])
-  const files = useMemo(() => (open ? (loadLibrary().preset ?? []).filter((it) => it.mode !== 'morph' && (only ? loopSnapshot(it, only) : (it.layers ?? []).some((x) => x?.type === 'loop'))) : []), [open, only])
-
-  if (!open) return null
-  const needle = q.trim().toLowerCase()
-  const hit = (s) => !needle || String(s).toLowerCase().includes(needle)
-  /* presets in catalog order, one heading per generator */
-  const groups = []
-  for (const p of presets) {
-    const label = groupById(groupOfPreset(p.id))?.label ?? p.loop
-    if (!hit(p.label) && !hit(label)) continue
-    let g = groups[groups.length - 1]
-    if (!g || g.label !== label) { g = { label, rows: [] }; groups.push(g) }
-    g.rows.push(p)
-  }
-  const shownFiles = files.filter((it) => hit(it.name || 'Untitled'))
+  const [query, setQuery] = useState('')
   /* the stage is a plain generator with fewer than two steps, or the step being edited */
   const stageOk = layer?.type === 'loop' && (morph.steps.length < 2 || morph.editing != null)
 
-  const close = () => { setMorph({ picker: null }); setQ('') }
-  const pick = (step) => {
+  /* every row, and the step each one makes */
+  const { rows, make } = useMemo(() => {
+    const rows = [], make = new Map()
+    if (!open) return { rows, make }
+    if (stageOk && (!only || layer.loopId === only)) {
+      rows.push({ id: 'stage', label: layer.presetLabel || 'Current stage', group: 'Current stage', hint: groupById(layer.loopGroup)?.label })
+      make.set('stage', () => stepFromLayer(layer))
+    }
+    for (const it of loadLibrary().preset ?? []) {
+      if (it.mode === 'morph' || !(only ? loopSnapshot(it, only) : (it.layers ?? []).some((x) => x?.type === 'loop'))) continue
+      const id = `file:${it.id}`
+      rows.push({ id, label: it.name || 'Untitled', group: 'My files' })
+      make.set(id, () => stepFromFile(it, only))
+    }
+    for (const p of PRESETS) {
+      if (isToolPreset(p) || (only && p.loop !== only)) continue
+      const id = `preset:${p.id}`
+      rows.push({ id, label: p.label, group: groupById(groupOfPreset(p.id))?.label ?? p.loop, hint: p.sub })
+      make.set(id, () => stepFromPreset(p))
+    }
+    return { rows, make }
+  }, [open, only, stageOk, layer])
+
+  if (!open) return null
+  const needle = query.trim().toLowerCase()
+  const results = needle ? rows.filter((r) => [r.label, r.group, r.hint].some((s) => s && s.toLowerCase().includes(needle))) : []
+
+  const onSelect = (row) => {
+    const step = make.get(row.id)?.()
     if (!step) return
-    /* the first step puts the generator on the stage; later ones only join the list */
     if (morph.steps.length === 0) setOnly('loop', { loopGroup: step.loopGroup, presetId: step.presetId, presetLabel: step.presetLabel, loopId: step.loopId, ...step.params })
     addStep(step)
-    close()
   }
-  const nothing = needle && (door === 'preset' ? groups.length === 0 : shownFiles.length === 0)
+  const onClose = () => { setMorph({ picker: null }); setQuery('') }
 
   return (
-    <FullscreenOverlay open={open} scrim onClose={close}>
-      <div className="kol-step-picker flex flex-col gap-4" style={{ minWidth: 'min(640px, 90vw)' }}>
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="kol-eyebrow text-meta">Morph · add a step</span>
-          <span className="ms-auto flex items-center gap-2">
-            {stageOk && <Button tone="grey" size="sm" onClick={() => pick(stepFromLayer(layer))}>From the stage</Button>}
-            <SegmentedToggle value={door} onChange={(v) => setMorph({ picker: v })} options={DOORS} size="sm" />
-          </span>
-        </div>
-        <SearchInput size="sm" value={q} onChange={(e) => setQ(e.target.value)} onClear={() => setQ('')} placeholder="Search" autoFocus />
-        {door === 'file' && files.length === 0 ? (
-          <EmptyState eyebrow="Morph" title={only ? 'No saved files of this generator' : 'No saved labs files yet'} body="Save a labs file first, or add a step from the presets." />
-        ) : (
-          <ul className="flex flex-col" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-            {door === 'preset'
-              ? groups.map((g) => (
-                <li key={g.label} className="flex flex-col">
-                  <p className="kol-eyebrow text-meta pt-3 pb-1">{g.label}</p>
-                  <ul className="flex flex-col">
-                    {g.rows.map((p) => (
-                      <li key={p.id}><ContentRow variant="default" media={false} title={p.label} onClick={() => pick(stepFromPreset(p))} /></li>
-                    ))}
-                  </ul>
-                </li>
-              ))
-              : shownFiles.map((it) => (
-                <li key={it.id}><ContentRow variant="default" media={false} title={it.name || 'Untitled'} onClick={() => pick(stepFromFile(it, only))} /></li>
-              ))}
-            {nothing && <li><p className="kol-mono-12 text-meta pt-3">Nothing matches “{q}”.</p></li>}
-          </ul>
-        )}
-      </div>
-    </FullscreenOverlay>
+    <ShellSearchOverlay
+      open
+      onClose={onClose}
+      suggestions={rows}
+      results={results}
+      query={query}
+      onQueryChange={setQuery}
+      onSelect={onSelect}
+      placeholder="Search presets and files"
+      selectLabel="Add step"
+    />
   )
 }

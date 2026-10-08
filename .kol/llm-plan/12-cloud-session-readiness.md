@@ -22,7 +22,7 @@ Oddity: `api/.wrangler/` is not ignored — 19 local D1 state files are tracked.
 ## Steps
 
 1. Move the walk scripts into a tracked path; point the scripts at this repo's own Playwright.
-2. User rules on `docs/`: stays ignored, or tracked.
-3. User rules on `api/.wrangler/`: ignore it (and untrack the 19 files), or keep.
+2. DONE 2026-10-08 — `docs/` tracked (the `/docs/` line dropped; `docs/.obsidian/` stays ignored).
+3. DONE 2026-10-08 — `api/.wrangler/` ignored; the 19 tracked files come out with `git rm -r --cached api/.wrangler` (the user's).
 4. User commits and pushes.
 5. In the cloud session: `pnpm install`, `pnpm build`, one walk — say whether the boot rules loaded.

@@ -13,6 +13,7 @@ import { effectHost } from '../compose/inspectors/effectCategories'
 import { PanelHeader, PanelPills, SheetGrab, SHEET_H } from '../components/PanelHeader'
 import MorphTab from '../morph/MorphTab'
 import { useMorph } from '../morph/morphStore'
+import { openFiles } from '../library/filesDialogStore'
 
 /**
  * MobileOverlay — the generator's control panel, content split into
@@ -393,7 +394,9 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
             <div className="flex flex-col gap-2 pt-3">
               <SegmentedToggle value={aspectValue} onChange={onAspect} options={ASPECT_ROW_1} size={cs} ariaLabel="Aspect" />
               <SegmentedToggle value={aspectValue} onChange={onAspect} options={ASPECT_ROW_2} size={cs} ariaLabel="Aspect (landscape) and fill" />
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                {/* a roll as a file — a labs file, so it is a morph step under From my files (⌘S at a desk) */}
+                <Button tone="primary" size={cs} onClick={() => openFiles({ focusName: true })}>Save…</Button>
                 <Button tone="primary" size={cs} onClick={() => onExportPng(2)}>Download</Button>
                 <Button tone="primary" size={cs} onClick={() => setUiHidden(true)}>Hide UI</Button>
                 <Button tone="primary" size={cs} onClick={onRestart}>Start over</Button>

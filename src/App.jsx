@@ -111,6 +111,8 @@ export default function App() {
                 sidebar in each mode"); `\` hides it, see AppLayout */}
             <Route path="/editor" element={<Editor />} />
             <Route path="/labs" element={<LabsView />} />
+            {/* the labs chrome with the Morph rail open (plan 10) */}
+            <Route path="/morph" element={<LabsView />} />
             <Route path="/randomiser" element={<MobileView />} />
           </Route>
           <Route path="/output" element={<OutputView />} />
