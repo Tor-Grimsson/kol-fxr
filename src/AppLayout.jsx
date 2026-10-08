@@ -164,11 +164,19 @@ function RailSignIn({ handlerRef }) {
   const modal = useModal()
   const session = useLibrarySession()
   handlerRef.current = async () => {
-    if (session) { signOutLibrary(); return }
+    if (session) {
+      signOutLibrary()
+      await modal.alert('Signed out. Saves stay on this device only.')
+      return
+    }
     const pw = await modal.prompt('Password for the library sync:', '')
     if (!pw) return
-    try { await signInLibrary(pw) }
-    catch (e) { await modal.confirm(e instanceof UnauthorizedError ? 'Wrong password.' : `Sync failed: ${e?.message || e}`, { okLabel: 'OK' }) }
+    try {
+      const n = await signInLibrary(pw)
+      await modal.alert(`Signed in. ${n} saved ${n === 1 ? 'item' : 'items'} in the cloud library; saves now sync.`)
+    } catch (e) {
+      await modal.alert(e instanceof UnauthorizedError ? 'Wrong password. Still local only.' : `Sign in failed: ${e?.message || e}`)
+    }
   }
   return null
 }
@@ -217,7 +225,8 @@ export default function AppLayout() {
      Settings itself, but a `shell.bottomItems` replaces its list, so Settings is named here too;
      the shell's `settingsPath` toggle still applies to it. */
   const bottomItems = [
-    ...(getLibraryApi() ? [{ icon: 'user', path: SIGN_IN_PATH, label: session ? 'Sign out' : 'Sign in' }] : []),
+    /* the icon IS the state: a person while local, a cloud while synced (the label only shows with the rail open) */
+    ...(getLibraryApi() ? [{ icon: session ? 'cloud' : 'user', path: SIGN_IN_PATH, label: session ? 'Synced · sign out' : 'Sign in' }] : []),
     { icon: 'nav-settings', path: SETTINGS_PATH, label: 'Settings' },
   ]
 

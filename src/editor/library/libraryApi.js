@@ -52,8 +52,9 @@ export const useLibrarySession = () => useSyncExternalStore((l) => { listeners.a
 export async function signInLibrary(password) {
   if (!apiBase) throw new Error('no library api')
   const backend = createD1Backend(apiBase, password)
-  await backend.hydrate()
+  const rows = await backend.hydrate()
   session = { backend }
   emit()
+  return rows.filter((r) => !r.deleted).length
 }
 export function signOutLibrary() { if (!session) return; session = null; emit() }
