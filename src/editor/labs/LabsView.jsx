@@ -9,7 +9,9 @@ import { useComposeState } from '../compose/state'
 import { useTool } from '../state/tools'
 import { useGlobalShortcuts } from '../state/useGlobalShortcuts'
 import EditorFooter from '../shell/panels/EditorFooter'
-import MorphDialogHost from '../morph/MorphDialogHost'
+import StepPicker from '../morph/StepPicker'
+import { useMorph } from '../morph/morphStore'
+import { urlIntent } from '../library/UrlIntents'
 import FilesDialogHost from '../library/FilesDialogHost'
 import TimelineDock from '../params/TimelineDock'
 import { useDragResize } from '@kolkrabbi/kol-framework'
@@ -341,6 +343,7 @@ function LabsBody() {
   const [tall, setTall] = useState(false)
   /* THE ENTRY CARD (LabsCatalogCard), both frames: open while the stage is empty, gone on a pick,
      back when the layer goes; the sheet's `Catalog` and the rail's rows reopen it */
+  const morph = useMorph()
   const [catalog, setCatalog] = useState(() => !layer)
   useEffect(() => { setCatalog(!layer) }, [layer?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   /* …and at a desk a pick OPENS the params rail: it folds with the shell rail (the 2026-08-30
@@ -397,7 +400,7 @@ function LabsBody() {
   useEffect(() => {
     if (seededRef.current) return
     seededRef.current = true
-    if (new URLSearchParams(window.location.search).get('open')) return /* a saved file wins (OpenFromUrl) */
+    const intent = urlIntent(); if (intent.open || intent.fresh) return /* a file or a fresh frame wins (UrlIntents) */
     const deepLink = new URLSearchParams(window.location.search).get('preset')
     const group = deepLink ? groupOfPreset(deepLink) : null
     if (group) setOnly('loop', presetLayerPatch(presetById(deepLink), group))
@@ -463,7 +466,7 @@ function LabsBody() {
   /* `.kol-editor-labs` scopes kol-labs.css to this chrome; `contents` keeps the
    * wrapper out of layout so the shell's grid is untouched. */
   return (
-    <div className="kol-editor-labs contents" data-touch={touch || undefined} data-params={paramsOpen ? 'open' : undefined} data-empty={layer ? undefined : ''} style={tall ? { '--kol-sheet-h': SHEET_H.tall } : undefined}>
+    <div className="kol-editor-labs contents" data-touch={touch || undefined} data-params={paramsOpen ? 'open' : undefined} data-empty={layer || morph.active ? undefined : ''} style={tall ? { '--kol-sheet-h': SHEET_H.tall } : undefined}>
       {/* draws nothing — hands labs' categories to the shell rail */}
       <LabsNav />
       {touch ? (
@@ -480,7 +483,8 @@ function LabsBody() {
       )}
       {/* labs' own shortcuts card retired 2026-10-06 (the user: "dont we have a standardized
           shortcuts look?") — S opens the editor's sheet, which EditorShell mounts for every chrome */}
-      {catalog && <LabsCatalogCard onPicked={() => setCatalog(false)} onClose={() => setCatalog(false)} />}
+      {/* the entry card yields to the Morph tab's own doors (plan 09) */}
+      {catalog && !morph.picker && !(morph.active && !layer) && <LabsCatalogCard onPicked={() => setCatalog(false)} onClose={() => setCatalog(false)} />}
     </div>
   )
 }
@@ -496,7 +500,8 @@ export default function LabsView() {
       {/* The File tab's Files… · Save as… · Morph… open these through their stores — mounted inside
           the providers. FilesDialogHost was the editor's only until 2026-10-08: labs' two buttons were dead. */}
       <FilesDialogHost />
-      <MorphDialogHost />
+      {/* the Morph tab's two doors (plan 09) */}
+      <StepPicker />
     </EditorProviders>
   )
 }

@@ -86,7 +86,8 @@ function MobileBody() {
   /* …and the FRAME follows the window too (2026-10-05): under 768 a desk window gets the sheet,
      where the 264px rail left the stage 126px of a 390 window. The doors above stay the device's. */
   const narrow = useNarrow()
-  const start = () => 'entry'
+  /* a file opened by URL (`?open=`, plan 09) lands on the live screen — the chooser is for an empty stage */
+  const start = () => (new URLSearchParams(window.location.search).get('open') ? 'live' : 'entry')
   const [screen, setScreen] = useState(start)   /* entry | category | live */
   /* Effects: the input media first, then the effect sheet — and the media is
      KEPT while effects are browsed (the sheet's Back only closes the sheet) */

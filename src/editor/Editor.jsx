@@ -7,7 +7,7 @@ import { goLabs, goRandomiser, modeById } from './mode'
 import EditorErrorBoundary from './EditorErrorBoundary'
 import { ToolProvider }       from './state/tools'
 import { GeneratorLibraryProvider } from './library/LibraryProvider'
-import OpenFromUrl from './library/OpenFromUrl'
+import UrlIntents from './library/UrlIntents'
 import { useGlobalShortcuts } from './state/useGlobalShortcuts'
 import { ComposeStateProvider, useComposeState } from './compose/state'
 import { transport } from './params/transport'
@@ -17,7 +17,6 @@ import { PatternStateProvider } from './modes/pattern/state'
 import { TypeStateProvider }    from './modes/type/state'
 import PaletteModal from './color/PaletteModal.jsx'
 import FilesDialogHost from './library/FilesDialogHost'
-import MorphDialogHost from './morph/MorphDialogHost'
 import Compose from './Compose'
 
 /**
@@ -56,7 +55,6 @@ function EditorBody() {
       {/* mounted once, inside the providers — the two File surfaces open it
           through a store rather than owning it (FilesDialog, kol-fxr) */}
       <FilesDialogHost />
-      <MorphDialogHost />
     </>
   )
 }
@@ -86,7 +84,7 @@ export function EditorProviders({ children, persistDraft = true, draftKey }) {
               <PaletteStateProvider>
                 <PatternStateProvider>
                   <TypeStateProvider>
-                    <OpenFromUrl />
+                    <UrlIntents />
                     {children}
                   </TypeStateProvider>
                 </PatternStateProvider>

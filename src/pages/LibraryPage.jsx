@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@kolkrabbi/kol-component'
 import { CatalogPage } from '@kolkrabbi/kol-shell'
+import { openNewFile } from '../components/NewFileDialog'
 import {
   GeneratorLibraryProvider,
   useGeneratorLibrary,
@@ -137,8 +138,7 @@ function LibraryBody() {
         ),
       })}
       actions={
-        /* ponytail: New File is a placeholder, same as Home's. */
-        <Button tone="grey" size="md" onClick={() => {}}>New File</Button>
+        <Button tone="grey" size="md" onClick={openNewFile}>New File</Button>
       }
     />
   )

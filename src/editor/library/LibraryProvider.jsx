@@ -121,6 +121,11 @@ function validatePreset(spec) {
     aspect:  spec.aspect  ?? '1:1',
     layers:  spec.layers,
     palette: spec.palette ?? null,
+    /* a custom canvas keeps its size (loadPreset reads it); `mode` says where the file opens and
+     * `morph` holds a morph file's steps (plan 09) — both were being dropped here */
+    ...(typeof spec.canvasW === 'number' && typeof spec.canvasH === 'number' ? { canvasW: spec.canvasW, canvasH: spec.canvasH } : {}),
+    ...(typeof spec.mode === 'string' ? { mode: spec.mode } : {}),
+    ...(spec.morph && typeof spec.morph === 'object' ? { morph: spec.morph } : {}),
   }
 }
 

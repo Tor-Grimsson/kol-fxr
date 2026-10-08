@@ -1,9 +1,11 @@
 import { groupById } from '../../loops/registry'
 import { resolvedChain } from '../compose/filterChain'
+import { getMorph } from '../morph/morphStore'
 
 /* What labs' touch sheet reads for the one layer — the generator's two forms: `group · preset` on
  * the open panel's header, the preset alone on the collapsed pill (user ruling 2026-08-12). */
 export function sheetLabels(layer) {
+  if (getMorph().active) return { title: 'Morph', pill: 'Morph' }
   if (!layer) return { title: 'Labs', pill: 'Labs' }
   if (layer.type === 'loop' || layer.type === 'misc') {
     return { title: `${groupById(layer.loopGroup)?.label ?? 'Labs'} · ${layer.presetLabel}`, pill: layer.presetLabel }

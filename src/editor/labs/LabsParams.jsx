@@ -21,6 +21,8 @@ import { groupById, loopById, presetsInGroup, presetsInSub, presetLayerPatch } f
 import { computeRoll, allScopeParams } from '../params/rolls'
 import { useAppSettings, getAppSettings, setAppSetting } from '../lib/appSettings'
 import { useLabsLayer } from './useLabsLayer'
+import MorphTab from '../morph/MorphTab'
+import { useMorph } from '../morph/morphStore'
 import Hint from '../components/Hint'
 import { useControlSize, stripClamp } from '../params/controlSize'
 
@@ -471,6 +473,8 @@ function KineticSurface({ layer, showMod }) {
 
 export default function LabsParams() {
   const { layer } = useLabsLayer()
+  const morph = useMorph()
+  const cs = useControlSize()
   /* Modulation dots hide by default (labs has none) — M or Settings →
    * Modulation dots brings them back. */
   const showMod = !!useAppSettings().labsModDots
@@ -487,6 +491,9 @@ export default function LabsParams() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  /* THE MORPH RAIL (plan 10): its own surface while the MORPH row is in use — no generator heading,
+     no generator strip; a step being edited opens its generator's tabs under the slots */
+  if (morph.active) return <Surface title="Morph"><MorphTab layer={layer} editTabs={cs === 'sm' ? GEN_TABS : GEN_TABS_TOUCH} /></Surface>
   if (!layer) return <Hint>Pick an effect or generator from the nav.</Hint>
   if (layer.type === 'photo') return <EffectSurface key={layer.id} layer={layer} showMod={showMod} />
   if (layer.type === 'loop') return <GenerativeSurface key={layer.id} layer={layer} showMod={showMod} />

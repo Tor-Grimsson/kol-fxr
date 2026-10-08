@@ -11,6 +11,8 @@ import { deriveScopes, allScopeParams, computeRoll, computePresetRoll, computeFi
 import { resolvedChain } from '../compose/filterChain'
 import { effectHost } from '../compose/inspectors/effectCategories'
 import { PanelHeader, PanelPills, SheetGrab, SHEET_H } from '../components/PanelHeader'
+import MorphTab from '../morph/MorphTab'
+import { useMorph } from '../morph/morphStore'
 
 /**
  * MobileOverlay — the generator's control panel, content split into
@@ -146,6 +148,10 @@ const ASPECT_ROW_2 = [
 ]
 
 export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRestart, aspectValue, onAspect, openEffects = false, rail = false, onRail, onSheet }) {
+  /* a morph file opened here plays; its steps show read-only (plan 09 — building is labs' job).
+     First hook in the body: the overlay returns early below, and a hook after a conditional return
+     changes the hook count between renders (React #310). */
+  const morph = useMorph()
   const { updateLayer, addFilter, removeFilter } = useComposeState()
   const { onExportPng } = useComposeFile()
   const [uiHidden, setUiHidden] = useState(false)
@@ -230,7 +236,7 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
     )
   }
 
-  const tabs = (isLoop ? TABS_LOOP : TABS_MEDIA).filter((t) => (t.value !== 'effects' || effectable) && (t.value !== 'transport' || pack('motion')))
+  const tabs = [...(isLoop ? TABS_LOOP : TABS_MEDIA), ...(isLoop && morph.steps.length >= 2 ? [{ value: 'morph', label: 'Morph' }] : [])].filter((t) => (t.value !== 'effects' || effectable) && (t.value !== 'transport' || pack('motion')))
   const activeTab = tabs.some((t) => t.value === tab) ? tab : tabs[0].value
 
   return (
@@ -298,6 +304,7 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
             className={rail ? STRIP_CLAMP : '[&_.kol-seg-cell]:min-w-0 [&_.kol-seg-cell]:px-2 [&_.kol-seg-cell]:overflow-hidden'}
           />
 
+          {activeTab === 'morph' && isLoop && <MorphTab layer={layer} readOnly />}
           {activeTab === 'generate' && isLoop && (
             <div className="flex flex-col gap-2 pt-3">
               <div className="grid grid-cols-2 gap-2">

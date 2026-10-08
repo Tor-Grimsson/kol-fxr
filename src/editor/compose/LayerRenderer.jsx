@@ -9,6 +9,7 @@ import { regularPolygonPoints, starPoints, trianglePoints } from './shape-math'
 import { pathD } from './path-math'
 import { computeBooleanCached } from './boolean-ops'
 import { hasBindings, resolveLayer } from '../params/resolve'
+import { shapeMorphDef } from '../morph/shape'
 import { useTransportCtx, useTransportPlaying, useTransportEpoch, transport } from '../params/transport'
 import { pack } from '../packs'
 import { enabledCanvasStages, enabledEngineStage, pixiStages } from './filterChain'
@@ -26,6 +27,8 @@ import { paintAlpha } from './paint'
 const gen = () => pack('generators')
 const fx = () => pack('effects')
 const loopById = (id) => gen()?.loopById(id) ?? null
+/* a Shape-mode morph (plan 10) is a loop layer whose draw is the morph of its steps' outlines */
+const defFor = (layer) => (layer.morph?.mode === 'shape' ? shapeMorphDef(loopById, layer.loopId) : loopById(layer.loopId))
 const loopDrawParams = (loop, layer) => gen().loopDrawParams(loop, layer)
 const resolveCameraKeys = (def) => gen()?.resolveCameraKeys(def) ?? null
 const drawLoopFrame = (...args) => gen().drawLoopFrame(...args)
@@ -129,7 +132,7 @@ export default function LayerRenderer({ layer: rawLayer, palette }) {
     case 'misc':   /* misc rides the loop render vehicle */
     case 'loop': {
       if (!gen()) return null
-      const def = loopById(layer.loopId)
+      const def = defFor(layer)
       if (def?.kind === 'engine') return <EngineLoopLayer layer={layer} def={def} layerStyle={layerStyle} />
       /* Engine filter on a 2d loop (labs relief-over-generated-pattern,
        * HalftonePage): the loop's live canvas feeds the GL engine, canvas
@@ -308,7 +311,7 @@ function EffectedLayer({ layer, stages, pxStages = [], palette, layerStyle }) {
   const pixiRef = useRef(null)      /* { key, canvas } pixi result | { pending } */
   const [, forceDraw] = useState(0)
   const isLoop = layer.type === 'loop' || layer.type === 'misc'
-  const loopDef = isLoop ? loopById(layer.loopId) : null
+  const loopDef = isLoop ? defFor(layer) : null
   const tctx = useTransportCtx(isLoop || chainAnimated(stages))
   const camKeys = useCameraKeysDrag(loopDef, layer, canvasRef)
 
@@ -494,7 +497,7 @@ function LoopLayer({ layer, layerStyle }) {
   const canvasRef = useRef(null)
   const lastDraw = useRef(null)
   const tctx = useTransportCtx(true)
-  const def = loopById(layer.loopId)
+  const def = defFor(layer)
   const camKeys = useCameraKeysDrag(def, layer, canvasRef)
   useEffect(() => {
     const cv = canvasRef.current

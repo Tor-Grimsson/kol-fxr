@@ -1701,8 +1701,8 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
      * (below), where the draft can't be trusted — don't nuke on a transient. */
     const resolve = (finalLayers) => { restoreResolvedRef.current = true; gcClips(finalLayers) }
     /* `?open=<id>` (a file card on Home, plan 08): the user asked for that file, so it wins over the
-     * draft — no restore prompt; OpenFromUrl loads it. */
-    if (new URLSearchParams(window.location.search).get('open')) { resolve(layersRef.current); return }
+     * draft — no restore prompt; UrlIntents loads it. */
+    { const q = new URLSearchParams(window.location.search); if (q.get('open') || q.get('new')) { resolve(layersRef.current); return } }
     let raw
     try { raw = localStorage.getItem(draftKey) } catch { restoreResolvedRef.current = true; return }
     if (!raw) { resolve(layersRef.current); return }

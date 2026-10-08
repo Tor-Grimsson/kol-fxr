@@ -33,12 +33,15 @@ import { svgToPngBlob } from '@kolkrabbi/kol-component'
 import { transport } from '../params/transport'
 import { pack } from '../packs'
 import { downloadBlob } from '../lib/download'
+import { shapeMorphDef } from '../morph/shape'
 
 /* The seam (editor/packs.js) — loop and kinetic layers export through their packs; without the
  * pack a loop layer exports nothing (loopById → null) and a kinetic one exports without fonts. */
 const loopById = (id) => pack('generators')?.loopById(id) ?? null
 const loopDrawParams = (loop, layer) => pack('generators').loopDrawParams(loop, layer)
 const drawLoopFrame = (...args) => pack('generators').drawLoopFrame(...args)
+/* a Shape-mode morph exports as the morph, not as its first step (plan 10) */
+const defFor = (layer) => (layer.morph?.mode === 'shape' ? shapeMorphDef(loopById, layer.loopId) : loopById(layer.loopId))
 const kineticFontCss = (comp) => pack('motion')?.kineticFontCss(comp) ?? ''
 
 const LOGO_RAW = {
@@ -401,7 +404,7 @@ function textLayerForeignObject(layer, color, strokeColor, sw) {
  * canvas2d draw fn isn't possible; a snapScale× raster snapshot matches
  * what the user sees at the export's output resolution. */
 function loopLayerSvg(layer, snapScale) {
-  const loop = loopById(layer.loopId)
+  const loop = defFor(layer)
   if (!loop || typeof document === 'undefined') return ''
   const lw = Math.max(1, layer.w ?? 0)
   const lh = Math.max(1, layer.h ?? 0)

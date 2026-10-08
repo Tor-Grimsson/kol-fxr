@@ -21,13 +21,13 @@ There are ~5 half-finished editor prototypes under `kol-apparat/kol-editors/` (`
 
 ---
 
-## §2 — Current base = the brand editor (DOM/SVG compositor), consuming the published DS
+## §2 — The editor is this repo's source, consuming the published DS
 
-The directory currently holds the frame-based design compositor copied from `kol-monorepo/apps/brand` — canvas + frames, layers, palette / pattern / type generators, image fill. It consumes the published `@kolkrabbi/kol-*` design-system packages as a **normal external npm consumer** (no workspace linking, no symlinks).
+The DOM/SVG compositor — canvas + frames, layers, generators, effects, the three chromes — is source in `src/` (`src/index.jsx` and below). It lived in kol-ds-ui as `@kolkrabbi/design-editor` from 2026-09-03 to 2026-10-08 and **came back by user ruling** (plan 06): editor work happens here, with no round-trip tickets. The DS tier (`@kolkrabbi/kol-*`) is still consumed as a **normal external npm consumer** — no workspace linking, no symlinks, exact pins.
 
-**Consequence:** stack is **React 19 + Vite + Tailwind 4 + pnpm**. DS updates arrive via npm version bumps, not symlinks — the editor is a real downstream consumer, which also validates the published DS.
+**Consequence:** stack is **React 19 + Vite + Tailwind 4 + pnpm**. DS updates arrive via npm version bumps; editor changes are commits here. kol-ds-ui's `packages/design-editor` still exists and publishes for its own apps — the two trees diverge from the first edit, and its fate is an open ruling.
 
-**Do not revisit** unless a different base engine is adopted (see §4 — still open).
+**Do not revisit** unless the editor is moved out again by ruling.
 
 ---
 
@@ -66,5 +66,5 @@ Build a solid vector **shape editor** (canvas/frames, layer reorder, node/bezier
 - **Forking into parallel editor repos** — the exact sprawl §1 collapses.
 - **Stripping the brand color layer** prematurely (§3).
 - **Destructive wholesale codebase/UI swaps** when only functionality was wanted (§4) — the 2026-07-01 lesson.
-- **npm publishing** — ✅ **done 2026-07-03**: the editor ships as **`@kolkrabbi/design-editor`** (embeddable `<DesignEditor />` library, MIT, `pnpm build:lib` → `dist/`). The old "not current work" deferral is retired — reopened deliberately for a real embedder. Residual non-goal: it is **not** a `kol-*` DS-tier package and is **not** merged into kol-design-system — it stays a separate consumer repo (§2).
+- **npm publishing** — the editor published as `@kolkrabbi/design-editor` from 2026-07-03, then from kol-ds-ui after 2026-09-03. Since 2026-10-08 nothing is published from this repo; it is an app.
 - **Effects / image-fill before shape-editor parity** (§5).

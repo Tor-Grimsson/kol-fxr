@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { useModal } from '@kolkrabbi/kol-component'
+import { currentView } from '../mode'
 import { useComposeState } from './state'
 import { useGeneratorLibrary } from '../library/LibraryProvider'
 import { buildLayersSvg, downloadComposeSvg, downloadComposePng, svgToPngBlob } from './build'
@@ -76,8 +77,11 @@ export function useComposeFile() {
   const liveRef = useRef(null)
   liveRef.current = { layers, palette }
 
+  /* `mode` says where a file opens (plan 09): labs for the labs and randomiser chromes, editor
+   * otherwise; a morph save overrides it with 'morph'. Files saved before keep the inference. */
   const buildSpec = (name) => ({
     intent:  'whole',
+    mode:    currentView() === 'labs' || currentView() === 'randomiser' ? 'labs' : 'editor',
     name:    name ?? null,
     aspect,
     canvasW, canvasH,

@@ -4,6 +4,7 @@ import { AppHub, useNavHidden } from '@kolkrabbi/kol-shell'
 import { Button, Dropdown, ModalProvider, useModal } from '@kolkrabbi/kol-component'
 import { ThemeToggle } from '@kolkrabbi/kol-framework'
 import logomarkUrl from '@kolkrabbi/kol-brand/svg/favicon-01.svg?url'
+import NewFileDialog, { openNewFile } from './components/NewFileDialog'
 /* The rail-extras store moved into the package with labs (0.4.0): labs WRITES
    it and this layout READS it, so two module copies meant subscribing to a
    store nothing ever touched. One copy, one store. The settings sections, the
@@ -149,8 +150,9 @@ const savedCards = () => (loadLibrary().preset ?? []).map((p) => ({
    the chromes on RECENT. */
 const RECENT_FILES = 12
 const recentFiles = () => savedCards().sort((a, b) => stampOf(b.file) - stampOf(a.file)).slice(0, RECENT_FILES)
-/* a single generator layer is a labs file; anything else opens in the editor */
-const chromeOf = (p) => (Array.isArray(p.layers) && p.layers.length === 1 && p.layers[0]?.type === 'loop' ? 'labs' : 'editor')
+/* where a file opens: its stored `mode` (plan 09 — labs · editor · morph, a morph opens in labs);
+   files from before carry none and keep the guess — a single generator layer is a labs file */
+const chromeOf = (p) => (p.mode === 'labs' || p.mode === 'morph' ? 'labs' : p.mode === 'editor' ? 'editor' : (Array.isArray(p.layers) && p.layers.length === 1 && p.layers[0]?.type === 'loop' ? 'labs' : 'editor'))
 
 /* ponytail: placeholder steps — monitor's five-step tour has no fxr copy yet.
    The last step's `actions` is a FUNCTION so HubHome can hand it `close`. */
@@ -175,8 +177,9 @@ function RailSignIn({ handlerRef }) {
   const session = useLibrarySession()
   handlerRef.current = async () => {
     if (session) {
-      signOutLibrary()
-      await modal.alert('Signed out. Saves stay on this device only.')
+      /* the same press signs out — so it asks first, the way the password was asked */
+      const ok = await modal.confirm('Sign out of the library sync? Saves stay on this device only.', { okLabel: 'Sign out' })
+      if (ok) signOutLibrary()
       return
     }
     const pw = await modal.prompt('Password for the library sync:', '')
@@ -283,7 +286,7 @@ export default function AppLayout() {
 
   /* Remember the pick, then leave for the chrome. */
   const enter = (id) => { setMode(id); navigate(withView(id)) }
-  /* a file card opens its file in its chrome — OpenFromUrl reads `open` there */
+  /* a file card opens its file in its chrome — UrlIntents reads `open` there */
   const openFile = (p) => navigate(`/${chromeOf(p)}?open=${encodeURIComponent(p.id)}`)
   /* Home's file verbs write storage directly (no provider at the shell tier); a tick re-reads it */
   const [, setTick] = useState(0)
@@ -316,6 +319,7 @@ export default function AppLayout() {
   return (
     <ModalProvider>
     <RailSignIn handlerRef={signInRef} />
+    <NewFileDialog />
     <AppHub
       app={APP}
       /* Labs' category rows sit DIRECTLY UNDER Labs, not after the whole nav —
@@ -351,9 +355,8 @@ export default function AppLayout() {
           media: <img src={`/previews/chromes/${c.name}.png`} alt={c.title} />,
           onClick: () => enter(c.name),
         }),
-        /* ponytail: New File is a placeholder — the editor has no "new document"
-           door outside its own File menu yet; wire it when one exists. */
-        actions: <Button tone="grey" size="md" onClick={() => {}}>New File</Button>,
+        /* New File → the four doors (plan 09) */
+        actions: <Button tone="grey" size="md" onClick={openNewFile}>New File</Button>,
       }}
       walkthrough={WALKTHROUGH(enter)}
       settings={{

@@ -6,7 +6,6 @@ import { pack } from '../../packs'
 import AudioInputRow from '../../params/AudioInputRow'
 import { useComposeFile } from '../../compose/useComposeFile'
 import { openFiles } from '../../library/filesDialogStore'
-import { openMorph } from '../../morph/morphDialogStore'
 import { useComposeState } from '../../compose/state'
 import { useLayerEdit } from '../../compose/useLayerEdit'
 import { findLayerDeep } from '../../compose/helpers'
@@ -192,10 +191,6 @@ function SettingsFileTab({ onSaveSettings, onLoadSettings, onSave, currentPreset
           one click is not what you wanted. */}
       <Button tone="primary" size={cs} className="w-full" onClick={() => openFiles()}>
         Files…
-      </Button>
-      {/* Morph… — tween between saved presets of this generator (plan 05, 2026-10-08) */}
-      <Button tone="primary" size={cs} className="w-full" onClick={() => openMorph()}>
-        Morph…
       </Button>
     </div>
   )

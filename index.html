@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <!-- kol-theme-boot: THEME_BOOT_SCRIPT from kol-framework, injected by vite.config.js -->
     <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
+    <!-- ADD TO HOME SCREEN (plan 11, apps/media's shape): saved to the home screen this runs
+         without Safari's chrome; `black-translucent` puts the page under the status bar, which
+         is what `viewport-fit=cover` below is for. Icons are kol-website's touch icons verbatim —
+         this repo's favicon.svg is byte-identical to that mark. -->
+    <link rel="apple-touch-icon" href="/touch-icons/apple-touch-icon-dark.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="FXR" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAFAFA" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121215" />
     <!-- maximum-scale=1 stops iOS Safari's zoom-on-focus for fields under 16px
          (the touch rail runs the md rung at 14px, see controlSize.js); iOS ≥10
          still pinch-zooms regardless, and the stage has its own pinch. -->
