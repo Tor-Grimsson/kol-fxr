@@ -26,3 +26,6 @@ LLM_RULES.md
 # a `#` only starts one at the beginning of a line.
 .kol/llm-context/.active-goal*.md
 _tmp/
+
+# The D1 Worker's local secret (plan 07) — ADMIN_PASSWORD for `wrangler dev`; the deployed one is `wrangler secret put`
+api/.dev.vars

@@ -3,7 +3,7 @@
 **Filed:** 2026-08-30 → **kol-ds-ui**
 **Entry:** `~/dev/projects/kol-ds-ui/lobby/inbox/OneGrabGestureBothRails.md`
 **Ledger:** `~/dev/projects/kol-ds-ui/lobby/INDEX.md` — **the truth about this ticket**
-**Last known:** 🔵 `filed` 2026-08-30
+**Last known:** 🟢 `closed` — component 0.142.0 · shell 0.30.0 · framework 0.36.0 (synced 2026-10-07)
 
 ## Why it went there
 

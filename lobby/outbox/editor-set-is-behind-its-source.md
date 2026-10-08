@@ -3,7 +3,7 @@
 **Filed:** 2026-09-03 → **kol-ds-ui**
 **Entry:** `~/dev/projects/kol-ds-ui/lobby/inbox/editor-set-is-behind-its-source.md`
 **Ledger:** `~/dev/projects/kol-ds-ui/lobby/INDEX.md` — **the truth about this ticket**
-**Last known:** 🔵 `filed` 2026-09-03
+**Last known:** 🟢 `closed` — ten of twelve fixed 2026-09-03, five consumed back here the same day; the rest superseded by the editor's move into the DS (synced 2026-10-07)
 
 ## Why it went there
 

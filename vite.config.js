@@ -34,17 +34,32 @@ export default defineConfig({
   resolve: {
     dedupe: ['react', 'react-dom'],
   },
-  // kol-icons's Icon builds its registry via `import.meta.glob(...svg)`.
-  // Globs only expand when Vite source-transforms a file — a pre-bundled
-  // node_modules dep leaves them empty, so every kol-icons icon resolves to
-  // "not found". Excluding it from dep-optimization makes Vite process the
-  // package source directly (globs + ?raw both work), populating the registry.
-  // NOT the other DS packages: kol-component pulls CJS deps (lowlight) that only
-  // work pre-bundled. Stale-after-bump is handled by `vite --force` in the dev
-  // script instead (2026-08-27 — the title face and the filter labels both
-  // rendered the OLD package after a bump until the dep cache was rebuilt).
+  // THE RAW-SOURCE KOL PACKAGES ARE NOT PRE-BUNDLED. They publish JSX, and two
+  // things in them break under the dep optimizer: kol-icons builds its registry
+  // via `import.meta.glob(...svg)`, which only expands when Vite source-transforms
+  // the file (pre-bundled, every icon resolves to "not found"); and since
+  // kol-component 0.240.0 `PdfPage.jsx` does `import('pdfjs-dist/…?url')`, which
+  // the optimizer reads as a literal filename and fails the whole dev start
+  // (found 2026-10-07 on this repo's bump: `vite --force` died in
+  // "dependency optimization"). Excluded, they ride the plugin pipeline like
+  // app source. Their CJS deps then skip the optimizer's interop, so those are
+  // pre-bundled by name — the same shape kol-website runs on 0.240.0.
+  // Stale-after-bump is handled by `vite --force` in the dev script
+  // (2026-08-27 — the title face and the filter labels both rendered the OLD
+  // package after a bump until the dep cache was rebuilt).
   optimizeDeps: {
-    exclude: ['@kolkrabbi/kol-icons'],
+    exclude: [
+      '@kolkrabbi/kol-icons',
+      '@kolkrabbi/kol-component',
+      '@kolkrabbi/kol-framework',
+      '@kolkrabbi/kol-brand',
+      '@kolkrabbi/kol-shell',
+      '@kolkrabbi/kol-theme',
+    ],
+    include: [
+      '@kolkrabbi/kol-component > react-syntax-highlighter',
+      '@kolkrabbi/kol-component > embla-carousel-react',
+    ],
   },
   // /media → the kol-media CDN, same-origin so photo filters can getImageData
   // without tainting the canvas (the CDN sends NO CORS headers; a cross-origin

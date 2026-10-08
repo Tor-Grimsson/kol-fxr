@@ -1,5 +1,7 @@
 allowBuilds:
   esbuild: true
+  # wrangler's runtime (the D1 Worker, plan 07) — a native binary, built on install
+  workerd: true
 minimumReleaseAgeExclude:
   # First-party — we publish these; the release-age delay guards the third-party
   # supply chain, and a per-version list has to be appended on every bump.

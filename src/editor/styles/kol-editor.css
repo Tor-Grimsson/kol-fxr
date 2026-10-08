@@ -1,0 +1,348 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Editor — unified shell + compose layer panel + canvas patterns
+
+   Scoped to the `/editor/*` routes. Imported by EditorShell.jsx so it
+   only loads when the editor mounts.
+
+   Sections:
+     1. Shell layout (grid, rails, canvas surface)
+     2. Compose rail (panel container + header + bottom action area)
+     3. Layer rows (pill, chevron, swatch/icon, mini buttons)
+     4. Inspector body
+     5. Canvas patterns (grid backdrop, transparency checker)
+     6. DS shims (published-DS rules the current pairing is missing)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+
+/* ───── 1. Shell layout ─────────────────────────────────────────────── */
+
+.kol-editor-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--kol-surface-primary);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.kol-editor-shell input,
+.kol-editor-shell textarea,
+.kol-editor-shell [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* Browser default focus ring (Firefox draws a double outline on inputs) —
+   the DS .kol-control shell carries its own focus affordance (border
+   reveal), so the UA ring only stacks noise on top.
+
+   THIS RULE STAYS — reviewed 2026-08-15 against the FocusRingsInConsumers
+   resolution, whose remainder said to delete it. That remainder was wrong.
+   kol-theme 0.43.0's `--kol-focus-ring` / `--kol-focus-ring-quiet` pair turns
+   off rings the DESIGN SYSTEM draws; this rule suppresses the ring the
+   BROWSER draws on a native <input>, which the DS never styled and therefore
+   cannot switch off. Deleting it restores the double outline this was written
+   to kill. The two are unrelated mechanisms that happen to share a symptom.
+
+   Setting both DS tokens to transparent is still available and orthogonal:
+   it would silence .kol-btn / .kol-seg-cell / the rails, not this. */
+.kol-editor-shell input:focus-visible,
+.kol-editor-shell textarea:focus-visible {
+  outline: none;
+}
+
+.kol-editor-grid {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr) 320px;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "left canvas right";
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.kol-editor-left {
+  grid-area: left;
+  border-right: 1px solid var(--kol-oq-08);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.kol-editor-right {
+  grid-area: right;
+  border-left: 1px solid var(--kol-oq-08);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* Canvas column wraps an optional canvas.header sub-bar + the canvas
+ * main. Lives in the grid's `canvas` cell. The .kol-editor-canvas main
+ * keeps its dark background; the header sits above it inside the same
+ * column so it spans only the canvas, not the rails. */
+.kol-editor-canvas-column {
+  grid-area: canvas;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.kol-editor-canvas-header {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--kol-oq-08);
+  background-color: var(--kol-surface-primary);
+}
+.kol-editor-canvas-header:empty { display: none; }
+.kol-editor-canvas {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  /* Themed surface so the infinite backdrop flips with light/dark. CanvasArea
+   * paints its own resolved infinite color on top (default = this same token);
+   * this shows through when the infinite fill is set to None. */
+  background-color: var(--kol-surface-secondary);
+}
+
+/* When a non-select tool is active on the canvas stage, layers inside
+ * inherit the stage's tool cursor instead of their own `cursor: 'move'`
+ * inline style. Mousedown logic already short-circuits to create-mode
+ * regardless of what's underneath; this aligns the visual feedback with
+ * that behavior. `!important` is required to beat the layer's inline
+ * style. */
+[data-tool]:not([data-tool="select"]) [data-layer-id] {
+  cursor: inherit !important;
+}
+
+/* Hover tooltip — any element with [data-kol-tip] grows a name label below
+ * it after a short hover-intent delay. Pure CSS: the delay is the
+ * animation-delay, so no JS timers. pointer-events: none keeps the tip
+ * from stealing the next click. */
+[data-kol-tip] { position: relative; }
+[data-kol-tip]:hover::after {
+  content: attr(data-kol-tip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--kol-surface-secondary);
+  border: 1px solid var(--kol-oq-08);
+  color: var(--kol-fg-emphasis);
+  font-family: var(--kol-font-family-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  opacity: 0;
+  animation: kol-tip-in 120ms ease-out 400ms forwards;
+}
+@keyframes kol-tip-in { to { opacity: 1; } }
+
+.kol-editor-rail-header {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--kol-oq-08);
+}
+/* Empty header (e.g. left.header has no panels) collapses entirely so its
+   border-bottom doesn't stack on top of the panel header below. */
+.kol-editor-rail-header:empty { display: none; }
+.kol-editor-rail-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Reserve the classic-scrollbar gutter so tab switches that overflow
+     don't reflow the rail content (no-op under overlay scrollbars). */
+  scrollbar-gutter: stable;
+  display: flex;
+  flex-direction: column;
+}
+/* Stacked panels in the rail body shouldn't force height:100% as the
+   single-occupant compose rail does. */
+.kol-editor-rail-body .kol-compose-rail { height: auto; }
+
+/* …EXCEPT the inspector rail, which IS the single occupant and carries the
+   grab edge. The rule above collapsed it to its content — 40px — and the grab
+   strip is `top-0 bottom-0` inside it, so the whole resize edge shrank to 40px
+   with it. The body is a flex column, so it fills by growing, not by height. */
+.kol-editor-rail-body .kol-compose-rail--inspector {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Rail footer — pinned below the scrolling body (transport dock). */
+.kol-editor-rail-footer { flex: 0 0 auto; }
+
+/* Canvas footer — the timeline dock strip below the canvas main. */
+.kol-editor-canvas-footer {
+  flex: 0 0 auto;
+  background-color: var(--kol-surface-primary);
+}
+
+
+/* ───── 2. Compose rail ─────────────────────────────────────────────── */
+
+.kol-compose-rail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+
+/* ───── 3. Layer rows ───────────────────────────────────────────────── */
+
+/* Each list item is a flex row of [chevron-or-spacer, layer-row pill]. The
+   chevron sits outside the pill so hover/active fills only the row area. */
+.kol-compose-layer-line {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.kol-compose-layer-collapse {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--kol-fg-64);
+  padding: 0;
+}
+.kol-compose-layer-collapse:hover { color: var(--kol-surface-on-primary); }
+/* Chevrons are focus chrome, not resting chrome (Figma model): hidden until
+   the pointer is inside the stack, then every container row shows its own. */
+.kol-compose-layer-collapse { opacity: 0; transition: opacity 120ms; }
+[data-layer-stack]:hover .kol-compose-layer-collapse { opacity: 1; }
+/* Indent nested rows one chevron slot per level (Figma model) — a child's
+   type icon aligns under its parent's icon, not its name. Top-level rows
+   carry no nest class and sit flush. */
+.kol-compose-layer-nest { padding-left: 16px; }
+
+.kol-compose-layer-row {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 60px 4px 8px;  /* right padding reserves space for the
+                                 absolutely-positioned lock + eye buttons. */
+  color: var(--kol-fg-64);
+  border-radius: 4px;
+  cursor: grab;
+  position: relative;
+}
+.kol-compose-layer-row:hover {
+  background: var(--kol-oq-04);
+  color: var(--kol-surface-on-primary);
+}
+/* Selected = accent highlight; a selected container also tints its expanded
+   children block one shade lighter (Figma model). Hover stays grey. */
+.kol-compose-layer-row.is-active {
+  background: color-mix(in srgb, var(--kol-accent-primary) 26%, transparent);
+  color: var(--kol-fg-emphasis);
+}
+.kol-compose-layer-row.is-tinted {
+  background: color-mix(in srgb, var(--kol-accent-primary) 11%, transparent);
+}
+/* Hidden layer — dim the icon+name only; the slashed eye stays legible. */
+.kol-compose-layer-row.is-hidden .kol-compose-layer-main { opacity: 0.4; }
+.kol-compose-layer-row.is-dragging { opacity: 0.4; cursor: grabbing; }
+.kol-compose-layer-row[draggable]:active { cursor: grabbing; }
+
+/* Drop indicator — 2px accent line at the top or bottom of the target row. */
+.kol-compose-layer-row.is-drop-above::before,
+.kol-compose-layer-row.is-drop-below::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: var(--kol-accent-primary);
+  pointer-events: none;
+  z-index: 1;
+}
+.kol-compose-layer-row.is-drop-above::before { top: -1px; }
+.kol-compose-layer-row.is-drop-below::after  { bottom: -1px; }
+
+.kol-compose-layer-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+}
+.kol-compose-layer-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+  border: 1px solid var(--kol-oq-08);
+  flex-shrink: 0;
+}
+.kol-compose-layer-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.kol-compose-layer-mini {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--kol-fg-48);
+  border-radius: 2px;
+  padding: 0;
+}
+.kol-compose-layer-mini:hover {
+  color: var(--kol-surface-on-primary);
+  background: var(--kol-oq-08);
+}
+
+
+/* ───── 4. Inspector body ───────────────────────────────────────────── */
+
+:is(.kol-compose-inspector-body, .kol-inspector-rail-body) {
+  padding: 20px 16px;
+  flex: 1;
+  overflow-y: auto;
+  /* Reserve the scrollbar gutter — this is the rail's REAL scroller (the
+     panel bodies are height-clamped, not the outer rail-body), so a tall
+     tab/loop that overflows must not reflow the column when its scrollbar
+     appears. */
+  scrollbar-gutter: stable;
+}
+/* The Inspector holds PANES (inspector rebuild 2026-09-27): each pane pads itself so the rule
+   between two panes runs edge to edge — the body's own padding is what inset it. */
+.kol-inspector-rail-body { padding: 0; }
+
+
+/* ───── 5. Canvas patterns ──────────────────────────────────────────── */
+
+/* Grid backdrop — ruled lines for alignment guidance. Two-tier (major +
+   minor); tunable via --kol-grid-step / --kol-grid-major-every. */
+.kol-grid-bg {
+  --kol-grid-step: 32px;
+  --kol-grid-major-every: 4;
+  --kol-grid-minor: color-mix(in srgb, var(--kol-surface-on-primary) 2%, transparent);
+  --kol-grid-major: color-mix(in srgb, var(--kol-surface-on-primary) 4%, transparent);
+  background-image:
+    linear-gradient(to right,  var(--kol-grid-major) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--kol-grid-major) 1px, transparent 1px),
+    linear-gradient(to right,  var(--kol-grid-minor) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--kol-grid-minor) 1px, transparent 1px);
+  background-size:
+    calc(var(--kol-grid-step) * var(--kol-grid-major-every)) calc(var(--kol-grid-step) * var(--kol-grid-major-every)),
+    calc(var(--kol-grid-step) * var(--kol-grid-major-every)) calc(var(--kol-grid-step) * var(--kol-grid-major-every)),
+    var(--kol-grid-step) var(--kol-grid-step),
+    var(--kol-grid-step) var(--kol-grid-step);
+}

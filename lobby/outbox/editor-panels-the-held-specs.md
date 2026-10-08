@@ -3,7 +3,7 @@
 **Filed:** 2026-09-03 → **kol-ds-ui**
 **Entry:** `~/dev/projects/kol-ds-ui/lobby/inbox/editor-panels-the-held-specs.md`
 **Ledger:** `~/dev/projects/kol-ds-ui/lobby/INDEX.md` — **the truth about this ticket**
-**Last known:** 🔵 `filed` 2026-09-03
+**Last known:** 🟠 `addressed` — kol-component 0.222.0 (2026-09-25), every row answered; closes on kol-fxr adopting it (synced 2026-10-07)
 
 ## Why it went there
 

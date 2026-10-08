@@ -138,3 +138,46 @@
     opacity: 1;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   THE EDITOR'S OWN ACCENT (editor-chrome-review, 2026-09-03 — user ruling,
+   relayed through kol-fxr: accent → teal, guides → magenta).
+
+   SCOPED HERE, NOT REBOUND IN THE THEME, and that is the whole point. The DS
+   accent is `--kol-accent-primary`, bound to `--kol-color-yellow-300` in
+   kol-framework's brand sheet and labelled there as the *dominant identity
+   colour* — it is KOLKRABBI'S BRAND. Rebinding it would turn every KOL surface
+   in the estate teal, which is a brand decision and not one this ticket asked
+   for. The user was explicit: *"you dont have any brand control you only
+   control the tickets to ds and assembly of the editor"*. So the editor paints
+   its own accent on its own root and the brand is untouched.
+
+   WHY TEAL, and why the yellow was wrong HERE: the editor runs against his
+   terminal, whose orange/amber band already carries active tabs and warnings —
+   the accent was colliding with meaning that already existed on screen.
+   `#458488` is the Gruvbox aqua already doing work there; `#83A598` is 21 %
+   saturation, which is a foreground and not an accent.
+
+   WHY THE GUIDES ARE A SEPARATE HUE: a guide and a selection must never read
+   as the same thing. Magenta was chosen because it carries no existing meaning
+   on that screen — magenta and purple together account for a few hundred
+   pixels of a 2.46M-pixel sample, all syntax highlighting. The sampled
+   `#BA7799` is anti-aliased text and too dim for a 1px line; canonical
+   `#D3869B` is the brightness a guide wants.
+   ═══════════════════════════════════════════════════════════════════════ */
+.kol-design-editor {
+  --kol-accent-primary: #458488;
+  --kol-accent-primary-strong: #5A9DA1;
+  /* read by kol-component's guide line, which falls back to the accent when a
+     consumer binds nothing */
+  --kol-canvas-guide: #D3869B;
+}
+
+/* THE RANDOMISER'S GROUND IS BLACK IN EITHER THEME, and a host's drawer trigger floats over it
+   (kol-shell's hamburger, top-right). In the light theme that was dark ink on black — on live fxr
+   too (2026-10-05). While the randomiser is mounted the trigger takes the frozen light ink;
+   opaque, as every glyph is. A selector across packages because the trigger is the host's and
+   the black is ours. */
+:root:has(.kol-editor-randomiser) .kol-shell-drawer-trigger {
+  color: var(--kol-color-absolute-white);
+}

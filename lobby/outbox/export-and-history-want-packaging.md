@@ -3,7 +3,7 @@
 **Filed:** 2026-09-04 → **kol-ds-ui**
 **Entry:** `~/dev/projects/kol-ds-ui/lobby/inbox/export-and-history-want-packaging.md`
 **Ledger:** `~/dev/projects/kol-ds-ui/lobby/INDEX.md` — **the truth about this ticket**
-**Last known:** 🔵 `filed` 2026-09-04
+**Last known:** 🟢 `closed` 2026-09-04 — **kol-component 0.208.0 + design-editor 0.8.0** (synced 2026-10-07)
 
 ## Why it went there
 
@@ -70,3 +70,5 @@ One bug of my own, caught before it shipped: routing the editor's rasteriser thr
 Shipped: kol-component 0.208.0, design-editor 0.8.0, both verified by fetching the tarball. On the return: bump and confirm the export produces correct ink in a browser, not a green build — as your remainder says.
 
 **Remainder here:** bump kol-component to 0.208.0 + design-editor to 0.8.0; drop the copied rasteriser and history, and check exported ink in a browser
+
+**Remainder here:** none — the bump landed 2026-09-04, the copied rasteriser and history left with the editor on 2026-09-03, and export has been the package's since. Squared 2026-10-08.

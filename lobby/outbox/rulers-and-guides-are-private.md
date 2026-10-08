@@ -90,3 +90,5 @@ NOT fxr's.** This repo has held no editor source since the move; the private
 copies are inside `packages/design-editor`, which is theirs. Nothing is owed here.
 
 Version handed to kol-client-olina for adoption.
+
+**Remainder here:** none — kol-component passed 0.203.0 on 2026-09-04 and the editor, private copies included, moved into the DS on 2026-09-03; there is nothing here to drop. Squared 2026-10-08.

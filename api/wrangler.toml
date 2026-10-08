@@ -1,0 +1,19 @@
+# kol-fxr-api — the one D1 binding this app has (plan 07, 2026-10-08).
+# The app itself deploys on Vercel and cannot hold a D1 binding; this Worker is
+# the API beside it. Deploy: `pnpm api:deploy`. Local: `pnpm api:dev` on 8787.
+name = "kol-fxr-api"
+main = "src/index.js"
+compatibility_date = "2026-10-06"
+
+# the custom domain — wrangler creates the DNS record on the kolkrabbi.io zone on deploy
+routes = [{ pattern = "fxr-api.kolkrabbi.io", custom_domain = true }]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kol-fxr"
+database_id = "3dfc8e68-1c2e-4525-96ae-7bbfa20bd61d"
+
+[vars]
+# browser origins allowed to call this API — localhost and 127.0.0.1 on any port are always allowed
+ALLOWED_ORIGINS = "https://fxr.kolkrabbi.io"
+# ADMIN_PASSWORD is a secret: `wrangler secret put ADMIN_PASSWORD --config api/wrangler.toml`; locally api/.dev.vars

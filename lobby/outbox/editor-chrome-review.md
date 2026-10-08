@@ -3,7 +3,7 @@
 **Filed:** 2026-09-03 → **kol-ds-ui**
 **Entry:** `~/dev/projects/kol-ds-ui/lobby/inbox/editor-chrome-review.md`
 **Ledger:** `~/dev/projects/kol-ds-ui/lobby/INDEX.md` — **the truth about this ticket**
-**Last known:** 🔵 `filed` 2026-09-03
+**Last known:** 🟠 `addressed` — seven of thirteen shipped (component 0.205.0 · theme 0.144.0 · design-editor 0.12.0 + 0.13.0); the rest are the user's (synced 2026-10-07)
 
 ## Why it went there
 

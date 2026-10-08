@@ -3,7 +3,7 @@
 **Filed:** 2026-08-27 → **kol-ds-ui**
 **Entry:** `~/dev/projects/kol-ds-ui/lobby/inbox/RailSettingsDisclosure.md`
 **Ledger:** `~/dev/projects/kol-ds-ui/lobby/INDEX.md` — **the truth about this ticket**
-**Last known:** 🔴 **needs-ruling** 2026-08-28 — returned as shell 0.14.0, then **the shape it shipped was deleted by shell 0.16.0** before fxr adopted it. See the last section.
+**Last known:** 🟢 `closed` at the DS (framework 0.34.0 + shell 0.14.0, the shell half withdrawn by 0.16.0) · ⚫ `retired` here 2026-08-30, user ruling (synced 2026-10-07)
 
 ## Why it went there
 

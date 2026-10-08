@@ -5,7 +5,7 @@ import {
   GeneratorLibraryProvider,
   useGeneratorLibrary,
   LIBRARY_SLOT_KEYS,
-} from '@kolkrabbi/design-editor'
+} from '../index.jsx'
 
 /**
  * LibraryPage — `/library`, on kol-shell's `CatalogPage` (ShellHomeSystem,
@@ -125,7 +125,7 @@ function LibraryBody() {
         media: <img src={`/previews/chromes/${PREVIEWS[items.indexOf(item) % PREVIEWS.length]}.png`} alt="" />,
         actions: item.placeholder ? undefined : (
           <Button
-            variant="outline"
+            tone="outline"
             size="sm"
             onClick={(e) => { e.stopPropagation(); removeItem(item.slot, item.id) }}
           >
@@ -135,7 +135,7 @@ function LibraryBody() {
       })}
       actions={
         /* ponytail: New File is a placeholder, same as Home's. */
-        <Button variant="grey" size="md" onClick={() => {}}>New File</Button>
+        <Button tone="grey" size="md" onClick={() => {}}>New File</Button>
       }
     />
   )
