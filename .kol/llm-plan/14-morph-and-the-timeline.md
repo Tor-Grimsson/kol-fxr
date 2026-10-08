@@ -18,20 +18,21 @@ Order: § 1 first (it unblocks § 6–8), then § 2–5 (small, independent), th
 - **Not:** a lookalike — it is the DS file, owned here from the copy on, as the editor was.
 - **Done when:** the dock renders and edits keys exactly as before, on `vite preview`, in labs and the editor.
 
-## 2. Blend drops every step but the first's generator
+## 2. Blend drops every step but the first's generator — a third mode, Crossfade
 
-- **Cause:** Blend is `buildMorph` — it tweens step 1's generator's params, reading step 2's values only for keys of the same name (`MorphTab.jsx:52`). Circle morph is `morph-circle`, Star morph is `star-morph`: the star is silently gone.
-- **Do:** Blend decides per segment. Same generator on both sides → today's param tween. Different generators → a **crossfade**: draw both steps, alpha by the segment's progress (plan 05 § 3's crossfade). Two modes stay — **Shape · Blend**; Blend picks tween or crossfade itself, no third toggle.
-- **Done when:** circle → star → circle plays in Blend with both shapes visible; a same-generator pair still tweens.
+- **Cause:** Blend is `buildMorph` — it tweens step 1's generator's params, reading step 2's values only for keys of the same name (`MorphTab.jsx:52`). Circle morph is `morph-circle`, Star morph is `star-morph`: the star is silently gone. Blend is plain keyframe tracks by design (`buildMorph.js:9` — drag the keys, bind a knob) and a fade cannot be a track, so Blend must not try to cover this.
+- **Do:** three modes — **Shape · Blend · Crossfade** (user, 2026-10-08). Crossfade is its own draw, the way Shape is (`shapeMorphDef`): both steps drawn, alpha by the segment's progress; the layer carries `morph.steps` + the `morphT` lane. Blend stays pure tracks.
+- **Greyed, with the reason as its tooltip:** Blend when the steps are not one generator; Shape and Crossfade when a step is a GL `engine` generator (10 of them — only 2D canvas draws can be recorded or redrawn). A greyed current mode falls to the first available one.
+- **Done when:** circle → star → circle plays in Crossfade with both shapes visible; Blend is greyed for that pair and still tweens a same-generator pair.
 
 ## 3. Shape has no resolution
 
-- **Cause:** the sample count is automatic, `max(64, min(512, …))` (`shape.js:196`), and outlines are re-recorded every frame.
-- **Do:** a **Resolution** row in Shape mode (Auto · 64–1024), stored on `morph`, fed to the pairing. Cache each step's recorded outline while its own animation is static, so a high resolution doesn't cost a re-record per frame.
+- **Cause:** the sample count is automatic, `max(64, min(512, …))` (`shape.js:196`).
+- **Do:** a **Resolution** row in Shape mode (Auto · 64–1024), stored on `morph`, fed to the pairing. No cache — every generator moves with `u`, so an outline is never static.
 
 ## 4. Morph rail on the shared assets
 
-- **Length:** hand-built `Input` + a loose `s`. It also duplicates the transport's loop length (both write `transport.setLoopSeconds`). **Do:** drop Length from the Morph rail; the transport owns the length and Save reads it from there. If it must stay: the transport's own field (`Input variant="property" unit="s"`, `TransportBar.jsx:33`).
+- **Length:** hand-built `Input` + a loose `s`. It also duplicates the transport's loop length (both write `transport.setLoopSeconds`). **Do:** drop Length from the Morph rail; the transport owns the length, Save reads `transport.getLoopSeconds()`, and loading a saved morph sets the transport from its stored `seconds` (or an old file plays at the wrong length). If it must stay: the transport's own field (`Input variant="property" unit="s"`, `TransportBar.jsx:33`).
 - **Step list:** a hand-built `<ul>` with ↑ ↓ × buttons. **Do:** check `LayerStack` (kol-component) for steps — drag reorder, select = edit step, remove. If it fits, use it; if it doesn't, say why before building anything.
 - **Title:** the rail heading is the group alone (`LabsParams.jsx:406` → "SIMPLE"). **Do:** method / group — `LOOPS / SIMPLE`.
 
@@ -48,12 +49,12 @@ Order: § 1 first (it unblocks § 6–8), then § 2–5 (small, independent), th
 ## 7. Steps named on the lane  *(needs § 1)*
 
 - **Now:** a morph is one layer; its lane shows bare diamonds (steps 1 → 2 → 1) under a truncated `Loop · Circle mo…`.
-- **Do:** keep one layer (it saves, bakes and exports as one). Name each key with its step, each span with its transition (*Circle morph → Star morph*); clicking a name opens that step for editing (`editStep`). The lane label reads the morph's name.
+- **Do:** keep one layer (it saves, bakes and exports as one). One **header lane per morph** carrying the step names on its keys and the transition on each span (*Circle morph → Star morph*); clicking a name opens that step for editing (`editStep`). In Blend every differing param is its own track — those lanes fold under the header, never named per step. The header reads the morph's name.
 
 ## 8. Resizable dock and curve editing  *(needs § 1)*
 
 - **Now:** fixed height; a key's easing is one of six presets in the selected-key menu.
-- **Do:** drag the dock's top edge to resize. A curve view per lane (AE / Resolve style): bezier handles on a key, easing Linear · Ease in · Ease out · Ease in-out · Custom. The key editor already tolerates an array easing (`Array.isArray(key.easing)`) — confirm the resolver reads it as a cubic-bezier before building the handles.
+- **Do:** drag the dock's top edge to resize. A curve view per lane (AE / Resolve style): bezier handles on a key, easing Linear · Ease in · Ease out · Ease in-out · Custom. The resolver already reads a cubic-bezier array (`easing.js:51`) — Custom is UI only, the data model exists.
 
 ## Verification
 
