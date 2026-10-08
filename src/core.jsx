@@ -98,6 +98,7 @@ export { setMediaClient, setMediaProxyBase, setSettingsStore }
 
 /** Where the library syncs to (plan 07) — unset, the app is localStorage only and shows no Sign in. */
 export { setLibraryApi, getLibraryApi, useLibrarySession, signInLibrary, signOutLibrary, UnauthorizedError } from './editor/library/libraryApi'
+export { renameStored, duplicateStored, removeStored } from './editor/library/libraryOps'
 
 /** The seam — a host's own pack registers through it exactly as the shipped ones do. */
 export { registerPack } from './editor/packs'

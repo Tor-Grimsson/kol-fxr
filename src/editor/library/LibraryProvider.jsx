@@ -251,7 +251,7 @@ function loadFromStorage() {
  * outer copy (`storage` fires cross-tab only). This is the same function the provider seeds
  * from — validators and migrations included — so a host reads fresh with no provider and
  * no second copy of the storage key. */
-export { loadFromStorage as loadLibrary }
+export { loadFromStorage as loadLibrary, saveToStorage as saveLibrary }
 
 function saveToStorage(state) {
   if (typeof window === 'undefined') return

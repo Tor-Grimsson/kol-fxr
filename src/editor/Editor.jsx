@@ -7,6 +7,7 @@ import { goLabs, goRandomiser, modeById } from './mode'
 import EditorErrorBoundary from './EditorErrorBoundary'
 import { ToolProvider }       from './state/tools'
 import { GeneratorLibraryProvider } from './library/LibraryProvider'
+import OpenFromUrl from './library/OpenFromUrl'
 import { useGlobalShortcuts } from './state/useGlobalShortcuts'
 import { ComposeStateProvider, useComposeState } from './compose/state'
 import { transport } from './params/transport'
@@ -85,6 +86,7 @@ export function EditorProviders({ children, persistDraft = true, draftKey }) {
               <PaletteStateProvider>
                 <PatternStateProvider>
                   <TypeStateProvider>
+                    <OpenFromUrl />
                     {children}
                   </TypeStateProvider>
                 </PatternStateProvider>

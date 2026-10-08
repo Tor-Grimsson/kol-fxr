@@ -7,6 +7,8 @@
  * `setMediaProxyBase` — one copy, the host sets it before the editor mounts.
  */
 import { useSyncExternalStore } from 'react'
+import { loadLibrary, saveLibrary } from './LibraryProvider'
+import { mergeRemote } from './mergeRemote'
 
 let apiBase = null
 export function setLibraryApi(base) { apiBase = typeof base === 'string' && base.trim() ? base.trim().replace(/\/+$/, '') : null }
@@ -53,6 +55,12 @@ export async function signInLibrary(password) {
   if (!apiBase) throw new Error('no library api')
   const backend = createD1Backend(apiBase, password)
   const rows = await backend.hydrate()
+  /* THE CLOUD FILES LAND IN THE LIBRARY NOW, not on the next provider mount: merged into the stored
+   * library here, so Home's SAVED (which reads `loadLibrary()` on render) and the Library page show
+   * them the moment sign-in returns. Local-only items go up in the same pass. */
+  const { next, pushes } = mergeRemote(loadLibrary(), rows)
+  saveLibrary({ ...loadLibrary(), ...next })
+  for (const op of pushes) backend.push(op).catch(() => {})
   session = { backend }
   emit()
   return rows.filter((r) => !r.deleted).length

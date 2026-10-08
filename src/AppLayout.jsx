@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AppHub, useNavHidden } from '@kolkrabbi/kol-shell'
 import { Button, Dropdown, ModalProvider, useModal } from '@kolkrabbi/kol-component'
@@ -16,6 +16,7 @@ import {
   MODES, setMode, withView, loadLibrary,
   isMobileDevice, wantsDesktop,
   getLibraryApi, useLibrarySession, signInLibrary, signOutLibrary, UnauthorizedError,
+  renameStored, duplicateStored, removeStored,
 } from './index.jsx'
 
 /**
@@ -136,11 +137,20 @@ const CHROMES = MODES.map((m) => ({ name: m.id, title: m.label, detail: m.blurb 
 const fmtDate = (ms) =>
   new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 
+const stampOf = (p) => p.updatedAt ?? p.savedAt ?? 0
 const savedCards = () => (loadLibrary().preset ?? []).map((p) => ({
   name: p.id,
   title: p.name || 'Untitled preset',
-  detail: `${p.layers?.length ?? 0} layers · ${p.aspect ?? '1:1'} · ${fmtDate(p.savedAt)}`,
+  detail: `${p.layers?.length ?? 0} layers · ${p.aspect ?? '1:1'} · ${fmtDate(stampOf(p))}`,
+  file: p,
 }))
+/* SIGNED IN, HOME IS YOUR FILES (plan 08, user 2026-10-08: "chrome type isn't a file"). RECENT =
+   the last 12 saved, newest first; SAVED = all of them. Signed out, Home is exactly as before —
+   the chromes on RECENT. */
+const RECENT_FILES = 12
+const recentFiles = () => savedCards().sort((a, b) => stampOf(b.file) - stampOf(a.file)).slice(0, RECENT_FILES)
+/* a single generator layer is a labs file; anything else opens in the editor */
+const chromeOf = (p) => (Array.isArray(p.layers) && p.layers.length === 1 && p.layers[0]?.type === 'loop' ? 'labs' : 'editor')
 
 /* ponytail: placeholder steps — monitor's five-step tour has no fxr copy yet.
    The last step's `actions` is a FUNCTION so HubHome can hand it `close`. */
@@ -179,6 +189,31 @@ function RailSignIn({ handlerRef }) {
     }
   }
   return null
+}
+
+/* A file card's three verbs (plan 08) — the Files dialog's, on Home. Under the shell's ModalProvider,
+   so the rename prompt and the delete confirm are the KOL dialogs. */
+function FileActions({ file, onChange }) {
+  const modal = useModal()
+  const stop = (fn) => (e) => { e.stopPropagation(); fn() }
+  const rename = async () => {
+    const name = await modal.prompt('Rename:', file.name ?? '')
+    if (name == null || !name.trim() || name.trim() === file.name) return
+    renameStored('preset', file.id, name.trim()); onChange()
+  }
+  const duplicate = () => { duplicateStored('preset', file.id); onChange() }
+  const remove = async () => {
+    const ok = await modal.confirm(`Delete “${file.name || 'Untitled preset'}”?`, { okLabel: 'Delete' })
+    if (!ok) return
+    removeStored('preset', file.id); onChange()
+  }
+  return (
+    <span className="flex items-center gap-1">
+      <Button tone="ghost" quiet size="sm" iconOnly="edit" aria-label="Rename" onClick={stop(rename)} />
+      <Button tone="ghost" quiet size="sm" iconOnly="copy" aria-label="Duplicate" onClick={stop(duplicate)} />
+      <Button tone="ghost" quiet size="sm" iconOnly="trash" aria-label="Delete" onClick={stop(remove)} />
+    </span>
+  )
 }
 
 /* Publishes `--fxr-rail` — the rail's width, or 0 when hidden or absent — so a
@@ -248,6 +283,11 @@ export default function AppLayout() {
 
   /* Remember the pick, then leave for the chrome. */
   const enter = (id) => { setMode(id); navigate(withView(id)) }
+  /* a file card opens its file in its chrome — OpenFromUrl reads `open` there */
+  const openFile = (p) => navigate(`/${chromeOf(p)}?open=${encodeURIComponent(p.id)}`)
+  /* Home's file verbs write storage directly (no provider at the shell tier); a tick re-reads it */
+  const [, setTick] = useState(0)
+  const bump = () => setTick((n) => n + 1)
 
   /* ⌥1…⌥6 — the rail top to bottom, HOME included. See the docblock for why
      this is local rather than AppShell's `navKeys`. */
@@ -289,14 +329,27 @@ export default function AppLayout() {
       onNavigate={onNavigate}
       settingsPath={SETTINGS_PATH}
       home={{
-        items: (view) => (view === 'recent' ? CHROMES : savedCards()),
-        filtersTitle: 'All Chromes',
-        toCard: (c, { view: v }) => ({
+        items: (view) => (session
+          ? (view === 'recent' ? recentFiles() : savedCards())
+          : (view === 'recent' ? CHROMES : savedCards())),
+        filtersTitle: session ? 'All Files' : 'All Chromes',
+        /* files read best as rows — the row has an actions column; the grid card draws its actions
+           over the title, so a click on a name hit Rename. List is the default once signed in (read
+           on Home's mount), and the verbs ride the list only. */
+        defaultLayout: session ? 'list' : 'grid',
+        toCard: (c, { layout }) => (c.file ? {
           key: c.name,
           title: c.title,
           detail: c.detail,
-          media: v === 'recent' ? <img src={`/previews/chromes/${c.name}.png`} alt={c.title} /> : false,
-          onClick: v === 'recent' ? () => enter(c.name) : undefined,
+          media: false,
+          onClick: () => openFile(c.file),
+          actions: layout === 'list' ? <FileActions file={c.file} onChange={bump} /> : undefined,
+        } : {
+          key: c.name,
+          title: c.title,
+          detail: c.detail,
+          media: <img src={`/previews/chromes/${c.name}.png`} alt={c.title} />,
+          onClick: () => enter(c.name),
         }),
         /* ponytail: New File is a placeholder — the editor has no "new document"
            door outside its own File menu yet; wire it when one exists. */

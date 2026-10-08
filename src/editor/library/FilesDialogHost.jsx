@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import FilesDialog from './FilesDialog'
-import { useFilesDialog, closeFiles } from './filesDialogStore'
+import { useFilesDialog, closeFiles, openFiles } from './filesDialogStore'
+import { matchCombo } from '../state/keymap'
 import { useComposeState } from '../compose/state'
 import { useComposeFile } from '../compose/useComposeFile'
 import { useGeneratorLibrary } from './LibraryProvider'
@@ -19,6 +21,18 @@ export default function FilesDialogHost() {
   const { loadPreset, setCurrentPresetId, setCurrentPresetName } = useComposeState()
   const { onLoadSettings, onSaveSettings, buildSpec } = useComposeFile()
   const { addItem } = useGeneratorLibrary()
+
+  /* ⌘O / Ctrl+O — the Files overlay from any chrome (plan 08). Lives here, with the dialog, so every
+   * chrome that mounts the host answers it; preventDefault stops the browser's own Open. */
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!matchCombo(e, 'Mod+O')) return
+      e.preventDefault()
+      if (open) closeFiles(); else openFiles()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
 
   return (
     <FilesDialog

@@ -397,6 +397,7 @@ function LabsBody() {
   useEffect(() => {
     if (seededRef.current) return
     seededRef.current = true
+    if (new URLSearchParams(window.location.search).get('open')) return /* a saved file wins (OpenFromUrl) */
     const deepLink = new URLSearchParams(window.location.search).get('preset')
     const group = deepLink ? groupOfPreset(deepLink) : null
     if (group) setOnly('loop', presetLayerPatch(presetById(deepLink), group))

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { EditorProviders } from '../Editor'
+import FilesDialogHost from '../library/FilesDialogHost'
 import { Button } from '@kolkrabbi/kol-component'
 import { OutputStage } from '../OutputView'
 import { useComposeState, CANVAS_W } from '../compose/state'
@@ -303,6 +304,8 @@ export default function MobileView() {
   return (
     <EditorProviders persistDraft={false}>
       <MobileBody />
+      {/* ⌘O opens the Files overlay here too (plan 08) */}
+      <FilesDialogHost />
     </EditorProviders>
   )
 }

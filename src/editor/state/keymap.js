@@ -85,6 +85,8 @@ export const SHORTCUTS = [
 
   /* View */
   { id: 'show-shortcuts', combo: 'S',     label: 'Show / hide shortcuts',   section: 'View' },
+  /* Bound in FilesDialogHost, where the dialog lives (passive here, like `,`). Mod+O, not O: O is the Ellipse tool. */
+  { id: 'open-files',     combo: 'Mod+O', label: 'Files',                   section: 'View', passive: true },
   /* The settings DRAWER, not the `/settings` page (that is the rail's ⌥6).
    * Bound in `EditorShell.jsx`, where the drawer lives — `passive` here for the
    * same reason `fps` is: declared for the cheat sheet, dispatched at the

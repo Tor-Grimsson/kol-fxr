@@ -92,9 +92,12 @@ function LibraryBody() {
   const { library, removeItem } = useGeneratorLibrary()
   const [view, setView] = useState('recent')
 
+  /* placeholders only while the library holds NOTHING real (plan 08) — once anything is saved, an
+     empty slot is just empty, not 16 fake cards burying the real ones */
+  const anyReal = SLOT_ORDER.some((slot) => (library[slot] ?? []).length > 0)
   const pooled = SLOT_ORDER.flatMap((slot) => {
     const saved = library[slot] ?? []
-    return (saved.length ? saved.map((item) => ({ ...item, slot })) : placeholdersFor(slot))
+    return (saved.length ? saved.map((item) => ({ ...item, slot })) : anyReal ? [] : placeholdersFor(slot))
       .map((item) => ({ ...item, [slot]: tagOf(slot, item) }))
   })
   /* RECENT = newest first; SAVED = store order */
