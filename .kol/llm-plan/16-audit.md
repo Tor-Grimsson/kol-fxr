@@ -6,7 +6,7 @@
 ## What it looks for
 
 1. **Bugs** — every route (`/` `/library` `/settings` `/editor` `/labs` `/morph` `/randomiser`) walked on `vite preview` at 1600 and 390 touch, console clean, every rail row and every tab pressed. The last full one was 2026-07-07 (*four fix waves*); the editor and morph arrived since.
-2. **Hand-built where the DS has it** — the user's hardest rule. Grep the rails and sheets for local markup doing a DS component's job: lists, rows, fields with a loose unit, titles. Each is either swapped for the asset or named as a DS gap for a local-session ticket.
+2. **Hand-built where the DS has it** — the user's hardest rule. Grep the rails and sheets for local markup doing a DS component's job: lists, rows, fields with a loose unit, titles. Each is either swapped for the asset here, or — when the DS lacks it — written into **plan 17, the parked DS list** (user, 2026-10-08: *"what should go to DS should just go to the parked plan, I'll fetch it there locally later"*). No tickets from the cloud.
 3. **One vocabulary** — the labs rail laws (`AGENT-CONTEXT` § control vocabulary): one segmented control, one row, one label voice, `kol-mono-*` for wrapping text, `kol-helper-*` single-line only, no `size="sm"` literals in rail components.
 4. **Dead code** — the retired library build (`vite.lib.config.js`, `index.lib.css`, `src/index.jsx` as "library entry"), `_tmp/` references, `onSaveSettings`-style names the docs call cosmetic.
 
