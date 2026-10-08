@@ -6,6 +6,8 @@
  * backend is the provider's seam: `hydrate()` and `push(op)`. A module setter in the idiom of
  * `setMediaProxyBase` — one copy, the host sets it before the editor mounts.
  */
+import { useSyncExternalStore } from 'react'
+
 let apiBase = null
 export function setLibraryApi(base) { apiBase = typeof base === 'string' && base.trim() ? base.trim().replace(/\/+$/, '') : null }
 export function getLibraryApi() { return apiBase }
@@ -37,3 +39,21 @@ export function createD1Backend(base, password) {
     },
   }
 }
+
+/* THE SESSION — one per tab, module level, so it outlives a chrome switch (each chrome mounts its own
+ * LibraryProvider; a ref inside one would vanish on the next route). Set by the rail's Sign in,
+ * read by every provider as it mounts. `signInLibrary` hydrates once to prove the password; a wrong
+ * one throws UnauthorizedError and nothing changes. Never persisted. */
+let session = null
+const listeners = new Set()
+const emit = () => listeners.forEach((l) => l())
+export function getLibrarySession() { return session }
+export const useLibrarySession = () => useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l) }, getLibrarySession, getLibrarySession)
+export async function signInLibrary(password) {
+  if (!apiBase) throw new Error('no library api')
+  const backend = createD1Backend(apiBase, password)
+  await backend.hydrate()
+  session = { backend }
+  emit()
+}
+export function signOutLibrary() { if (!session) return; session = null; emit() }

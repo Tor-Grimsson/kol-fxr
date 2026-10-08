@@ -3,7 +3,6 @@ import {
   Button, ContentCard, ContentFilters, ContentRow,
   EmptyState, FullscreenOverlay, Input, useModal, Tooltip } from '@kolkrabbi/kol-component'
 import { useGeneratorLibrary } from './LibraryProvider'
-import { getLibraryApi, createD1Backend, UnauthorizedError } from './libraryApi'
 
 /**
  * FilesDialog — the editor's files dialog: one list over the whole generator
@@ -78,7 +77,7 @@ export default function FilesDialog({
   onSaveCurrent,
   focusName = false,
 }) {
-  const { library, removeItem, renameItem, duplicateItem, syncState, connectBackend, disconnectBackend } = useGeneratorLibrary()
+  const { library, removeItem, renameItem, duplicateItem } = useGeneratorLibrary()
   const modal = useModal()
   const fileRef = useRef(null)
   /* the node the overlay hands focus to when Save As opened it — a child's
@@ -135,20 +134,6 @@ export default function FilesDialog({
   if (!open) return null
 
   const openItem = (it) => { onOpenItem?.(it); onClose?.() }
-
-  /* SIGN IN — the library sync (plan 07). Opt-in per session: one password, asked here, held in
-   * the backend's closure and nowhere else. Cancel and nothing changes. Only offered when the
-   * host named an API; without one the app is localStorage only and this button does not exist. */
-  const signIn = async () => {
-    const pw = await modal.prompt('Password for the library sync:', '')
-    if (!pw) return
-    try {
-      await connectBackend(createD1Backend(getLibraryApi(), pw))
-      setError('')
-    } catch (e) {
-      setError(e instanceof UnauthorizedError ? 'Wrong password' : `Sync failed: ${e?.message || e}`)
-    }
-  }
 
   const onDelete = async (it) => {
     const ok = await modal.confirm(`Delete “${labelOf(it)}”?`, { okLabel: 'Delete' })
@@ -334,9 +319,6 @@ export default function FilesDialog({
             Import
           </Button>
           <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={pickImport} />
-          {getLibraryApi() && (syncState === 'on'
-            ? <Button tone="primary" size="sm" quiet onClick={disconnectBackend}>Synced · sign out</Button>
-            : <Button tone="primary" size="sm" iconLeft="cloud" onClick={signIn}>Sign in</Button>)}
 
           <span className="flex items-center gap-2 ms-auto">
             <Input

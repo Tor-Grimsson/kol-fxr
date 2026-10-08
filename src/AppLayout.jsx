@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AppHub, useNavHidden } from '@kolkrabbi/kol-shell'
-import { Button, Dropdown } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, ModalProvider, useModal } from '@kolkrabbi/kol-component'
 import { ThemeToggle } from '@kolkrabbi/kol-framework'
 import logomarkUrl from '@kolkrabbi/kol-brand/svg/favicon-01.svg?url'
 /* The rail-extras store moved into the package with labs (0.4.0): labs WRITES
@@ -15,6 +15,7 @@ import {
   useSettingsSections, shortcutsBySection, comboLabel,
   MODES, setMode, withView, loadLibrary,
   isMobileDevice, wantsDesktop,
+  getLibraryApi, useLibrarySession, signInLibrary, signOutLibrary, UnauthorizedError,
 } from './index.jsx'
 
 /**
@@ -85,6 +86,11 @@ export const NAV_ITEMS = [
 ]
 
 const SETTINGS_PATH = '/settings'
+/* THE SIGN-IN ROW — a sentinel, not a route (user, 2026-10-08: "why wouldn't it be in the rail?
+   like a user icon"). It sits in the rail's pinned foot above Settings, only when the host named
+   a library API; the session it opens lives in the editor's `libraryApi` module, so it outlives a
+   chrome switch. Never a page: there is nothing to show, only a password to ask for. */
+const SIGN_IN_PATH = '#sign-in'
 
 /* The ⌥-digit order: the rail READ TOP TO BOTTOM, logomark first. Derived from
    NAV_ITEMS so adding a destination cannot silently renumber the rest — the
@@ -151,6 +157,22 @@ const SHORTCUTS = shortcutsBySection(null)
 
 const typing = (t) => t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName)
 
+/* The sign-in gesture, under the shell's own ModalProvider so the KOL prompt serves it on every
+   route — the chromes carry their own provider inside. Registers itself on a ref the rail's
+   onNavigate calls. */
+function RailSignIn({ handlerRef }) {
+  const modal = useModal()
+  const session = useLibrarySession()
+  handlerRef.current = async () => {
+    if (session) { signOutLibrary(); return }
+    const pw = await modal.prompt('Password for the library sync:', '')
+    if (!pw) return
+    try { await signInLibrary(pw) }
+    catch (e) { await modal.confirm(e instanceof UnauthorizedError ? 'Wrong password.' : `Sync failed: ${e?.message || e}`, { okLabel: 'OK' }) }
+  }
+  return null
+}
+
 /* Publishes `--fxr-rail` — the rail's width, or 0 when hidden or absent — so a
    chrome's FIXED layers (the randomiser's overlays) keep clear of it; AppShell
    only offsets in-flow content. */
@@ -189,10 +211,20 @@ export default function AppLayout() {
      instead of routing. */
   const extras = useRailExtras()
   const sections = useSettingsSections()
+  const session = useLibrarySession()
+  const signInRef = useRef(null)
+  /* the pinned foot: Sign in (when there is an API to sign in to) above Settings. AppHub pins
+     Settings itself, but a `shell.bottomItems` replaces its list, so Settings is named here too;
+     the shell's `settingsPath` toggle still applies to it. */
+  const bottomItems = [
+    ...(getLibraryApi() ? [{ icon: 'user', path: SIGN_IN_PATH, label: session ? 'Sign out' : 'Sign in' }] : []),
+    { icon: 'nav-settings', path: SETTINGS_PATH, label: 'Settings' },
+  ]
 
   /* Every hop is an SPA transition since 2026-08-27 — the chromes are lazy
      routes that mount and unmount like any page. */
   const onNavigate = (path) => {
+    if (path === SIGN_IN_PATH) { signInRef.current?.(); return }
     if (path?.startsWith(RAIL_EXTRA_PREFIX)) {
       /* A labs pick swaps the layer without a route change, and the touch
          drawer only closes itself on `currentPath` — so it stayed open over
@@ -233,6 +265,8 @@ export default function AppLayout() {
   if (location.pathname === '/' && isMobileDevice() && !wantsDesktop()) return <Navigate to="/randomiser" replace />
 
   return (
+    <ModalProvider>
+    <RailSignIn handlerRef={signInRef} />
     <AppHub
       app={APP}
       /* Labs' category rows sit DIRECTLY UNDER Labs, not after the whole nav —
@@ -287,6 +321,7 @@ export default function AppLayout() {
         railSections: 'enter',
         navKeys: false,
         settingsKey: onChrome ? undefined : ',',
+        bottomItems,
       }}
     >
       {onChrome && <ChromeSettingsKey />}
@@ -294,5 +329,6 @@ export default function AppLayout() {
         <Outlet />
       </RailFrame>
     </AppHub>
+    </ModalProvider>
   )
 }

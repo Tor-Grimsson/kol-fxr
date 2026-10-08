@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { mergeRemote } from './mergeRemote'
-import { UnauthorizedError } from './libraryApi'
+import { UnauthorizedError, useLibrarySession, signOutLibrary } from './libraryApi'
 
 /**
  * Generator library — shared multi-asset store across the editor's modes.
@@ -312,28 +312,29 @@ export function GeneratorLibraryProvider({ children }) {
     const b = backendRef.current
     if (!b) return
     b.push(op).catch((e) => {
-      if (e instanceof UnauthorizedError) { backendRef.current = null; setSyncState('off') }
+      if (e instanceof UnauthorizedError) signOutLibrary()
       if (typeof console !== 'undefined') console.warn('library sync: push failed —', e?.message || e)
     })
   }, [])
-  const connectBackend = useCallback(async (backend) => {
-    const rows = await backend.hydrate() /* throws → the caller says so; nothing here changes */
-    const { next, pushes } = mergeRemote(libRef.current, rows)
-    backendRef.current = backend
-    setLibrary({ ...EMPTY, ...next })
-    setSyncState('on')
-    for (const op of pushes) push(op)
-  }, [push])
-  const disconnectBackend = useCallback(() => { backendRef.current = null; setSyncState('off') }, [])
-
+  /* the session is the rail's (libraryApi.js); this provider follows it: hydrate + merge when it
+   * appears or when this provider mounts under one, drop the backend when it goes */
+  const session = useLibrarySession()
   useEffect(() => {
-    const onStorage = (e) => {
-      if (e.key !== STORAGE_KEY) return
-      setLibrary(loadFromStorage())
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [])
+    if (!session) { backendRef.current = null; setSyncState('off'); return undefined }
+    let alive = true
+    session.backend.hydrate().then((rows) => {
+      if (!alive) return
+      const { next, pushes } = mergeRemote(libRef.current, rows)
+      backendRef.current = session.backend
+      setLibrary({ ...EMPTY, ...next })
+      setSyncState('on')
+      for (const op of pushes) push(op)
+    }).catch((e) => {
+      if (e instanceof UnauthorizedError) signOutLibrary()
+      if (typeof console !== 'undefined') console.warn('library sync: hydrate failed —', e?.message || e)
+    })
+    return () => { alive = false }
+  }, [session, push])
 
   const addItem = useCallback((slot, spec) => {
     if (!SLOT_KEYS.includes(slot) || !spec) return null
@@ -449,8 +450,6 @@ export function GeneratorLibraryProvider({ children }) {
     clearAll,
     replaceAll,
     syncState,
-    connectBackend,
-    disconnectBackend,
     savePalette: (spec) => addItem('palette', spec),
     savePattern: (spec) => addItem('pattern', spec),
     saveType:    (spec) => addItem('type',    spec),
@@ -473,8 +472,6 @@ export function useGeneratorLibrary() {
       clearAll:    () => {},
       replaceAll:  () => {},
       syncState:   'off',
-      connectBackend: async () => {},
-      disconnectBackend: () => {},
       savePalette: () => null,
       savePattern: () => null,
       saveType:    () => null,
