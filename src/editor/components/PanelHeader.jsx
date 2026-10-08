@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { Icon } from '@kolkrabbi/kol-icons'
-import { Button } from '@kolkrabbi/kol-component'
+import { Button, useGrabEdge } from '@kolkrabbi/kol-component'
 
 /**
  * THE CONTROL PANEL'S TWO STATES — one structure for labs and the generator (2026-10-05, the
@@ -56,28 +56,50 @@ export function PanelPills({ label, onOpen, size = 'lg', tone = 'primary', child
  * two detents, a grabber that shows it and cycles them on a tap): HALF the display, the default,
  * and TALL (`--kol-sheet-h`: 50dvh · 85dvh). Labs' Style tab is four screens of controls in a
  * half sheet; tall is two. The grabber is the sheet's first row on a phone, above the header; a
- * 24px row for the 24px hit box, the line itself 36×4 in opaque oq ink. Tap only — drag is the
- * upgrade if the tap is not enough (ponytail). */
+ * 24px row for the 24px hit box, the line itself 36×4 in opaque oq ink.
+ *
+ * …AND IT RESIZES (plan 15 § 1, 2026-10-08; the user: "the fake handle there, that only works on
+ * click, draggable to resize height"). The DS gesture, its two variants: `useGrabEdge` wakes the
+ * estate's pill on pointer proximity and travels it along the line (`axis: 'x'` — a horizontal
+ * edge), and the drag is `useDragResize`'s rule — pointer-up under the slop is a TAP (the detents
+ * cycle), past it the sheet follows the finger LIVE through `onResize(px)` (the sheet's height from
+ * the display's bottom), and `onResizeEnd(px)` lets the consumer snap or collapse. Pointer capture,
+ * so the finger may leave the line. `onDrag(dir)` stays for a consumer that only wants the step. */
 export const SHEET_H = { half: '50dvh', tall: '85dvh' }
-export function SheetGrab({ tall, onToggle, onDrag }) {
-  /* …AND IT DRAGS (2026-10-06, the user: "draggable handle is not draggable"): a vertical pull of
-     more than 32px fires `onDrag(-1 | 1)` on release, up or down, and the tap is then swallowed;
-     a shorter move is a tap. Pointer capture, so the finger may leave the line. */
-  const drag = useRef({ y: null, moved: false, swallow: false }).current
-  const down = (e) => { drag.y = e.clientY; drag.moved = false; e.currentTarget.setPointerCapture?.(e.pointerId) }
-  const move = (e) => { if (drag.y !== null && Math.abs(e.clientY - drag.y) > 32) drag.moved = true }
+export const SHEET_MIN = 96   /* released under this, the sheet collapses */
+const SLOP = 4
+export function SheetGrab({ tall, onToggle, onDrag, onResize, onResizeEnd }) {
+  const ref = useRef(null)
+  useGrabEdge(ref, { axis: 'x' })
+  const drag = useRef({ y: null, h0: 0, moved: false, swallow: false, last: 0 }).current
+  const down = (e) => {
+    drag.y = e.clientY; drag.moved = false
+    /* the sheet's live height: from the grab's own top to the display's bottom */
+    drag.h0 = window.innerHeight - e.currentTarget.getBoundingClientRect().top
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  }
+  const move = (e) => {
+    if (drag.y === null) return
+    const dy = e.clientY - drag.y
+    if (Math.abs(dy) > SLOP) drag.moved = true
+    if (drag.moved && onResize) { drag.last = drag.h0 - dy; onResize(drag.last) }
+  }
   const up = (e) => {
     if (drag.y === null) return
     const dy = e.clientY - drag.y; drag.y = null
-    if (drag.moved && onDrag) { onDrag(dy < 0 ? -1 : 1); drag.swallow = true }
+    if (!drag.moved) return
+    drag.swallow = true
+    if (onResize) onResizeEnd?.(drag.h0 - dy)
+    else onDrag?.(dy < 0 ? -1 : 1)
   }
   const click = () => { if (drag.swallow) { drag.swallow = false; return } onToggle?.() }
   return (
     <button
+      ref={ref}
       type="button"
       aria-label={tall ? 'Lower the sheet' : 'Raise the sheet'}
       aria-pressed={tall}
-      className="flex h-6 w-full shrink-0 touch-none items-center justify-center"
+      className="kol-sheet-grab relative flex h-6 w-full shrink-0 touch-none items-center justify-center"
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}

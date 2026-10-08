@@ -37,7 +37,11 @@ export default function UrlIntents() {
         if (item.mode === 'morph' && item.morph) resetMorph({ active: true, ...item.morph, fileId: item.id, fileName: item.name ?? null })
         else resetMorph()
         /* a morph file is motion: it opens playing, in every chrome (the randomiser landed on step 1, still) */
-        setTimeout(() => { loadPreset(item); if (item.mode === 'morph') transport.play() }, 0)
+        setTimeout(() => {
+          loadPreset(item)
+          /* the morph's length is the transport's (plan 14 § 4 — the rail has no Length of its own) */
+          if (item.mode === 'morph') { if (item.morph?.seconds > 0) transport.setLoopSeconds(item.morph.seconds); transport.play() }
+        }, 0)
       } else if (typeof console !== 'undefined') console.warn(`open: no saved file ${open}`)
     } else if (fresh) {
       clearLayers()

@@ -1,6 +1,6 @@
 # Plan — Morph and the timeline, made right
 
-**Status:** SCOPED, not started. Cloud session 2026-10-08. Nothing here needs kol-ds-ui — the timeline comes home (§ 1), the rest is this repo's.
+**Status:** BUILT 2026-10-08 (cloud session), all eight, walked on `vite preview` at 1600 (`walk-morph.mjs`, 10 checks) — crossfade, greyed modes, resolution, grab-handle steps, `Loops / Simple`, centred loop field, seconds counter, named header lane, dock resize + curve handles. Parked for a local session: the step list to the DS (§ 4), a per-option `disabled` on `SegmentedToggle` (the greyed cell is a dimmed label + tooltip until then).
 **Origin:** user, 2026-10-08, on `fxr.kolkrabbi.io/morph` (Circle morph → Star morph, Blend):
 - *"blend now ignores everything but the first layer? I thought each layer would be added as a layer to the 'timeline'?"*
 - *"'Shape' needs resolution slider to make the morph smoother"*

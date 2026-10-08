@@ -9,7 +9,7 @@ import { regularPolygonPoints, starPoints, trianglePoints } from './shape-math'
 import { pathD } from './path-math'
 import { computeBooleanCached } from './boolean-ops'
 import { hasBindings, resolveLayer } from '../params/resolve'
-import { shapeMorphDef } from '../morph/shape'
+import { shapeMorphDef, crossfadeMorphDef } from '../morph/shape'
 import { useTransportCtx, useTransportPlaying, useTransportEpoch, transport } from '../params/transport'
 import { pack } from '../packs'
 import { enabledCanvasStages, enabledEngineStage, pixiStages } from './filterChain'
@@ -27,8 +27,11 @@ import { paintAlpha } from './paint'
 const gen = () => pack('generators')
 const fx = () => pack('effects')
 const loopById = (id) => gen()?.loopById(id) ?? null
-/* a Shape-mode morph (plan 10) is a loop layer whose draw is the morph of its steps' outlines */
-const defFor = (layer) => (layer.morph?.mode === 'shape' ? shapeMorphDef(loopById, layer.loopId) : loopById(layer.loopId))
+/* a Shape-mode morph (plan 10) is a loop layer whose draw is the morph of its steps' outlines; a
+ * Crossfade (plan 14 § 2) one fades step into step. Blend is plain tracks — the generator's own def. */
+const defFor = (layer) => (layer.morph?.mode === 'shape' ? shapeMorphDef(loopById, layer.loopId)
+  : layer.morph?.mode === 'crossfade' ? crossfadeMorphDef(loopById, layer.loopId)
+  : loopById(layer.loopId))
 const loopDrawParams = (loop, layer) => gen().loopDrawParams(loop, layer)
 const resolveCameraKeys = (def) => gen()?.resolveCameraKeys(def) ?? null
 const drawLoopFrame = (...args) => gen().drawLoopFrame(...args)

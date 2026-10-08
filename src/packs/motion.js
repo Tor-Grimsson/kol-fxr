@@ -9,12 +9,13 @@ import KineticType from '../kinetic/KineticType'
 import { loadFonts, warmFontCss, kineticFontCss } from '../kinetic/fonts'
 import KineticPanel from '../editor/compose/inspectors/KineticPanel'
 import TimelineDock from '../editor/params/TimelineDock'
+import TransportFab from '../editor/params/TransportFab'
 import TransportBar from '../editor/params/TransportBar'
 
 export const motion = {
   layerTypes: ['kinetic'],
   kineticPresetById, presetComp, KineticType, loadFonts, warmFontCss, kineticFontCss,
-  KineticPanel, TimelineDock, TransportBar,
+  KineticPanel, TimelineDock, TransportBar, TransportFab,
 }
 
 registerPack('motion', motion)

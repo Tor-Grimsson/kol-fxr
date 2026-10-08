@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AppHub, useNavHidden } from '@kolkrabbi/kol-shell'
-import { Button, Dropdown, ModalProvider, useModal } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, MediaLibrary, ModalProvider, useModal } from '@kolkrabbi/kol-component'
 import { ThemeToggle } from '@kolkrabbi/kol-framework'
 import logomarkUrl from '@kolkrabbi/kol-brand/svg/favicon-01.svg?url'
 import NewFileDialog, { openNewFile } from './components/NewFileDialog'
+import { pickMedia } from './editor/library/mediaPick'
+import { getMediaClient, proxied, isVideoType } from './editor/library/mediaLibrary'
 /* The rail-extras store moved into the package with labs (0.4.0): labs WRITES
    it and this layout READS it, so two module copies meant subscribing to a
    store nothing ever touched. One copy, one store. The settings sections, the
@@ -96,6 +98,8 @@ const SETTINGS_PATH = '/settings'
    a library API; the session it opens lives in the editor's `libraryApi` module, so it outlives a
    chrome switch. Never a page: there is nothing to show, only a password to ask for. */
 const SIGN_IN_PATH = '#sign-in'
+/* the rail's Media row (plan 15 § 4) — a sentinel too: it opens the library, it is not a route */
+const MEDIA_PATH = '#media'
 
 /* The ⌥-digit order: the rail READ TOP TO BOTTOM, logomark first. Derived from
    NAV_ITEMS so adding a destination cannot silently renumber the rest — the
@@ -262,19 +266,29 @@ export default function AppLayout() {
   const sections = useSettingsSections()
   const session = useLibrarySession()
   const signInRef = useRef(null)
-  /* the pinned foot: Sign in (when there is an API to sign in to) above Settings. AppHub pins
-     Settings itself, but a `shell.bottomItems` replaces its list, so Settings is named here too;
-     the shell's `settingsPath` toggle still applies to it. */
+  const [mediaOpen, setMediaOpen] = useState(false)
+  /* the pinned foot: Media (signed in — the r2b2 stores, read-only; plan 15 § 4) and Sign in (when
+     there is an API to sign in to) above Settings. AppHub pins Settings itself, but a
+     `shell.bottomItems` replaces its list, so Settings is named here too; the shell's
+     `settingsPath` toggle still applies to it. */
   const bottomItems = [
+    ...(session ? [{ icon: 'image', path: MEDIA_PATH, label: 'Media' }] : []),
     /* the icon IS the state: a person while local, a cloud while synced (the label only shows with the rail open) */
     ...(getLibraryApi() ? [{ icon: session ? 'cloud' : 'user', path: SIGN_IN_PATH, label: session ? 'Synced · sign out' : 'Sign in' }] : []),
     { icon: 'nav-settings', path: SETTINGS_PATH, label: 'Settings' },
   ]
+  /* a pick lands in the chrome under it — or, from a shell page, in the editor it opens */
+  const onMediaPick = (url, meta = {}) => {
+    pickMedia({ url: proxied(url), srcType: isVideoType(meta.contentType) ? 'video' : 'image' })
+    setMediaOpen(false)
+    if (!onChrome) navigate('/editor')
+  }
 
   /* Every hop is an SPA transition since 2026-08-27 — the chromes are lazy
      routes that mount and unmount like any page. */
   const onNavigate = (path) => {
     if (path === SIGN_IN_PATH) { signInRef.current?.(); return }
+    if (path === MEDIA_PATH) { setMediaOpen(true); return }
     if (path?.startsWith(RAIL_EXTRA_PREFIX)) {
       /* A labs pick swaps the layer without a route change, and the touch
          drawer only closes itself on `currentPath` — so it stayed open over
@@ -323,6 +337,8 @@ export default function AppLayout() {
     <ModalProvider>
     <RailSignIn handlerRef={signInRef} />
     <NewFileDialog />
+    {/* the explorer media.kolkrabbi.io runs, over the three stores (the client lists its buckets) */}
+    <MediaLibrary variant="modal" open={mediaOpen} client={getMediaClient()} accept={['image', 'video']} onClose={() => setMediaOpen(false)} onSelect={onMediaPick} />
     <AppHub
       app={APP}
       /* Labs' category rows sit DIRECTLY UNDER Labs, not after the whole nav —

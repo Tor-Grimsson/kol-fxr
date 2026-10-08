@@ -14,7 +14,7 @@
  * ship as-is.
  */
 
-export const SLOTS = ['left.header', 'left.body', 'left.footer', 'right.header', 'right.body', 'right.footer', 'canvas.header', 'canvas.footer']
+export const SLOTS = ['left.header', 'left.body', 'left.footer', 'right.header', 'right.body', 'right.footer', 'canvas.header', 'canvas.footer', 'canvas.overlay']
 
 export function panelsForSlot(panels, slot) {
   return (panels ?? [])

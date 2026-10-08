@@ -8,6 +8,7 @@ import EditorErrorBoundary from './EditorErrorBoundary'
 import { ToolProvider }       from './state/tools'
 import { GeneratorLibraryProvider } from './library/LibraryProvider'
 import UrlIntents from './library/UrlIntents'
+import { consumeMediaPicks } from './library/mediaPick'
 import { useGlobalShortcuts } from './state/useGlobalShortcuts'
 import { ComposeStateProvider, useComposeState } from './compose/state'
 import { transport } from './params/transport'
@@ -30,6 +31,13 @@ import Compose from './Compose'
  * which is the per-layer color panel in the left rail) mounts inside the
  * stack so it sees palette + compose state; opens on `kol:open-color-modal`.
  */
+/* a file picked in the rail's Media library lands as a photo layer (plan 15 § 4) */
+function MediaPickSink() {
+  const { addLayer } = useComposeState()
+  useEffect(() => consumeMediaPicks((d) => addLayer('photo', { src: d.url, srcType: d.srcType })), [addLayer])
+  return null
+}
+
 function EditorBody() {
   /* Global shortcuts (undo / redo / deselect) — mounted here so keyboard
    * works everywhere, not just inside CanvasArea. */
@@ -51,6 +59,7 @@ function EditorBody() {
   return (
     <>
       <Compose />
+      <MediaPickSink />
       <PaletteModal />
       {/* mounted once, inside the providers — the two File surfaces open it
           through a store rather than owning it (FilesDialog, kol-fxr) */}

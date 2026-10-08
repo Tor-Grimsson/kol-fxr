@@ -210,7 +210,6 @@ export default function EditorFooter() {
    * the display high there, and Output's eight controls standing open took all of it. No tab is
    * lit at rest; a tap opens one and the same tap closes it. */
   const [tab, setTab] = useState(touch ? null : (TransportBar ? 'transport' : 'output'))
-  const [transportOpen, setTransportOpen] = useState(false)
   const [pngScale, setPngScale] = useState(1)
   const [batchOpen, setBatchOpen] = useState(false)
   const [recording, setRecording] = useState(false)
@@ -285,31 +284,21 @@ export default function EditorFooter() {
           * ON TOUCH THE TRANSPORT IS ITS FIRST CELL (2026-10-06; the user: "transport new layout
           * uneven"): a filled ▶ square stood beside the strip as a second shape; now one strip,
           * the ▶ cell lit while the transport sheet is up. */}
+        {/* ON TOUCH THE TRANSPORT LEFT THE STRIP (plan 15 § 2): it is the floating play button over the
+          * canvas (`TransportFab`, the motion pack's `canvas.overlay`), so the row is Output · File. */}
         <SegmentedToggle
-          value={touch && transportOpen ? 'transport-sheet' : tab}
-          onChange={(v) => { if (v === 'transport-sheet') { setTransportOpen((o) => !o); return } setTab((t) => (touch && t === v ? null : v)) }}
-          options={touch && TransportBar ? [{ value: 'transport-sheet', label: <Icon name="play" size={glyphSize(cs, true)} />, ariaLabel: 'Transport' }, ...tabs] : tabs}
+          value={tab}
+          onChange={(v) => setTab((t) => (touch && t === v ? null : v))}
+          options={tabs}
           size={cs}
           className={`flex-1 min-w-0 ${cs === 'sm' ? TOGGLE_FIX : (stripClamp(cs) ?? '')}`.trim()}
         />
       </div>
       {/* stays mounted hidden on desktop so playback chrome never re-inits on a
           tab switch; on touch the bar lives in the sheet below */}
-      {TransportBar && (
+      {TransportBar && !touch && (
         <div className={tab === 'transport' ? undefined : 'hidden'}>
           <TransportBar size={cs} />
-        </div>
-      )}
-      {touch && TransportBar && transportOpen && (
-        <div
-          className="fixed inset-x-0 bottom-0 flex items-center gap-3 border-t border-oq-08 bg-surface-primary px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-          /* over the sheet it rises from, UNDER the shell's nav drawer and its scrim (kol-shell:
-             the scrim is sticky − 1). At `--kol-z-modal` it stood on top of an open drawer
-             (2026-10-05). */
-          style={{ zIndex: 'calc(var(--kol-z-sticky) - 2)' }}
-        >
-          <div className="flex-1 min-w-0"><TransportBar size={cs} /></div>
-          <Tooltip label="Close transport"><Button variant="nav" size={cs} iconOnly="x" aria-label="Close transport" onClick={() => setTransportOpen(false)} /></Tooltip>
         </div>
       )}
       {tab === 'output' && (

@@ -13,6 +13,13 @@
      6. DS shims (published-DS rules the current pairing is missing)
    ═══════════════════════════════════════════════════════════════════════ */
 
+/* THE HOME-SCREEN APP (plan 15 § 3). `apple-mobile-web-app-status-bar-style: black-translucent`
+ * puts the page UNDER the status bar; standalone, the top safe-area inset is the page's to pad
+ * (in a browser tab the chrome pads it). Unverified on a device — plan 15 § 5. */
+@media (display-mode: standalone) {
+  body { padding-top: env(safe-area-inset-top, 0px); }
+}
+
 
 /* ───── 1. Shell layout ─────────────────────────────────────────────── */
 
@@ -173,6 +180,52 @@
   flex: 0 0 auto;
   background-color: var(--kol-surface-primary);
 }
+/* THE DOCK'S GRAB (plan 14 § 8) — its top edge resizes it, wearing the estate's grab pill: hidden at
+ * rest, woken by pointer proximity and travelling the edge to meet the cursor (`useGrabEdge`,
+ * `axis: 'x'` — the pill travels x, the drag is y). The drawing is the DS's horizontal handle, the
+ * one `ColumnBrowser` wears along its foot (kol-theme `.kol-column-browser-resize-y`), written for
+ * the dock's name — the hook supplies `is-near` and `--kol-rail-grab-x`, nothing else. */
+.kol-timeline-grab {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  z-index: 1;
+  height: 8px;
+  cursor: row-resize;
+  touch-action: none;
+}
+.kol-timeline-grab::before {
+  content: '';
+  position: absolute;
+  translate: -50% -50%;
+  border-radius: var(--kol-radius-full);
+  background: var(--kol-fg-64);
+  opacity: 0;
+  width: 4.5rem;
+  height: 0.125rem;
+  top: 0.5px;
+  left: clamp(2.25rem, var(--kol-rail-grab-x, 50%), calc(100% - 2.25rem));
+  transition: opacity 1800ms cubic-bezier(0.22, 1, 0.36, 1) 400ms, background-color 500ms ease;
+}
+.kol-timeline-grab.is-near::before,
+.kol-timeline-grab.is-dragging::before { opacity: 1; transition-delay: 40ms; }
+.kol-timeline-grab.is-dragging::before { background: var(--kol-fg-96); }
+/* the touch sheet's grab wears the same pill above its static bar (PanelHeader.jsx `SheetGrab`,
+ * plan 15 § 1) — a pointer near the sheet's top edge wakes it; a finger never sees it */
+.kol-sheet-grab::before {
+  content: '';
+  position: absolute;
+  translate: -50% -50%;
+  border-radius: var(--kol-radius-full);
+  background: var(--kol-fg-64);
+  opacity: 0;
+  width: 4.5rem;
+  height: 0.125rem;
+  top: 0.5px;
+  left: clamp(2.25rem, var(--kol-rail-grab-x, 50%), calc(100% - 2.25rem));
+  transition: opacity 1800ms cubic-bezier(0.22, 1, 0.36, 1) 400ms, background-color 500ms ease;
+  pointer-events: none;
+}
+.kol-sheet-grab.is-near::before { opacity: 1; transition-delay: 40ms; }
 
 
 /* ───── 2. Compose rail ─────────────────────────────────────────────── */

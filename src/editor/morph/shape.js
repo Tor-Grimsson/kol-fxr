@@ -192,8 +192,8 @@ function chunk(subs, m) {
   return out
 }
 /* two subpaths k of the way: shared geometry; a fill meeting a stroke crossfades on it */
-function blendPair(x, y, k) {
-  const N = Math.max(64, Math.min(512, Math.max(x.pts.length, y.pts.length)))
+function blendPair(x, y, k, N0) {
+  const N = N0 || Math.max(64, Math.min(512, Math.max(x.pts.length, y.pts.length)))
   const closed = x.closed && y.closed
   const px = prep({ ...x, closed }, N)
   const py = align(px, prep({ ...y, closed }, N), closed)
@@ -205,20 +205,25 @@ function blendPair(x, y, k) {
     { pts, closed: y.closed, op: y.op, rule: y.rule, style: y.style, alpha: y.alpha * k, lineWidth },
   ]
 }
-function pairAll(a, b, k) {
+function pairAll(a, b, k, N) {
   const out = []
   if (!a.length || !b.length) { for (const x of a) out.push(collapse(x, k)); for (const y of b) out.push(collapse(y, 1 - k)); return out }
   const m = Math.min(a.length, b.length)
   const ca = chunk(a, m), cb = chunk(b, m)
-  for (let i = 0; i < m; i++) out.push(...blendPair(ca[i], cb[i], k))
+  for (let i = 0; i < m; i++) out.push(...blendPair(ca[i], cb[i], k, N))
   return out
 }
 
-/** The subpaths k of the way from outline A to outline B (`frame` = w·h, to tell a background). */
-export function morphOutlines(A, B, k, frame = Infinity) {
+/** The subpaths k of the way from outline A to outline B (`frame` = w·h, to tell a background).
+ * `resolution` is the points per pair (plan 14 § 3); 0 / undefined = auto (64–512 by the outline). */
+export function morphOutlines(A, B, k, frame = Infinity, resolution = 0) {
   const bgA = A.filter((x) => isBg(x, frame)), bgB = B.filter((x) => isBg(x, frame))
-  return [...pairAll(bgA, bgB, k), ...pairAll(A.filter((x) => !isBg(x, frame)), B.filter((x) => !isBg(x, frame)), k)]
+  return [...pairAll(bgA, bgB, k, resolution), ...pairAll(A.filter((x) => !isBg(x, frame)), B.filter((x) => !isBg(x, frame)), k, resolution)]
 }
+export const RESOLUTION_OPTIONS = [
+  { value: 0, label: 'Auto' },
+  ...[64, 128, 256, 512, 1024].map((n) => ({ value: n, label: String(n) })),
+]
 
 export function paint(ctx, subs) {
   for (const s of subs) {
@@ -268,7 +273,53 @@ export function drawShapeMorph(ctx, u, w, h, p, lookup) {
   const A = outlineOf(lookup(steps[i].loopId), u, w, h, steps[i].params)
   if (!(k > 0) || n === 1) { paint(ctx, A); return }
   const B = outlineOf(lookup(steps[j].loopId), u, w, h, steps[j].params)
-  paint(ctx, morphOutlines(A, B, k, w * h))
+  paint(ctx, morphOutlines(A, B, k, w * h, p.morph?.resolution || 0))
+}
+
+/* ── crossfade (plan 14 § 2) — the third mode: both steps drawn, the second faded in over the
+ * first. No pairing, no recording: any 2d generator, the two steps as the generators draw them.
+ * The second step paints into its own canvas and composites at `k`, so a generator that writes
+ * `globalAlpha` itself cannot defeat the fade. */
+let fadeLayer = null
+/* a scratch canvas the size of the target's, wearing the target's transform — so whatever the
+ * viewport did to the target (dpr, fit, zoom) the fade layer composites pixel for pixel */
+function fadeCtx(ctx) {
+  if (!fadeLayer) fadeLayer = document.createElement('canvas').getContext('2d')
+  const c = fadeLayer.canvas, t = ctx.canvas
+  if (c.width !== t.width || c.height !== t.height) { c.width = t.width; c.height = t.height }
+  fadeLayer.setTransform(1, 0, 0, 1, 0, 0)
+  fadeLayer.clearRect(0, 0, c.width, c.height)
+  fadeLayer.setTransform(ctx.getTransform())
+  return fadeLayer
+}
+export const canCrossfade = (def) => typeof def?.draw === 'function' && def.kind !== 'engine'
+export function drawCrossfade(ctx, u, w, h, p, lookup) {
+  const steps = p.morph?.steps ?? []
+  const n = steps.length
+  if (!n) return
+  const s = Number.isFinite(p.morphT) ? p.morphT : 0
+  const fl = Math.floor(s)
+  const i = ((fl % n) + n) % n, j = (i + 1) % n, k = s - fl
+  const a = lookup(steps[i].loopId), b = lookup(steps[j].loopId)
+  if (canCrossfade(a)) { ctx.save(); a.draw(ctx, u, w, h, steps[i].params); ctx.restore() }
+  if (!(k > 0) || n === 1 || !canCrossfade(b)) return
+  const f = fadeCtx(ctx)
+  f.save(); b.draw(f, u, w, h, steps[j].params); f.restore()
+  ctx.save()
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.globalAlpha = k
+  ctx.drawImage(f.canvas, 0, 0)
+  ctx.restore()
+}
+const FADE_DEFS = new Map()
+export function crossfadeMorphDef(lookup, loopId) {
+  const base = lookup(loopId)
+  let d = FADE_DEFS.get(base)
+  if (!d) {
+    d = { id: 'crossfade', label: 'Crossfade', params: base?.params ?? [], draw: (ctx, u, w, h, p) => drawCrossfade(ctx, u, w, h, p, lookup) }
+    FADE_DEFS.set(base, d)
+  }
+  return d
 }
 
 /* The renderer's def for a shape-morph layer: the first step's schema (bg toggle, labels), a draw

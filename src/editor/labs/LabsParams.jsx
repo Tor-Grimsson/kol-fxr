@@ -16,7 +16,7 @@ import { LoopFields } from '../compose/inspectors/LoopFields'
 import KineticPanel from '../compose/inspectors/KineticPanel'
 import { KINETIC_TREE, KINETIC_PRESETS, presetComp } from '../../kinetic/presets'
 import { randomiseComp } from '../../kinetic/knobs'
-import { MISC_TREE } from '../../loops/taxonomy'
+import { GENERATIVE_TREE, MISC_TREE } from '../../loops/taxonomy'
 import { groupById, loopById, presetsInGroup, presetsInSub, presetLayerPatch } from '../../loops/registry'
 import { computeRoll, allScopeParams } from '../params/rolls'
 import { useAppSettings, getAppSettings, setAppSetting } from '../lib/appSettings'
@@ -403,7 +403,12 @@ function GenerativeSurface({ layer, showMod, tree }) {
   const edit = useLayerEdit(layer.id, { history: 'coalesce' })
 
   const current = presetsInGroup(layer.loopGroup).find((p) => p.id === layer.presetId)
-  const groupLabel = groupById(layer.loopGroup)?.label ?? ''
+  /* METHOD / GROUP — `Loops / Simple` (plan 14 § 4; the user: "why does it just say SIMPLE"); the
+     tree's type over the registry's group, one word when they agree (Scanline / Scanline) */
+  const group = groupById(layer.loopGroup)
+  const type = (tree ?? GENERATIVE_TREE).find((t) => t.groups.includes(layer.loopGroup))
+  const groupName = type?.labels?.[layer.loopGroup] ?? group?.label ?? ''
+  const groupLabel = type && type.label !== groupName ? `${type.label} / ${groupName}` : groupName
 
   /* Para Type's letter selector — single-glyph presets as labs pills. */
   const isGlyphs = layer.loopGroup === 'paratype' && current?.sub === 'Glyphs'

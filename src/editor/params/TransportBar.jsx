@@ -47,6 +47,9 @@ function LoopField({ seconds, onCommit, size }) {
           if (e.key === 'Enter') e.currentTarget.blur()
           if (e.key === 'Escape') { setDraft(shown); setEditing(false); e.currentTarget.blur() }
         }}
+        /* the shell centred too — `property` left-packs its content by design, and `text-center` alone
+           only centres inside the hugging input (plan 14 § 5; the user: "'loop/4s' should be centered") */
+        className="justify-center"
         inputClassName="text-center"
       />
     </Tooltip>

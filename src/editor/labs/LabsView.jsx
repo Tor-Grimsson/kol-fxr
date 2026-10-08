@@ -14,6 +14,8 @@ import { useMorph, setMorph } from '../morph/morphStore'
 import { urlIntent } from '../library/UrlIntents'
 import FilesDialogHost from '../library/FilesDialogHost'
 import TimelineDock from '../params/TimelineDock'
+import TransportFab from '../params/TransportFab'
+import { consumeMediaPicks } from '../library/mediaPick'
 import { useDragResize } from '@kolkrabbi/kol-framework'
 import LabsNav from './LabsNav'
 import LabsParams from './LabsParams'
@@ -21,7 +23,7 @@ import { LabsSourceCard } from './LabsSourcePicker'
 import { transport } from '../params/transport'
 import { getAppSettings } from '../lib/appSettings'
 import { groupOfPreset, presetById, presetLayerPatch } from '../../loops/registry'
-import { PanelHeader, PanelPills, SheetGrab, SHEET_H } from '../components/PanelHeader'
+import { PanelHeader, PanelPills, SheetGrab, SHEET_H, SHEET_MIN } from '../components/PanelHeader'
 import LabsCatalogCard from './LabsCatalogCard'
 import { useLabsLayer } from './useLabsLayer'
 import { setMountedView } from '../mode'
@@ -270,9 +272,18 @@ function LabsSheetHeader() {
 
 /* the sheet's first row: the grabber (PanelHeader.jsx) */
 function LabsSheetGrab() {
-  const { tall, setTall, collapseParams } = useContext(TouchRails)
-  /* a tap cycles; a drag up raises, a drag down lowers, then collapses */
-  return <SheetGrab tall={tall} onToggle={() => setTall((v) => !v)} onDrag={(dir) => { if (dir < 0) setTall(true); else if (tall) setTall(false); else collapseParams() }} />
+  const { tall, setTall, collapseParams, setSheetPx } = useContext(TouchRails)
+  /* a tap cycles the detents; a drag follows the finger (plan 15 § 1), released under SHEET_MIN
+     it collapses, released anywhere else it rests there — the detent flag is only read while no
+     dragged height is set */
+  return (
+    <SheetGrab
+      tall={tall}
+      onToggle={() => { setSheetPx(null); setTall((v) => !v) }}
+      onResize={(px) => setSheetPx(Math.max(SHEET_MIN, Math.min(window.innerHeight * 0.92, px)))}
+      onResizeEnd={(px) => { if (px < SHEET_MIN) { setSheetPx(null); collapseParams() } }}
+    />
+  )
 }
 
 /* The desktop rail minus its grab: no `useDragResize`, so nothing stamps a
@@ -315,6 +326,8 @@ const LABS_REGISTRY_TOUCH = {
   panels: [
     { slot: 'right.header', order: 0, Component: LabsSheetGrab },
     { slot: 'right.header', order: 1, Component: LabsSheetHeader },
+    /* the transport is a floating play button over the stage on touch (plan 15 § 2) */
+    { slot: 'canvas.overlay', order: 0, Component: TransportFab },
     ...LABS_REGISTRY.panels.map((p) => (p.Component === LabsRail ? { ...p, Component: LabsTouchRail } : p)),
   ],
 }
@@ -341,6 +354,8 @@ function LabsBody() {
      there is nothing on the stage, so the way in is in the sheet, not only in the corner; a pick
      closes it */
   const [tall, setTall] = useState(false)
+  /* …or any height the grab was dragged to (plan 15 § 1); null = the detent */
+  const [sheetPx, setSheetPx] = useState(null)
   /* THE ENTRY CARD (LabsCatalogCard), both frames: open while the stage is empty, gone on a pick,
      back when the layer goes; the sheet's `Catalog` and the rail's rows reopen it */
   const morph = useMorph()
@@ -359,6 +374,8 @@ function LabsBody() {
     a = requestAnimationFrame(() => { b = requestAnimationFrame(() => document.documentElement.removeAttribute('data-rail')) })
     return () => { cancelAnimationFrame(a); cancelAnimationFrame(b) }
   }, [morph.active, touch])
+  /* a file picked in the rail's Media library is the stage's photo layer (plan 15 § 4) */
+  useEffect(() => consumeMediaPicks((d) => setOnly('photo', { src: d.url, srcType: d.srcType })), [setOnly])
   /* a pick from the nav brings a collapsed sheet back */
   useEffect(() => {
     if (!touch) return undefined
@@ -475,11 +492,11 @@ function LabsBody() {
   /* `.kol-editor-labs` scopes kol-labs.css to this chrome; `contents` keeps the
    * wrapper out of layout so the shell's grid is untouched. */
   return (
-    <div className="kol-editor-labs contents" data-touch={touch || undefined} data-params={paramsOpen ? 'open' : undefined} data-empty={layer || morph.active ? undefined : ''} style={tall ? { '--kol-sheet-h': SHEET_H.tall } : undefined}>
+    <div className="kol-editor-labs contents" data-touch={touch || undefined} data-params={paramsOpen ? 'open' : undefined} data-empty={layer || morph.active ? undefined : ''} style={sheetPx ? { '--kol-sheet-h': `${sheetPx}px` } : tall ? { '--kol-sheet-h': SHEET_H.tall } : undefined}>
       {/* draws nothing — hands labs' categories to the shell rail */}
       <LabsNav />
       {touch ? (
-        <TouchRails.Provider value={{ collapseParams: () => setParamsOpen(false), tall, setTall, catalog, toggleCatalog: () => setCatalog((v) => !v) }}>
+        <TouchRails.Provider value={{ collapseParams: () => setParamsOpen(false), tall, setTall, setSheetPx, catalog, toggleCatalog: () => setCatalog((v) => !v) }}>
           {/* ONE SIZE GROUP IN THE SHEET — 'md', the rung where the DS's
               ladders agree (see controlSize.js). */}
           <ControlSizeContext.Provider value="md">

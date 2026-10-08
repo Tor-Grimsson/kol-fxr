@@ -91,6 +91,9 @@ export default function EditorShell({ registry }) {
   const Topbar = registry?.topbar ?? MenuTop
   const canvasHeader = panelsForSlot(registry?.panels, 'canvas.header')
   const canvasFooter = panelsForSlot(registry?.panels, 'canvas.footer')
+  /* `canvas.overlay` floats OVER the canvas (plan 15 § 2 — the phone's play button); the main is
+     the containing block, so an overlay rides the canvas region, not the viewport */
+  const canvasOverlay = panelsForSlot(registry?.panels, 'canvas.overlay')
   /* `data-editor-keep-selection` is the single marker the document-level
    * click-away handler in CanvasArea checks. Anything inside the shell
    * keeps selection on click; anything outside (sidenav, browser chrome)
@@ -107,8 +110,9 @@ export default function EditorShell({ registry }) {
               {canvasHeader.map(({ Component }, i) => <Component key={i} />)}
             </div>
           )}
-          <main className="kol-editor-canvas">
+          <main className="kol-editor-canvas" style={canvasOverlay.length ? { position: 'relative' } : undefined}>
             {Canvas ? <Canvas /> : null}
+            {canvasOverlay.map(({ Component }, i) => <Component key={i} />)}
           </main>
           {canvasFooter.length > 0 && (
             <div className="kol-editor-canvas-footer">

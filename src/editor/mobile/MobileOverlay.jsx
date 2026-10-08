@@ -10,7 +10,7 @@ import EffectScreen from './EffectScreen'
 import { deriveScopes, allScopeParams, computeRoll, computePresetRoll, computeFilterRoll, useRollSeed } from '../params/rolls'
 import { resolvedChain } from '../compose/filterChain'
 import { effectHost } from '../compose/inspectors/effectCategories'
-import { PanelHeader, PanelPills, SheetGrab, SHEET_H } from '../components/PanelHeader'
+import { PanelHeader, PanelPills, SheetGrab, SHEET_H, SHEET_MIN } from '../components/PanelHeader'
 import MorphTab from '../morph/MorphTab'
 import { useMorph } from '../morph/morphStore'
 import { openFiles } from '../library/filesDialogStore'
@@ -166,6 +166,8 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
      Now it is labs' sheet: half the display (tall on the grabber), the stage refitting above it
      (`onSheet`), the controls scrolling inside when they outgrow it. */
   const [tall, setTall] = useState(false)
+  /* …or the height the grab was dragged to (plan 15 § 1); null = the detent */
+  const [sheetPx, setSheetPx] = useState(null)
   const seed = useRollSeed(layer)
   /* the Effects tool opens its sheet as soon as its media has landed */
   useEffect(() => { if (openEffects) { setOpen(true); setShowFx(true) } }, [openEffects])
@@ -176,7 +178,7 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
   useEffect(() => { onRail?.(railShown); return () => onRail?.(false) }, [railShown]) // eslint-disable-line react-hooks/exhaustive-deps
   /* …and the sheet's height, so the stage can stand above it */
   const sheetShown = !rail && !!layer && open && !uiHidden
-  const sheetH = sheetShown ? (tall ? SHEET_H.tall : SHEET_H.half) : null
+  const sheetH = sheetShown ? (sheetPx ? `${sheetPx}px` : tall ? SHEET_H.tall : SHEET_H.half) : null
   useEffect(() => { onSheet?.(sheetH); return () => onSheet?.(null) }, [sheetH]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!layer) return null
@@ -276,7 +278,14 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
            `dvh` sum in MobileView) whatever the layout viewport's own height is doing */
         style={rail ? PANEL_STYLE : { ...PANEL_STYLE, top: `calc(100dvh - ${sheetH ?? SHEET_H.half})` }}
       >
-        {!rail && <SheetGrab tall={tall} onToggle={() => setTall((v) => !v)} onDrag={(dir) => { if (dir < 0) setTall(true); else if (tall) setTall(false); else setOpen(false) }} />}
+        {!rail && (
+          <SheetGrab
+            tall={tall}
+            onToggle={() => { setSheetPx(null); setTall((v) => !v) }}
+            onResize={(px) => setSheetPx(Math.max(SHEET_MIN, Math.min(window.innerHeight * 0.92, px)))}
+            onResizeEnd={(px) => { if (px < SHEET_MIN) { setSheetPx(null); setOpen(false) } }}
+          />
+        )}
         {/* Header — title tap collapses; Start over always reachable (it was
             buried in the Output tab — "can't go back", user 2026-08-12). In the
             rail it holds labs' insets, so both rails' first rows start on one y. */}
