@@ -1,6 +1,6 @@
 # Plan — Audit: bugs and consistency
 
-**Status:** SCOPED, not started — runs AFTER plans 14 and 15, or it reports what they already change.
+**Status:** RUN 2026-10-08 (cloud session) — `.kol/llm-context/audit/2026-10-08.md`: 12 findings (3 bugs · 4 hand-built · 2 vocabulary · 3 dead code), none fixed; the user orders them.
 **Origin:** user, 2026-10-08: *"should we run an audit? just to try to find bugs and look for consistency opportunities?"*
 
 ## What it looks for

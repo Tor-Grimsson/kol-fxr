@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getAppSettings, setAppSetting } from '../lib/appSettings'
 import { LabeledControl, SettingsRow } from '@kolkrabbi/kol-component'
 import { NumberField } from '../compose/inspectors/NumberField'
 import { mulberry32, randomSeed, randomizeSchema, mergeRoll } from '../lib/rng'
@@ -58,12 +59,20 @@ export function deriveScopes(schema, layer) {
   return scopes
 }
 
-/** The "Randomize all" param set: every visible param EXCEPT the motion
- * sections and Camera (framing + motion stay curated) and curation keys.
+/* WHAT RANDOMIZE ALL TOUCHES IS A SETTING (plan 18 § 3; the user: "often I'd just want not to
+ * change color or geometry, but others could randomise"). `rollScopes` holds one switch per scope
+ * id; a scope not named rolls by the old rule — the look on, the motion sections and Camera off. */
+export const scopeDefaultOn = (id) => !MOTION_SECTIONS.has(id) && id !== 'Camera'
+export const rollScopeOn = (id) => { const v = getAppSettings().rollScopes?.[id]; return typeof v === 'boolean' ? v : scopeDefaultOn(id) }
+export const setRollScope = (id, on) => setAppSetting('rollScopes', { ...(getAppSettings().rollScopes ?? {}), [id]: !!on })
+export const rollEffectsOn = () => getAppSettings().rollEffects !== false
+
+/** The "Randomize all" param set: every visible param in a scope that is ON (`rollScopes`;
+ * by default every section but the motion ones and Camera) and no curation key.
  * Per-param noRandom is still honoured downstream by randomizeSchema. */
 export function allScopeParams(schema, layer) {
   return visibleParams(schema ?? [], layer).filter((p) =>
-    !NEVER_ROLL.has(p.key) && !MOTION_SECTIONS.has(p.section) && p.section !== 'Camera')
+    !NEVER_ROLL.has(p.key) && rollScopeOn(p.type === 'color' ? COLOR_SCOPE : p.section))
 }
 
 /**
@@ -94,7 +103,7 @@ export function computeRoll(layer, params, seed, { stripNoRandom = false, withFi
   const patch = { ...mergeRoll(current, rolled), _rollSeed: seed }
   /* A WHOLE-LAYER roll rolls the effect chain too. Scope presses don't —
    * "Colour" means the generator's colours, not the chain's. */
-  if (withFilters) {
+  if (withFilters && rollEffectsOn()) {
     const filters = computeFilterRoll(layer, seed)
     if (filters) patch.filters = filters
   }

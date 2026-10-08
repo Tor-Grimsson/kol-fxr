@@ -10,6 +10,7 @@ import { pathD } from './path-math'
 import { computeBooleanCached } from './boolean-ops'
 import { hasBindings, resolveLayer } from '../params/resolve'
 import { shapeMorphDef, crossfadeMorphDef } from '../morph/shape'
+import { warpTime } from '../../loops/lib/viewport'
 import { useTransportCtx, useTransportPlaying, useTransportEpoch, transport } from '../params/transport'
 import { pack } from '../packs'
 import { enabledCanvasStages, enabledEngineStage, pixiStages } from './filterChain'
@@ -463,7 +464,7 @@ function EngineLoopLayer({ layer, def, layerStyle }) {
     const now = performance.now()
     const dt = transport.isPlaying() && lastTs.current != null ? (now - lastTs.current) / 1000 : 0
     lastTs.current = now
-    r.host.driveEngine(def, r.engine, { u: tctx.t, dt })
+    r.host.driveEngine(def, r.engine, { u: warpTime(tctx.t, layer), dt })
   })
 
   /* Orbit mode on: the engine's OrbitControls own the pointer — swallow

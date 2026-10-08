@@ -23,6 +23,51 @@ const TAU = Math.PI * 2
 export const VP_DEFAULTS = { vpZoom: 1, vpSpin: 0, vpPulse: 0, vpWobble: 0, vpRate: 1 }
 export const VP_KEYS = Object.keys(VP_DEFAULTS)
 
+/* ── THE TIME SHAPE (plan 18 § 4, 2026-10-08; the user: "I dont love the loop always breathing
+ * in and out. I would like more variation to the way it animates") ──
+ * The loop clock is `u` 0→1, linear, and most generators phase a sine on it — so every loop
+ * breathes the same way. These three params warp `u` BEFORE the draw, in `drawLoopFrame` (every
+ * 2d frame, live and export) and on the GL engines' `u`. Identity by default. Seamless by
+ * construction: every curve returns to its start at u=1, speed is whole loops per cycle, phase
+ * is a rotation of the loop. `drift` wanders a smooth hump on top of linear (two sines, both
+ * integer cycles, so it closes too). Folded onto every 2d def at the registry — the camera's
+ * fold covers only shape + pattern-rules — and not onto the Penrose sims (a warped clock on an
+ * accumulating sim is not a loop). */
+export const TIME_DEFAULTS = { vpTime: 'linear', vpSpeed: 1, vpPhase: 0 }
+export const TIME_KEYS = Object.keys(TIME_DEFAULTS)
+export const TIME_CURVES = [
+  { value: 'linear',   label: 'Linear' },
+  { value: 'ease',     label: 'Ease' },
+  { value: 'pingpong', label: 'Ping-pong' },
+  { value: 'steps',    label: 'Steps' },
+  { value: 'bounce',   label: 'Bounce' },
+  { value: 'drift',    label: 'Drift' },
+]
+export const TIME_PARAMS = [
+  { key: 'vpTime',  label: 'Time',  type: 'select', default: 'linear', options: TIME_CURVES, tab: 'anim', section: 'Form' },
+  { key: 'vpSpeed', label: 'Speed', type: 'range', min: 1, max: 4, step: 1,    default: 1, tab: 'anim', section: 'Form' },
+  { key: 'vpPhase', label: 'Phase', type: 'range', min: 0, max: 1, step: 0.05, default: 0, tab: 'anim', section: 'Form' },
+]
+const frac = (x) => x - Math.floor(x)
+/** `u` through the layer's time shape; identity when the params are absent or default. */
+export function warpTime(u, p) {
+  if (!p) return u
+  const curve = p.vpTime || 'linear'
+  const speed = Math.max(1, Math.round(p.vpSpeed || 1))
+  const phase = p.vpPhase || 0
+  if (curve === 'linear' && speed === 1 && !phase) return u
+  let x = frac(u * speed)
+  switch (curve) {
+    case 'ease':     x = 0.5 - 0.5 * Math.cos(x * Math.PI); break
+    case 'pingpong': x = x < 0.5 ? x * 2 : 2 - x * 2; break
+    case 'steps':    x = Math.floor(x * 4) / 4; break
+    case 'bounce':   { const b = Math.abs(Math.sin(x * Math.PI * 2)); x = x < 0.5 ? b : 1 - b * 0.5; x = frac(x); break }
+    case 'drift':    x = frac(x + 0.08 * Math.sin(x * TAU) + 0.04 * Math.sin(x * TAU * 3)); break
+    default: break
+  }
+  return frac(x + phase)
+}
+
 /* Editor param-schema entries for the camera (labs LoopsShell Animation tab,
  * its actual split: Frame = Spin + Zoom · Form = Pulse + Wobble + Rate).
  * Ranges match the labs sliders (LoopsShell.jsx:364-375). */
@@ -63,8 +108,9 @@ export function applyViewport(ctx, u, w, h, p) {
 // exactly the bare loop.draw (labs drawWithViewport).
 export function drawLoopFrame(ctx, loop, u, w, h, p) {
   if (!loop) return
+  const t = warpTime(u, p)
   ctx.save()
-  applyViewport(ctx, u, w, h, p)
-  loop.draw(ctx, u, w, h, p)
+  applyViewport(ctx, t, w, h, p)
+  loop.draw(ctx, t, w, h, p)
   ctx.restore()
 }

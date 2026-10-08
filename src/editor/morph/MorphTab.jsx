@@ -146,7 +146,7 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <StepList steps={steps} editing={editing} readOnly={readOnly} onEdit={editStep} onAdd={() => setMorph({ active: true, picker: 'preset' })} />
+      <StepList steps={steps} editing={editing} readOnly={readOnly} onEdit={editStep} onAdd={() => setMorph({ active: true, picker: 'preset' })} cs={cs} />
       {steps.length < 2 && !readOnly && <p className="kol-mono-12 text-meta">Two steps or more and the stage plays the morph.</p>}
 
       {editing != null && !readOnly && layer && editTabs && (
@@ -187,7 +187,7 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
  * lifts to kol-component as a list item + group in two variants (arrows · grab) — a local-session
  * ticket (plan 14 § 4).
  */
-function StepList({ steps, editing, readOnly, onEdit, onAdd }) {
+function StepList({ steps, editing, readOnly, onEdit, onAdd, cs }) {
   const [dragged, setDragged] = useState(null)
   const [over, setOver] = useState(null)   /* { index, pos: 'above' | 'below' } */
   const clear = () => { setDragged(null); setOver(null) }
@@ -223,7 +223,7 @@ function StepList({ steps, editing, readOnly, onEdit, onAdd }) {
               <span className="kol-helper-10 text-meta tabular-nums w-4 shrink-0">{i + 1}</span>
               <span className="kol-mono-12 text-emphasis truncate">{stepLabel(s, i)}</span>
             </button>
-            {!readOnly && <Button tone="ghost" quiet size="sm" iconOnly="x" aria-label="Remove step" onClick={() => removeStep(i)} />}
+            {!readOnly && <Button tone="ghost" quiet size={cs} iconOnly="x" aria-label="Remove step" onClick={() => removeStep(i)} />}
           </li>
         )
       })}

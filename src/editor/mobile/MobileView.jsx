@@ -111,7 +111,12 @@ function MobileBody() {
    * forwarding (no accidental grabs mid-pinch); scale clamps 0.5–3 and
    * sticks until Start over. */
   const [stageScale, setStageScale] = useState(1)
-  const pinchRef = useRef({ pts: new Map(), startDist: 0, startScale: 1 })
+  /* THE PINCH IS CONTINUOUS (plan 18 § 2; the user: "its stepped, I want variable responsive
+     pinch"). A state write per pointer move re-rendered the stage on every frame of the gesture;
+     now the live scale goes straight onto the wrapper's transform and the state is written once,
+     on release. Ceiling 3 → 4. */
+  const stageRef = useRef(null)
+  const pinchRef = useRef({ pts: new Map(), startDist: 0, startScale: 1, live: 1 })
   const tapRef = useRef(null)
   const pinchDist = () => {
     const [a, b] = [...pinchRef.current.pts.values()]
@@ -135,7 +140,8 @@ function MobileBody() {
     p.pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
     if (p.pts.size >= 2 && p.startDist > 0) {
       e.stopPropagation()
-      setStageScale(Math.min(3, Math.max(0.5, p.startScale * (pinchDist() / p.startDist))))
+      p.live = Math.min(4, Math.max(0.5, p.startScale * (pinchDist() / p.startDist)))
+      if (stageRef.current) stageRef.current.style.transform = `scale(${p.live})`
     }
   }
   const onPinchEnd = (e) => {
@@ -150,7 +156,7 @@ function MobileBody() {
     }
     if (tap?.id === e.pointerId) tapRef.current = null
     pinchRef.current.pts.delete(e.pointerId)
-    if (pinchRef.current.pts.size < 2) pinchRef.current.startDist = 0
+    if (pinchRef.current.pts.size < 2 && pinchRef.current.startDist > 0) { pinchRef.current.startDist = 0; setStageScale(pinchRef.current.live) }
   }
 
   /* re-stamps a saved theme choice on mount (kol-framework's store) */
@@ -257,6 +263,7 @@ function MobileBody() {
           ending above the sheet, a canvas still at its old size overran the box
           for a frame, and mobile Chrome read that as a wider page and zoomed out. */}
       <div
+        ref={stageRef}
         className="absolute inset-y-0 left-0 touch-none overflow-hidden"
         style={{ transform: `scale(${stageScale})`, right: railShown ? 'var(--kol-sidenav-w, 320px)' : 0, bottom: sheetH ?? 0 }}
         onPointerDownCapture={onPinchDown}

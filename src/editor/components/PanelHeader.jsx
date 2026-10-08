@@ -40,11 +40,13 @@ export function PanelHeader({ title, onCollapse, action, className = 'px-3' }) {
  * where a primary fill is the stage's own colour and the pill read as bare text. */
 export function PanelPills({ label, onOpen, size = 'lg', tone = 'primary', children }) {
   return (
-    <div className="pointer-events-none fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[var(--fxr-rail,0px)] right-0 z-10 flex flex-wrap-reverse gap-2 px-3 [&>*]:pointer-events-auto">
-      <Button tone={tone} size={size} onClick={onOpen}>
-        <span className="flex items-center gap-2">
-          {label}
-          <Icon name="chevron-down" size={16} className="rotate-180" />
+    /* ONE LINE (plan 18 § 1; the user: "buttons one line"): no wrap — the pill truncates, the
+       actions are icons (MobileOverlay) and keep their width */
+    <div className="pointer-events-none fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[var(--fxr-rail,0px)] right-0 z-10 flex flex-nowrap items-center gap-2 px-3 [&>*]:pointer-events-auto">
+      <Button tone={tone} size={size} onClick={onOpen} className="min-w-0 shrink">
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="truncate">{label}</span>
+          <Icon name="chevron-down" size={16} className="rotate-180 shrink-0" />
         </span>
       </Button>
       {children}

@@ -26,6 +26,8 @@ const DEFAULTS = {
   autoplay: false,        // transport starts playing on load
   clipToFrame: true,      // new layers/exports crop to the aspect frame
   labsModDots: false,     // labs rail shows bind dots (M / Settings toggle)
+  rollScopes: {},         // Randomize all: scope id → on/off (plan 18 § 3); absent = the default (look on, motion off)
+  rollEffects: true,      // Randomize all rolls the effect chain too
   /* showHints REMOVED 2026-08-15 — the placeholder gate moved to the DS
    * (`usePlaceholders()`, kol-component 0.46.0), which owns the preference and
    * persists it under its own `kol-placeholders` key. Keeping a second copy

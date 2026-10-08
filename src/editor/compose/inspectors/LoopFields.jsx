@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Button, Dropdown } from '@kolkrabbi/kol-component'
 import { LabeledControl, SettingsRow, LabeledControlSection } from '@kolkrabbi/kol-component'
 import { SegmentedToggle } from '@kolkrabbi/kol-component'
 import { ViewToggle } from '@kolkrabbi/kol-component'
 import AutoControls from '../../params/AutoControls'
+import RollScopesDialog from '../../params/RollScopesDialog'
 import { ModulationList } from '../../params/ModulationEditor'
 import { deriveScopes, allScopeParams, computeRoll, computePresetRoll, presetRollPool, useRollSeed, SeedField } from '../../params/rolls'
 import { motionPresetsFor, axisKeys } from '../../params/motionPresets'
@@ -93,6 +95,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
   const seed = useRollSeed(layer)
   const scopes = deriveScopes(schema, layer)
   const tables = motionPresetsFor(layer.loopId, layer)
+  const [scopesOpen, setScopesOpen] = useState(false)   /* plan 18 § 3 */
   const roll = (params, scope, opts) => {
     const rollPatch = computeRoll(layer, params, seed.take(), { stripNoRandom: !!scope?.motion, ...opts })
     /* A motion roll is by definition hand-off-the-preset — flip the touched
@@ -262,9 +265,14 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
               Randomize preset
             </Button>
           )}
-          <Button tone="primary" size={cs} className="w-full" onClick={(e) => (e.altKey ? resetScope(allScopeParams(schema, layer)) : roll(allScopeParams(schema, layer), undefined, { withFilters: true }))}>
-            Randomize all
-          </Button>
+          <div className="flex gap-2">
+            <Button tone="primary" size={cs} className="flex-1 min-w-0" onClick={(e) => (e.altKey ? resetScope(allScopeParams(schema, layer)) : roll(allScopeParams(schema, layer), undefined, { withFilters: true }))}>
+              Randomize all
+            </Button>
+            {/* what it touches — the setting's dialog (plan 18 § 3) */}
+            <Button tone="primary" size={cs} iconOnly="nav-settings" aria-label="What Randomize all rolls" onClick={() => setScopesOpen(true)} className="shrink-0" />
+          </div>
+          <RollScopesDialog open={scopesOpen} onClose={() => setScopesOpen(false)} schema={schema} layer={layer} size={cs} />
           {scopes.length > 0 && (
             /* Odd counts keep the lone half-width cell — labs' own grids do
              * (Pattern's 5, Penrose's 6-plus-reset), verified 2026-08-09. */

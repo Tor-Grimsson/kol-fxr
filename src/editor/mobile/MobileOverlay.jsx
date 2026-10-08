@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, SegmentedToggle } from '@kolkrabbi/kol-component'
+import { Button, SegmentedToggle, Tooltip } from '@kolkrabbi/kol-component'
 import { useComposeState } from '../compose/state'
 import { pack } from '../packs'
 import { useComposeFile } from '../compose/useComposeFile'
@@ -11,6 +11,7 @@ import { deriveScopes, allScopeParams, computeRoll, computePresetRoll, computeFi
 import { resolvedChain } from '../compose/filterChain'
 import { effectHost } from '../compose/inspectors/effectCategories'
 import { PanelHeader, PanelPills, SheetGrab, SHEET_H, SHEET_MIN } from '../components/PanelHeader'
+import RollScopesDialog from '../params/RollScopesDialog'
 import MorphTab from '../morph/MorphTab'
 import { useMorph } from '../morph/morphStore'
 import { openFiles } from '../library/filesDialogStore'
@@ -166,6 +167,8 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
      Now it is labs' sheet: half the display (tall on the grabber), the stage refitting above it
      (`onSheet`), the controls scrolling inside when they outgrow it. */
   const [tall, setTall] = useState(false)
+  const [scopesOpen, setScopesOpen] = useState(false)
+  const { aspect } = useComposeState()
   /* …or the height the grab was dragged to (plan 15 § 1); null = the detent */
   const [sheetPx, setSheetPx] = useState(null)
   const seed = useRollSeed(layer)
@@ -226,15 +229,18 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
       /* Pill shows the preset name only — the group·preset long form stays on
          the expanded header (user ruling 2026-08-12). */
       <PanelPills label={isLoop ? layer.presetLabel : 'Media'} onOpen={() => setOpen(true)} size={cs}>
-        {/* Media has no generator schema, but an effect chain is still
-            rollable — computeRoll's filter half carries it (2026-08-27).
-            Before that this button was loop-only, so an image or video
-            collapsed to Download and the pill, nothing to press. */}
+        {/* THE ROW IS ICONS (plan 18 § 1) — the pill, then roll · download · hide UI · fill, so it
+            holds one line at 390. Media has no generator schema, but an effect chain is still
+            rollable — computeRoll's filter half carries it (2026-08-27). Hide UI and Fill came up
+            from the Output tab (§ 2): the shot is taken from here, with the sheet down. */}
         {(isLoop || chain.length > 0) && (
-          <Button tone="primary" size={cs} onClick={rollAll}>Randomize all</Button>
+          <Tooltip label="Randomize all"><Button tone="primary" size={cs} iconOnly="bolt" aria-label="Randomize all" onClick={rollAll} className="shrink-0" /></Tooltip>
         )}
-        {/* Capture without re-expanding the sheet (2026-08-12). */}
-        <Button tone="primary" size={cs} onClick={() => onExportPng(2)}>Download</Button>
+        <Tooltip label="Download"><Button tone="primary" size={cs} iconOnly="download" aria-label="Download" onClick={() => onExportPng(2)} className="shrink-0" /></Tooltip>
+        <Tooltip label="Hide UI"><Button tone="primary" size={cs} iconOnly="eye-off" aria-label="Hide UI" onClick={() => setUiHidden(true)} className="shrink-0" /></Tooltip>
+        <Tooltip label={aspectValue === 'fill' ? 'Back to the frame' : 'Fill the screen'}>
+          <Button tone="primary" size={cs} iconOnly="maximize" aria-label={aspectValue === 'fill' ? 'Back to the frame' : 'Fill the screen'} aria-pressed={aspectValue === 'fill'} onClick={() => onAspect(aspectValue === 'fill' ? aspect : 'fill')} className="shrink-0" />
+        </Tooltip>
       </PanelPills>
     )
   }
@@ -244,6 +250,7 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
 
   return (
     <>
+      <RollScopesDialog open={scopesOpen} onClose={() => setScopesOpen(false)} schema={schema} layer={layer} size={cs} />
       {/* Generator switch sheet — the ONE list (CategoryScreen), identical
           to the entry flow's: pick hops the live layer's category, Insert
           restarts into the media picker, Back restarts to the beginning. */}
@@ -321,9 +328,13 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
                 <Button tone="primary" size={cs} iconRight="refresh" onClick={shufflePreset}>Preset</Button>
                 <Button tone="primary" size={cs} onClick={() => setShowCats(true)}>Generator</Button>
               </div>
-              <Button tone="primary" size={cs} className="w-full" onClick={rollAll}>
-                Randomize all
-              </Button>
+              <div className="flex gap-2">
+                <Button tone="primary" size={cs} className="flex-1 min-w-0" onClick={rollAll}>
+                  Randomize all
+                </Button>
+                {/* what it touches — the setting's dialog (plan 18 § 3) */}
+                <Tooltip label="What Randomize all rolls"><Button tone="primary" size={cs} iconOnly="nav-settings" aria-label="What Randomize all rolls" onClick={() => setScopesOpen(true)} className="shrink-0" /></Tooltip>
+              </div>
               {scopes.length > 0 && (
                 <ScopeStrips size={cs} cells={[
                   ...scopes.map((s) => ({ value: s.id, label: s.label, run: () => rollScope(s) })),
