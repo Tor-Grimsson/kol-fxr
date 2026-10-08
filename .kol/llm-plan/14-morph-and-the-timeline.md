@@ -33,7 +33,8 @@ Order: § 1 first (it unblocks § 6–8), then § 2–5 (small, independent), th
 ## 4. Morph rail on the shared assets
 
 - **Length:** hand-built `Input` + a loose `s`. It also duplicates the transport's loop length (both write `transport.setLoopSeconds`). **Do:** drop Length from the Morph rail; the transport owns the length, Save reads `transport.getLoopSeconds()`, and loading a saved morph sets the transport from its stored `seconds` (or an old file plays at the wrong length). If it must stay: the transport's own field (`Input variant="property" unit="s"`, `TransportBar.jsx:33`).
-- **Step list:** a hand-built `<ul>` with ↑ ↓ × buttons. **Do:** check `LayerStack` (kol-component) for steps — drag reorder, select = edit step, remove. If it fits, use it; if it doesn't, say why before building anything.
+- **Step list:** a hand-built `<ul>` with ↑ ↓ × buttons — a local component that belongs in the DS (user, 2026-10-08). **Do here:** reorder by a **grab handle** (`drag-handle`, kol-icons; the `2×3 dots`) instead of the arrows — HTML drag the way `LayerStack` does it (`onDragStart` … `onDrop`), × stays. Keep it as one local `StepList` so it lifts clean.
+  **Parked for a local session (DS ticket):** ship it to kol-component as a numbered list item + group, two variants — (1) as it is, arrows; (2) with the grab handle. Then this repo swaps its local copy for the package's.
 - **Title:** the rail heading is the group alone (`LabsParams.jsx:406` → "SIMPLE"). **Do:** method / group — `LOOPS / SIMPLE`.
 
 ## 5. `Loop / 4s` is not centered
