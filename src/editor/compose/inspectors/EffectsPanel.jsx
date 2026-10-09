@@ -328,10 +328,14 @@ export function StageRolls({ def, view, tab, onPatch, inline = false }) {
     <div className="flex flex-col gap-2">
       <SeedField seed={seed} inline={inline} />
       {allParams.length > 0 && (
-        <Button tone="primary" size={cs} className="w-full"
-          onClick={(e) => (e.altKey ? reset(allParams) : roll(allParams))}>
-          {motion ? 'Randomize motion' : 'Randomize all'}
-        </Button>
+        <div className="flex gap-2">
+          <Button tone="primary" size={cs} className="flex-1 min-w-0"
+            onClick={(e) => (e.altKey ? reset(allParams) : roll(allParams))}>
+            {motion ? 'Randomize motion' : 'Randomize all'}
+          </Button>
+          {/* reset, visible — it was only ⌥ on the button beside it */}
+          <Tooltip label="Reset to defaults (R)"><Button tone="primary" size={cs} iconOnly="rotate-left" aria-label="Reset to defaults" onClick={() => reset(allParams)} className="shrink-0" /></Tooltip>
+        </div>
       )}
       {scopes.length > 0 && (
         /* Odd counts keep the lone half-width cell — Generate's grid does. */

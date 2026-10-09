@@ -114,12 +114,12 @@ export const SHORTCUTS = [
   /* Labs — bound by `useLabsKeys` in labs/LabsParams.jsx, NOT by the canvas
      handler. Declared here so the cheat sheet stops showing the editor's
      answer for `R` while standing in labs. */
-  { id: 'labs-reset',  combo: 'R',       label: 'Reset to defaults', section: 'Labs', views: ['labs'] },
+  { id: 'labs-reset',  combo: 'R',       label: 'Reset to defaults', section: 'Labs', views: ['labs', 'randomiser'] },
   /* the stage's zoom — the −/100%/+ chips left the stage 2026-10-06 (LabsStage binds these) */
   { id: 'labs-zoom-in',  combo: 'Plus',  label: 'Zoom the stage in',  section: 'Labs', views: ['labs'], passive: true },
   { id: 'labs-zoom-out', combo: '-',     label: 'Zoom the stage out', section: 'Labs', views: ['labs'], passive: true },
   { id: 'labs-zoom-fit', combo: '0',     label: 'Fit the stage',      section: 'Labs', views: ['labs'], passive: true },
-  { id: 'labs-reroll', combo: 'Shift+R', label: 'Reroll',            section: 'Labs', views: ['labs'] },
+  { id: 'labs-reroll', combo: 'Shift+R', label: 'Reroll',            section: 'Labs', views: ['labs', 'randomiser'] },
 ]
 
 const KEY_LABELS = {
@@ -220,6 +220,20 @@ export function matchAny(event, shortcuts = SHORTCUTS, view) {
 /* Render a combo as glyphs for display: 'Mod+Shift+Z' → '⌘⇧Z'. */
 export function comboLabel(combo) {
   return combo.split('+').map((p) => KEY_LABELS[p] ?? p).join('')
+}
+
+/* IS THE KEY THE FOCUSED ELEMENT'S, NOT A SHORTCUT? Text entry owns every key. A slider, switch or
+ * swatch (`<input type="range">` and kin) owns only the keys it acts on — arrows, Home/End/Page,
+ * Space, Enter — and lets the rest through. Every handler used to bail on ANY input, so a slider
+ * that kept focus after a drag swallowed R, Shift+R and the rest (2026-10-09). */
+const NON_TEXT = new Set(['range', 'checkbox', 'radio', 'button', 'submit', 'reset', 'color', 'file'])
+const CONTROL_KEYS = /^(Arrow|Home$|End$|Page| $|Enter$)/
+export function isTyping(e) {
+  const t = e.target
+  if (!t) return false
+  if (t.isContentEditable || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT') return true
+  if (t.tagName !== 'INPUT') return false
+  return !NON_TEXT.has(t.type) || CONTROL_KEYS.test(e.key)
 }
 
 /* True when a shortcut applies in `view`. No `views` field = universal, which

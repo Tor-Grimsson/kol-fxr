@@ -31,7 +31,7 @@ function stepFromFile(item, loopId) {
   const schema = loopById(l.loopId)?.params ?? []
   return { loopId: l.loopId, loopGroup: l.loopGroup, presetId: l.presetId, presetLabel: l.presetLabel, params: pickParams(l, schema), source: { kind: 'file', id: item.id, label: item.name || 'Untitled' } }
 }
-function stepFromLayer(layer) {
+export function stepFromLayer(layer) {
   const schema = loopById(layer.loopId)?.params ?? []
   return { loopId: layer.loopId, loopGroup: layer.loopGroup, presetId: layer.presetId, presetLabel: layer.presetLabel, params: pickParams(layer, schema), source: { kind: 'stage', label: layer.presetLabel || 'Stage' } }
 }

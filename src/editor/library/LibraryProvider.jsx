@@ -126,6 +126,8 @@ function validatePreset(spec) {
     ...(typeof spec.canvasW === 'number' && typeof spec.canvasH === 'number' ? { canvasW: spec.canvasW, canvasH: spec.canvasH } : {}),
     ...(typeof spec.mode === 'string' ? { mode: spec.mode } : {}),
     ...(spec.morph && typeof spec.morph === 'object' ? { morph: spec.morph } : {}),
+    /* the frame at save time, a small webp data URL (useComposeFile `captureThumb`) */
+    ...(typeof spec.thumb === 'string' ? { thumb: spec.thumb } : {}),
   }
 }
 

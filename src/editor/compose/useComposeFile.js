@@ -51,6 +51,9 @@ function drawSvgToCanvas(g, svgString, w, h) {
   })
 }
 
+/* the long side of a file's thumbnail — the browse surface's tiles are 44–160px */
+const THUMB_PX = 240
+
 const nextFrame = () => new Promise((r) => requestAnimationFrame(r))
 
 /* Deep scan (groups walked) for kinetic layers — gates the kinetic font-css
@@ -89,14 +92,34 @@ export function useComposeFile() {
     palette: { poolId, modeId, colors, locks },
   })
 
+  /* THE FILE'S THUMBNAIL (2026-10-09 — Files showed a glyph for every file): the frame at save
+   * time, rasterized small onto the item. A failed capture saves without one. */
+  const captureThumb = async () => {
+    try {
+      const args = buildArgs()
+      await warmExportFonts(args.layers)
+      const k = THUMB_PX / Math.max(canvasW, canvasH)
+      const w = Math.round(canvasW * k), h = Math.round(canvasH * k)
+      const c = document.createElement('canvas')
+      c.width = w; c.height = h
+      await drawSvgToCanvas(c.getContext('2d'), buildLayersSvg(args), w, h)
+      return c.toDataURL('image/webp', 0.8)
+    } catch { return null }
+  }
+  /* the spec plus its thumbnail — every save goes through this */
+  const buildSavedSpec = async (name) => {
+    const thumb = await captureThumb()
+    return { ...buildSpec(name), ...(thumb ? { thumb } : {}) }
+  }
+
   const onSave = async () => {
     if (currentPresetId) {
-      updateItem('preset', currentPresetId, buildSpec(currentPresetName))
+      updateItem('preset', currentPresetId, await buildSavedSpec(currentPresetName))
       return
     }
     const name = await modal.prompt('Name this frame:', '')
     if (name === null) return
-    const id = addItem('preset', buildSpec(name || null))
+    const id = addItem('preset', await buildSavedSpec(name || null))
     if (id) {
       setCurrentPresetId(id)
       setCurrentPresetName(name || null)
@@ -106,7 +129,7 @@ export function useComposeFile() {
   const onSaveAs = async () => {
     const name = await modal.prompt('Save as:', currentPresetName ?? '')
     if (name === null) return
-    const id = addItem('preset', buildSpec(name || null))
+    const id = addItem('preset', await buildSavedSpec(name || null))
     if (id) {
       setCurrentPresetId(id)
       setCurrentPresetName(name || null)
@@ -392,6 +415,6 @@ export function useComposeFile() {
     onSaveSettings, onLoadSettings, openOutputWindow, currentPresetId,
     /* the live frame as a spec — FilesDialog saves through it, so the dialog
      * never has to know what a frame is made of */
-    buildSpec,
+    buildSpec, buildSavedSpec,
   }
 }

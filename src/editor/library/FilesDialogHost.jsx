@@ -20,7 +20,7 @@ import { currentView } from '../mode'
 export default function FilesDialogHost() {
   const { open, focusName } = useFilesDialog()
   const { loadPreset, setCurrentPresetId, setCurrentPresetName } = useComposeState()
-  const { onLoadSettings, onSaveSettings, buildSpec } = useComposeFile()
+  const { onLoadSettings, onSaveSettings, buildSavedSpec } = useComposeFile()
   const { addItem } = useGeneratorLibrary()
 
   /* ⌘O / Ctrl+O — the Files overlay from any chrome (plan 08). Lives here, with the dialog, so every
@@ -59,8 +59,8 @@ export default function FilesDialogHost() {
       onExportItem={(item, name) => onSaveSettings(name, item)}
       /* SAVE AS lands here instead of `modal.prompt` — the dialog shows the
        * names already taken while you pick one, which a prompt cannot. */
-      onSaveCurrent={(name) => {
-        const id = addItem('preset', buildSpec(name))
+      onSaveCurrent={async (name) => {
+        const id = addItem('preset', await buildSavedSpec(name))
         if (!id) return
         setCurrentPresetId(id)
         setCurrentPresetName(name)

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Dropdown, LabeledControlSection, SegmentedToggle, SettingsRow, StepList, useModal } from '@kolkrabbi/kol-component'
-import { Icon } from '@kolkrabbi/kol-icons'
+import { Button, LabeledControlSection, SegmentedToggle, StepList, useModal } from '@kolkrabbi/kol-component'
 import { loopById } from '../../loops/registry'
 import { useComposeState } from '../compose/state'
 import { useComposeFile } from '../compose/useComposeFile'
@@ -9,10 +8,12 @@ import { LoopFields } from '../compose/inspectors/LoopFields'
 import { useGeneratorLibrary } from '../library/LibraryProvider'
 import { useLabsLayer } from '../labs/useLabsLayer'
 import { transport, useTransportPlaying } from '../params/transport'
-import { useControlSize, stripClamp, RAIL_LABEL_W } from '../params/controlSize'
+import { useControlSize, stripClamp } from '../params/controlSize'
+import AutoControls from '../params/AutoControls'
 import { buildMorph, CURVES, CYCLES } from './buildMorph'
-import { hasOutline, canCrossfade, morphKeys, RESOLUTION_OPTIONS } from './shape'
-import { useMorph, setMorph, updateStep, removeStep, reorderStep, pickParams, stepLabel } from './morphStore'
+import { hasOutline, canCrossfade, morphKeys } from './shape'
+import { useMorph, setMorph, addStep, updateStep, removeStep, reorderStep, pickParams, stepLabel } from './morphStore'
+import { stepFromLayer } from './StepPicker'
 
 /**
  * MorphTab — the Morph rail (plan 10): labs' right rail while the MORPH row is the surface in use,
@@ -38,13 +39,21 @@ import { useMorph, setMorph, updateStep, removeStep, reorderStep, pickParams, st
  */
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 
+/* the morph's settings as a schema, so the rail's own renderer draws them — the labs rows, one
+   label column, full-width dropdowns, a slider for Resolution (points per outline pair, 0 = auto) */
+const SETTINGS = [
+  { key: 'curve', label: 'Curve', type: 'select', options: CURVES },
+  { key: 'cycle', label: 'Cycle', type: 'select', options: CYCLES },
+  { key: 'resolution', label: 'Resolution', type: 'range', min: 0, max: 1024, step: 1, default: 0, format: (v) => (v ? v : 'Auto'), when: (m) => m.mode === 'shape' },
+]
+
 export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
   const cs = useControlSize()
   const morph = useMorph()
   const { steps, curve, cycle, mode, resolution, editing, fileId, editRequest } = morph
   const { updateLayer, setCurrentPresetId, setCurrentPresetName, palette } = useComposeState()
   const { setOnly } = useLabsLayer()
-  const { buildSpec } = useComposeFile()
+  const { buildSavedSpec } = useComposeFile()
   const { addItem, updateItem } = useGeneratorLibrary()
   const modal = useModal()
   const playing = useTransportPlaying()
@@ -74,6 +83,12 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
     const next = ['shape', 'crossfade', 'blend'].find((m) => !blocked[m])
     if (next) setMorph({ mode: next })
   }, [mode, oneGenerator, allDraw, steps.length, readOnly]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* arriving from a labs preset: the generator on the stage IS step 1 — the preview showed it and
+     the slot sat empty (the user, 2026-10-09) */
+  useEffect(() => {
+    if (!readOnly && steps.length === 0 && layer?.type === 'loop' && layer.loopId && !layer.morph) addStep(stepFromLayer(layer))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* rebuild the stage from the steps — the one write the morph makes */
   const rebuild = () => {
@@ -133,61 +148,54 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
     let name = morph.fileName
     if (!fileId) { name = await modal.prompt('Name this morph:', ''); if (name === null) return }
     if (editing != null) { setMorph({ editing: null }); rebuildRef.current() }
-    const spec = { ...buildSpec(name || null), mode: 'morph', morph: { mode, loopId: morph.loopId, steps, curve, cycle, resolution, seconds: transport.getLoopSeconds() } }
+    const spec = { ...(await buildSavedSpec(name || null)), mode: 'morph', morph: { mode, loopId: morph.loopId, steps, curve, cycle, resolution, seconds: transport.getLoopSeconds() } }
     if (fileId) { updateItem('preset', fileId, spec); return }
     const id = addItem('preset', spec)
     if (id) { setMorph({ fileId: id, fileName: name || null }); setCurrentPresetId(id); setCurrentPresetName(name || null) }
   }
 
-  const ctl = cs === 'sm' ? 'sm' : 'md'
+  /* settings write to the store; a binding (an expression typed into the field) is not a setting */
+  const setSetting = (k, v) => { if (!readOnly && (v === null || typeof v !== 'object')) setMorph({ [k]: v }) }
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* the DS list (kol-component 0.245.0, `StepList` — filed from here 2026-10-09); the local copy
-          is in _tmp/2026-10-09-morph-steplist/. `grab` is a pointer sort, so it works under a finger. */}
-      <StepList
-        items={steps.map((s, i) => ({ id: i, label: stepLabel(s, i) }))}
-        activeIndex={editing}
-        reorder="grab"
-        readOnly={readOnly}
-        size={cs}
-        onSelect={editStep}
-        onRemove={removeStep}
-        onMove={reorderStep}
-        onAdd={() => setMorph({ active: true, picker: 'preset' })}
-        addLabel="Add a step"
-      />
-      {steps.length < 2 && !readOnly && <p className="kol-mono-12 text-meta">Two steps or more and the stage plays the morph.</p>}
+    <div className="flex flex-col gap-5">
+      {/* the mode is the rail's strip, where labs puts Generate · Style · Animation */}
+      <SegmentedToggle value={mode} onChange={(v) => !readOnly && setMorph({ mode: v })} options={modeOptions} size={cs} className={stripClamp(cs)} />
+
+      <LabeledControlSection divided>
+        {/* the DS list (kol-component 0.245.0, `StepList` — filed from here 2026-10-09); the local copy
+            is in _tmp/2026-10-09-morph-steplist/. `grab` is a pointer sort, so it works under a finger. */}
+        <StepList
+          items={steps.map((s, i) => ({ id: i, label: stepLabel(s, i) }))}
+          activeIndex={editing}
+          reorder="grab"
+          readOnly={readOnly}
+          size={cs}
+          onSelect={editStep}
+          onRemove={removeStep}
+          onMove={reorderStep}
+          onAdd={() => setMorph({ active: true, picker: 'preset' })}
+          addLabel="Add a step"
+        />
+        {steps.length < 2 && !readOnly && <p className="kol-mono-12 text-meta">Two steps or more and the stage plays the morph.</p>}
+        {steps.length >= 2 && blocked[mode] && <p className="kol-mono-12 text-meta">{blocked[mode]}</p>}
+      </LabeledControlSection>
 
       {editing != null && !readOnly && layer && editTabs && (
         <LabeledControlSection label={`Step ${editing + 1}`} divided>
-          <SegmentedToggle value={editTab} onChange={setEditTab} options={editTabs} size={cs} />
+          <SegmentedToggle value={editTab} onChange={setEditTab} options={editTabs} size={cs} className={stripClamp(cs)} />
           <LoopFields layer={layer} setProp={edit.setProp} patch={edit.patch} updateLayer={updateLayer} palette={palette} tab={editTab} tabStrip={null} inline picker={false} />
           <p className="kol-mono-12 text-emphasis">Editing step {editing + 1} — press Play to run the morph.</p>
         </LabeledControlSection>
       )}
 
-      <LabeledControlSection label="Mode" divided>
-        {/* the three cells on their own row, full width — labelled, Crossfade fell off the rail's edge */}
-        <SegmentedToggle value={mode} onChange={(v) => !readOnly && setMorph({ mode: v })} options={modeOptions} size={cs} className={stripClamp(cs)} />
-        <SettingsRow label="Curve" labelWidth={RAIL_LABEL_W}>
-          <Dropdown size={ctl} options={CURVES} value={curve} onChange={(v) => setMorph({ curve: v })} aria-label="Curve" disabled={readOnly} />
-        </SettingsRow>
-        <SettingsRow label="Cycle" labelWidth={RAIL_LABEL_W}>
-          <Dropdown size={ctl} options={CYCLES} value={cycle} onChange={(v) => setMorph({ cycle: v })} aria-label="Cycle" disabled={readOnly} />
-        </SettingsRow>
-        {mode === 'shape' && (
-          <SettingsRow label="Resolution" labelWidth={RAIL_LABEL_W}>
-            <Dropdown size={ctl} options={RESOLUTION_OPTIONS} value={resolution || 0} onChange={(v) => setMorph({ resolution: Number(v) || 0 })} aria-label="Resolution" disabled={readOnly} />
-          </SettingsRow>
-        )}
-      </LabeledControlSection>
-      {steps.length >= 2 && blocked[mode] && <p className="kol-mono-12 text-meta">{blocked[mode]}</p>}
+      <AutoControls schema={SETTINGS} layer={morph} setProp={setSetting} inline />
 
       {!readOnly && (
-        <Button tone="primary" size={cs} className="w-full" disabled={steps.length < 2} onClick={save}>{fileId ? 'Save' : 'Save…'}</Button>
+        <LabeledControlSection divided>
+          <Button tone="primary" size={cs} className="w-full" disabled={steps.length < 2} onClick={save}>{fileId ? 'Save' : 'Save…'}</Button>
+        </LabeledControlSection>
       )}
     </div>
   )
 }
-

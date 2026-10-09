@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AppHub, useNavHidden } from '@kolkrabbi/kol-shell'
-import { Button, Dropdown, MediaLibrary, ModalProvider, useModal } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, ModalProvider, useModal } from '@kolkrabbi/kol-component'
 import { ThemeToggle } from '@kolkrabbi/kol-framework'
 import logomarkUrl from '@kolkrabbi/kol-brand/svg/favicon-01.svg?url'
 import NewFileDialog, { openNewFile } from './components/NewFileDialog'
 import { pickMedia } from './editor/library/mediaPick'
-import { getMediaClient, proxied, isVideoType } from './editor/library/mediaLibrary'
+import { proxied, isVideoType } from './editor/library/mediaLibrary'
 /* The rail-extras store moved into the package with labs (0.4.0): labs WRITES
    it and this layout READS it, so two module copies meant subscribing to a
    store nothing ever touched. One copy, one store. The settings sections, the
@@ -21,6 +21,7 @@ import {
   getLibraryApi, useLibrarySession, signInLibrary, signOutLibrary, UnauthorizedError,
   renameStored, duplicateStored, removeStored,
 } from './index.jsx'
+import MediaPickerDialog from './editor/library/MediaPickerDialog'
 
 /**
  * AppLayout — the shell tier's layout root: kol-shell's `AppHub` (Shell + Hub
@@ -340,7 +341,7 @@ export default function AppLayout() {
     <RailSignIn handlerRef={signInRef} />
     <NewFileDialog />
     {/* the explorer media.kolkrabbi.io runs, over the three stores (the client lists its buckets) */}
-    <MediaLibrary variant="modal" open={mediaOpen} client={getMediaClient()} accept={['image', 'video']} onClose={() => setMediaOpen(false)} onSelect={onMediaPick} />
+    <MediaPickerDialog open={mediaOpen} accept={['image', 'video']} onClose={() => setMediaOpen(false)} onSelect={onMediaPick} />
     <AppHub
       app={APP}
       /* Labs' category rows sit DIRECTLY UNDER Labs, not after the whole nav —

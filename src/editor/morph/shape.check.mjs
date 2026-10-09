@@ -61,4 +61,15 @@ assert.deepEqual(morphKeys(3, 'once', 'in-out').map((k) => k.t), [0, 0.5, 1])
 assert.equal(mixStyle('#ff0000', '#0000ff', 0.5), 'rgba(128,0,128,1.000)')
 assert.equal(mixStyle('#ff0000', { grad: true }, 0.25), '#ff0000')
 
+// 8. alignment sticks: a near-tie keeps last frame's start point (the jolts, 2026-10-09)
+{
+  const sq = [[0, 0], [1, 0], [1, 1], [0, 1]]
+  const memo = {}
+  assert.deepEqual(align(sq, sq, true, memo), sq)                       // exact match: offset 0
+  const nudged = [[0.02, 0], [1, 0.02], [1, 1], [0, 1]].map(([x, y]) => [x + 0.5, y + 0.5])
+  const r = align(sq.map(([x, y]) => [x + 0.5, y + 0.5]), nudged, true, memo)
+  assert.equal(memo.off, 0)                                             // a tiny change does not rotate it
+  assert.equal(r[0][0], nudged[0][0])
+}
+
 console.log('shape.check: ok')

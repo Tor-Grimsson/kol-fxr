@@ -140,8 +140,15 @@ export function resample(pts, closed, N) {
   return out
 }
 
-/** `b` reordered to sit nearest `a`: a closed path rotates its start, an open one picks a direction. */
-export function align(a, b, closed) {
+/* how much better a new alignment must be before it replaces last frame's (2026-10-09, the jolts):
+   an animated generator moves its outline every frame, and the strict best start point can hop
+   between two near-equal candidates — the shape twists a step each time it does */
+const STICK = 1.1
+
+/** `b` reordered to sit nearest `a`: a closed path rotates its start, an open one picks a direction.
+ * `memo` (optional, one per pair, kept across frames) holds the last choice; it is kept while it
+ * stays within STICK of the best, so the pairing does not flip from frame to frame. */
+export function align(a, b, closed, memo) {
   const N = a.length
   if (closed) {
     let best = 0, bestD = Infinity
@@ -150,11 +157,20 @@ export function align(a, b, closed) {
       for (let k = 0; k < N && d < bestD; k++) d += d2(a[k], b[(k + off) % N])
       if (d < bestD) { bestD = d; best = off }
     }
+    if (memo && memo.n === N && memo.off != null && memo.off !== best) {
+      let d = 0
+      for (let k = 0; k < N; k++) d += d2(a[k], b[(k + memo.off) % N])
+      if (d <= bestD * STICK) best = memo.off
+    }
+    if (memo) { memo.n = N; memo.off = best }
     return best ? [...b.slice(best), ...b.slice(0, best)] : b
   }
   let fwd = 0, rev = 0
   for (let k = 0; k < N; k++) { fwd += d2(a[k], b[k]); rev += d2(a[k], b[N - 1 - k]) }
-  return rev < fwd ? [...b].reverse() : b
+  let flip = rev < fwd
+  if (memo && memo.rev != null && memo.rev !== flip && (memo.rev ? rev : fwd) <= Math.min(fwd, rev) * STICK) flip = memo.rev
+  if (memo) memo.rev = flip
+  return flip ? [...b].reverse() : b
 }
 
 const prep = (s, N) => { const pts = resample(s.pts, s.closed, N); if (s.closed && area(pts) < 0) pts.reverse(); return pts }
@@ -192,11 +208,12 @@ function chunk(subs, m) {
   return out
 }
 /* two subpaths k of the way: shared geometry; a fill meeting a stroke crossfades on it */
-function blendPair(x, y, k, N0) {
-  const N = N0 || Math.max(64, Math.min(512, Math.max(x.pts.length, y.pts.length)))
+function blendPair(x, y, k, N0, memo) {
+  /* a typed or slid count floors at 3 — fewer points cannot hold an outline */
+  const N = N0 ? Math.max(3, Math.round(N0)) : Math.max(64, Math.min(512, Math.max(x.pts.length, y.pts.length)))
   const closed = x.closed && y.closed
   const px = prep({ ...x, closed }, N)
-  const py = align(px, prep({ ...y, closed }, N), closed)
+  const py = align(px, prep({ ...y, closed }, N), closed, memo)
   const pts = px.map((q, i) => [lerp(q[0], py[i][0], k), lerp(q[1], py[i][1], k)])
   const lineWidth = lerp(x.lineWidth, y.lineWidth, k)
   if (x.op === y.op) return [{ pts, closed: k < 0.5 ? x.closed : y.closed, op: x.op, rule: (k < 0.5 ? x : y).rule, style: mixStyle(x.style, y.style, k), alpha: lerp(x.alpha, y.alpha, k), lineWidth }]
@@ -205,30 +222,27 @@ function blendPair(x, y, k, N0) {
     { pts, closed: y.closed, op: y.op, rule: y.rule, style: y.style, alpha: y.alpha * k, lineWidth },
   ]
 }
-function pairAll(a, b, k, N) {
+function pairAll(a, b, k, N, memos) {
   const out = []
   if (!a.length || !b.length) { for (const x of a) out.push(collapse(x, k)); for (const y of b) out.push(collapse(y, 1 - k)); return out }
   const m = Math.min(a.length, b.length)
   const ca = chunk(a, m), cb = chunk(b, m)
-  for (let i = 0; i < m; i++) out.push(...blendPair(ca[i], cb[i], k, N))
+  for (let i = 0; i < m; i++) out.push(...blendPair(ca[i], cb[i], k, N, memos && (memos[i] ??= {})))
   return out
 }
 
 /** The subpaths k of the way from outline A to outline B (`frame` = w·h, to tell a background).
  * `resolution` is the points per pair (plan 14 § 3); 0 / undefined = auto (64–512 by the outline). */
-export function morphOutlines(A, B, k, frame = Infinity, resolution = 0) {
+export function morphOutlines(A, B, k, frame = Infinity, resolution = 0, memo) {
   const bgA = A.filter((x) => isBg(x, frame)), bgB = B.filter((x) => isBg(x, frame))
-  return [...pairAll(bgA, bgB, k, resolution), ...pairAll(A.filter((x) => !isBg(x, frame)), B.filter((x) => !isBg(x, frame)), k, resolution)]
+  return [...pairAll(bgA, bgB, k, resolution, memo && (memo.bg ??= [])), ...pairAll(A.filter((x) => !isBg(x, frame)), B.filter((x) => !isBg(x, frame)), k, resolution, memo && (memo.fg ??= []))]
 }
-export const RESOLUTION_OPTIONS = [
-  { value: 0, label: 'Auto' },
-  ...[64, 128, 256, 512, 1024].map((n) => ({ value: n, label: String(n) })),
-]
 
-export function paint(ctx, subs) {
+export function paint(ctx, subs, mul = 1) {
+  if (!(mul > 0)) return
   for (const s of subs) {
     if (!(s.alpha > 0) || s.pts.length < 2) continue
-    ctx.globalAlpha = s.alpha
+    ctx.globalAlpha = s.alpha * mul
     ctx.beginPath()
     s.pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)))
     if (s.closed) ctx.closePath()
@@ -273,8 +287,23 @@ export function drawShapeMorph(ctx, u, w, h, p, lookup) {
   const A = outlineOf(lookup(steps[i].loopId), u, w, h, steps[i].params)
   if (!(k > 0) || n === 1) { paint(ctx, A); return }
   const B = outlineOf(lookup(steps[j].loopId), u, w, h, steps[j].params)
-  paint(ctx, morphOutlines(A, B, k, w * h, p.morph?.resolution || 0))
+  let memo = memos.get(`${i}>${j}`)
+  if (!memo) { if (memos.size > 32) memos.clear(); memo = {}; memos.set(`${i}>${j}`, memo) }
+  const M = morphOutlines(A, B, k, w * h, p.morph?.resolution || 0, memo)
+  /* THE ENDS MEET THE STEPS (2026-10-09, the jolts). The morph draws resampled, paired, chunked
+     geometry; a step at rest is the generator's own drawing — so every boundary snapped from one to
+     the other. Over the first and last EDGE of a segment the step's own drawing fades in over the
+     morph, so the frame at the key IS the step and nothing jumps. */
+  const a = k < EDGE ? 1 - smooth(k / EDGE) : 0
+  const b = k > 1 - EDGE ? smooth((k - (1 - EDGE)) / EDGE) : 0
+  paint(ctx, M, 1 - Math.max(a, b))
+  paint(ctx, A, a)
+  paint(ctx, B, b)
 }
+const EDGE = 0.12
+const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c) }
+/* last frame's alignments, per step pair (see `align`) */
+const memos = new Map()
 
 /* ── crossfade (plan 14 § 2) — the third mode: both steps drawn, the second faded in over the
  * first. No pairing, no recording: any 2d generator, the two steps as the generators draw them.

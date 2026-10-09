@@ -17,6 +17,7 @@ import TimelineDock from '../params/TimelineDock'
 import TransportFab from '../params/TransportFab'
 import { consumeMediaPicks } from '../library/mediaPick'
 import { useDragResize } from '@kolkrabbi/kol-framework'
+import { isTyping } from '../state/keymap'
 import LabsNav from './LabsNav'
 import LabsParams from './LabsParams'
 import { LabsSourceCard } from './LabsSourcePicker'
@@ -109,8 +110,7 @@ function LabsStage() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      const t = e.target
-      if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
+      if (isTyping(e)) return
       if (e.key === 'f' || e.key === 'F') { setShowFps((v) => !v); return }
       /* the zoom chips left the stage (2026-10-06, the user: "fold the zoom into a shortcut"):
          − and + (= without shift) step, 0 fits — listed in the shortcuts sheet (keymap.js) */
@@ -454,8 +454,7 @@ function LabsBody() {
   toolRef.current = tool
   useEffect(() => {
     const onKey = (e) => {
-      const t = e.target
-      if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
+      if (isTyping(e)) return
       if (e.code === 'Space') {
         e.preventDefault()
         transport.toggle()

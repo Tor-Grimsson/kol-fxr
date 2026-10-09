@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Dropdown } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, Tooltip } from '@kolkrabbi/kol-component'
 import { LabeledControl, SettingsRow, LabeledControlSection } from '@kolkrabbi/kol-component'
 import { SegmentedToggle } from '@kolkrabbi/kol-component'
 import { ViewToggle } from '@kolkrabbi/kol-component'
@@ -69,7 +69,7 @@ function OnOff({ inline, cs, on, onChange }) {
     : <ViewToggle size={cs} options={ONOFF} viewMode={on ? 'on' : 'off'} onViewChange={(v) => onChange(v === 'on')} />
 }
 
-export function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate, tab, tabStrip, tree, picker = true, inline = false }) {
+export function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate, tab, tabStrip, tree, picker = true, inline = false, onReset }) {
   const cs = useControlSize()
   const loop = loopById(layer.loopId)
   const schema = loop?.params ?? []
@@ -271,6 +271,10 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
             </Button>
             {/* what it touches — the setting's dialog (plan 18 § 3) */}
             <Button tone="primary" size={cs} iconOnly="nav-settings" aria-label="What Randomize all rolls" onClick={() => setScopesOpen(true)} className="shrink-0" />
+            {/* RESET, VISIBLE (the user, 2026-10-09: "we need something for reset") — it was only ⌥ on
+                Randomize all. The host's reset when it has one (labs: back to the preset, same as R),
+                else the schema's defaults. */}
+            <Tooltip label="Reset to defaults (R)"><Button tone="primary" size={cs} iconOnly="rotate-left" aria-label="Reset to defaults" onClick={onReset ?? (() => resetScope(allScopeParams(schema, layer)))} className="shrink-0" /></Tooltip>
           </div>
           <RollScopesDialog open={scopesOpen} onClose={() => setScopesOpen(false)} schema={schema} layer={layer} size={cs} />
           {scopes.length > 0 && (

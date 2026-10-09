@@ -8,7 +8,7 @@ import { scaleBoolChildren } from './boolean-ops'
 import { findLayerDeep } from './helpers'
 import KineticElementOverlay from './KineticElementOverlay'
 import SoftformsHandleOverlay from './SoftformsHandleOverlay'
-import { matchAny } from '../state/keymap'
+import { matchAny, isTyping } from '../state/keymap'
 import { useTool } from '../state/tools'
 import { useColorTarget } from '../color/useColorTarget'
 import { useLayerEdit } from './useLayerEdit'
@@ -1131,9 +1131,7 @@ export default function CanvasArea() {
     const layerOnlyIds = () => selectedIds.filter((id) => id !== 'canvas')
 
     const onKey = (e) => {
-      const t = e.target
-      const editable = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
-      if (editable) return
+      if (isTyping(e)) return
 
       /* Layer opacity digits (Photoshop convention): 1-9 = 10-90%, 0 = 100%,
        * 0 twice within 500ms = 0%. Handled before keymap matching — combos
@@ -1154,7 +1152,8 @@ export default function CanvasArea() {
         return
       }
 
-      const shortcut = matchAny(e)
+      /* the editor's answer only — `R` is the rectangle here, Reset in labs and the randomiser */
+      const shortcut = matchAny(e, undefined, 'editor')
       if (!shortcut) return
 
       const layer = selectedLayer

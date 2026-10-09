@@ -4,11 +4,12 @@ import { useComposeState } from '../compose/state'
 import { pack } from '../packs'
 import { useComposeFile } from '../compose/useComposeFile'
 import { transport, useTransport } from '../params/transport'
-import { groupById, loopById } from '../../loops/registry'
+import { groupById, loopById, presetsInGroup, presetLayerPatch } from '../../loops/registry'
 import CategoryScreen, { SPREAD } from './CategoryScreen'
 import EffectScreen from './EffectScreen'
 import { deriveScopes, allScopeParams, computeRoll, computePresetRoll, computeFilterRoll, useRollSeed } from '../params/rolls'
 import { resolvedChain } from '../compose/filterChain'
+import { useLabsKeys } from '../labs/useLabsKeys'
 import { effectHost } from '../compose/inspectors/effectCategories'
 import { PanelHeader, PanelPills, SheetGrab, SHEET_H, SHEET_MIN } from '../components/PanelHeader'
 import RollScopesDialog from '../params/RollScopesDialog'
@@ -183,6 +184,19 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
   const sheetShown = !rail && !!layer && open && !uiHidden
   const sheetH = sheetShown ? (sheetPx ? `${sheetPx}px` : tall ? SHEET_H.tall : SHEET_H.half) : null
   useEffect(() => { onSheet?.(sheetH); return () => onSheet?.(null) }, [sheetH]) // eslint-disable-line react-hooks/exhaustive-deps
+  /* labs' R · Shift+R, here too: back to the preset's defaults · roll everything */
+  /* R and the Generate tab's Reset button are one action */
+  const resetLayer = () => {
+    const preset = layer?.type === 'loop' && presetsInGroup(layer.loopGroup).find((p) => p.id === layer.presetId)
+    if (preset) updateLayer(layer.id, presetLayerPatch(preset, layer.loopGroup))
+  }
+  useLabsKeys(
+    resetLayer,
+    () => {
+      if (layer?.type !== 'loop') return
+      updateLayer(layer.id, computeRoll(layer, allScopeParams(loopById(layer.loopId)?.params ?? [], layer), seed.take(), { withFilters: true }))
+    },
+  )
 
   if (!layer) return null
 
@@ -334,6 +348,7 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
                 </Button>
                 {/* what it touches — the setting's dialog (plan 18 § 3) */}
                 <Tooltip label="What Randomize all rolls"><Button tone="primary" size={cs} iconOnly="nav-settings" aria-label="What Randomize all rolls" onClick={() => setScopesOpen(true)} className="shrink-0" /></Tooltip>
+                <Tooltip label="Reset to defaults (R)"><Button tone="primary" size={cs} iconOnly="rotate-left" aria-label="Reset to defaults" onClick={resetLayer} className="shrink-0" /></Tooltip>
               </div>
               {scopes.length > 0 && (
                 <ScopeStrips size={cs} cells={[

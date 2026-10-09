@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { usePlaceholders } from '@kolkrabbi/kol-component'
-import { matchAny } from './keymap'
+import { matchAny, isTyping } from './keymap'
 import { useComposeState } from '../compose/state'
 
 /**
@@ -31,9 +31,7 @@ export function useGlobalShortcuts() {
 
   useEffect(() => {
     const onKey = (e) => {
-      const target = e.target
-      const tag = target?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+      if (isTyping(e)) return
 
       const shortcut = matchAny(e)
       if (!shortcut || !GLOBAL_IDS.has(shortcut.id)) return

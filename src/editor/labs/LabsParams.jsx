@@ -24,25 +24,8 @@ import MorphTab from '../morph/MorphTab'
 import { useMorph } from '../morph/morphStore'
 import Hint from '../components/Hint'
 import { useControlSize, stripClamp } from '../params/controlSize'
-
-/* R = reset (re-pick the selection at its defaults) · Shift+R = reroll —
- * labs' keys, bound by whichever surface is mounted (one layer, one surface).
- * Same typing guard as the Space transport key. */
-function useLabsKeys(onReset, onReroll) {
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key !== 'r' && e.key !== 'R') return
-      if (e.metaKey || e.ctrlKey || e.altKey) return
-      const t = e.target
-      if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
-      e.preventDefault()
-      if (e.shiftKey) onReroll?.()
-      else onReset?.()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  })
-}
+import { isTyping } from '../state/keymap'
+import { useLabsKeys } from './useLabsKeys'
 
 /**
  * LabsParams — labs' right-rail surface (the reskin arc), replacing the
@@ -401,8 +384,10 @@ function GenerativeSurface({ layer, showMod, tree }) {
     if (p && id !== layer.presetId) setOnly(layer.type, presetLayerPatch(p, layer.loopGroup))
   }
 
+  /* R and the rail's Reset button are one action: back to the preset you are on */
+  const reset = () => { if (current) setOnly(layer.type, presetLayerPatch(current, layer.loopGroup)) }
   useLabsKeys(
-    () => { if (current) setOnly(layer.type, presetLayerPatch(current, layer.loopGroup)) },
+    reset,
     () => {
       const schema = loopById(layer.loopId)?.params ?? []
       updateLayer(layer.id, computeRoll(layer, allScopeParams(schema, layer), randomSeed(), { withFilters: true }))
@@ -417,7 +402,7 @@ function GenerativeSurface({ layer, showMod, tree }) {
       <LoopFields
         layer={layer} setProp={edit.setProp} patch={edit.patch} updateLayer={updateLayer}
         palette={palette} renderAnimate={showMod ? (p) => <BindDot layer={layer} param={p} setProp={edit.setProp} /> : undefined}
-        tab={tab} tabStrip={null} tree={tree} inline
+        tab={tab} tabStrip={null} tree={tree} inline onReset={reset}
       />
     </Surface>
   )
@@ -471,8 +456,7 @@ export default function LabsParams() {
     const onKey = (e) => {
       if (e.key !== 'm' && e.key !== 'M') return
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      const t = e.target
-      if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
+      if (isTyping(e)) return
       toggleDots()
     }
     window.addEventListener('keydown', onKey)

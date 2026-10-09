@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Dropdown, LabeledControlSection, SegmentedToggle, FullscreenOverlay, Tooltip, glyphSize, MediaLibrary } from '@kolkrabbi/kol-component'
-import { proxied, isVideoType, getMediaClient } from '../../library/mediaLibrary'
+import { Button, Dropdown, LabeledControlSection, SegmentedToggle, FullscreenOverlay, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
+import { proxied, isVideoType } from '../../library/mediaLibrary'
 import { useTransport } from '../../params/transport'
 import { pack } from '../../packs'
 import AudioInputRow from '../../params/AudioInputRow'
@@ -15,6 +15,7 @@ import { ASPECTS } from '../aspects'
 import BatchExportModal from './BatchExportModal'
 import { useControlSize, stripClamp } from '../../params/controlSize'
 import { Icon } from '@kolkrabbi/kol-icons'
+import MediaPickerDialog from '../../library/MediaPickerDialog'
 
 /**
  * EditorFooter — the tabbed rail footer, ported from the labs standard
@@ -149,7 +150,7 @@ function PhotoFileTab({ layer }) {
         </Button>
       )}
       {/* the DS modal library (2026-10-07) — the editor's own picker is retired; a media layer takes image or video */}
-      <MediaLibrary variant="modal" open={pickerOpen} client={getMediaClient()} accept={['image', 'video']} onClose={() => setPickerOpen(false)} onSelect={onLibraryPick} />
+      <MediaPickerDialog open={pickerOpen} accept={['image', 'video']} onClose={() => setPickerOpen(false)} onSelect={onLibraryPick} />
     </div>
   )
 }

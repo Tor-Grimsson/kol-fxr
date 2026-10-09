@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Dropdown, Input, Tooltip, useGrabEdge } from '@kolkrabbi/kol-component'
 import { useComposeState } from '../compose/state'
 import { labelForLayer } from '../compose/labels'
@@ -15,7 +15,8 @@ import { useTransport } from './transport'
  *   [time / length s] [scrub ruler ................................ playhead]
  *   [morph name     ] [header lane: ◆ step names — a name pressed edits that step] [▸ folds its param lanes]
  *   [track label    ] [lane: ◆ diamonds at t · click adds · drag moves · alt-click deletes]
- *   [selected key: value · easing · delete]  [curve: the segment's bezier, two handles]
+ *   [selected key's lane, opened tall: the value graph — keys at (t, v), segments, handles]
+ *   [selected key: value · easing · delete]
  *
  * THIS FILE IS THE DOCK AGAIN (plan 14 § 1, 2026-10-08). It was lifted into kol-component as
  * `organisms/TimelineDock` on 2026-09-27 (editor DS sync 3c) and this file became a wrapper; every
@@ -75,10 +76,22 @@ function collectTracks(layers, out = []) {
   return out
 }
 
+/* SYNC LOOP (the user, 2026-10-09: "a button to sync the loops in and out points so it's a seamless
+ * transition"): the out point takes the in point's value — a key at t 0 if there was none, every key
+ * at or past the end replaced by one at t 1 holding the start value — so the wrap does not jump. */
+export function syncLoopKeys(keys) {
+  if (!keys.length) return keys
+  const v0 = sampleTrack(keys, 0)
+  const body = keys.filter((k) => k.t > 0 && k.t < 1)
+  const first = keys.find((k) => k.t <= 0) ?? { ...keys[0], t: 0, v: v0 }
+  /* the end key carries no easing — the segment INTO it is the previous key's */
+  return [{ ...first, t: 0, v: v0 }, ...body, { t: 1, v: v0 }]
+}
+
 const secs = (frac, len) => `${(frac * len).toFixed(2)}`
 
 /* Click/drag to seek. */
-function ScrubRuler({ t, len, onSeek }) {
+function ScrubRuler({ t, len, onSeek, onSyncLoop }) {
   const ref = useRef(null)
   const fracFromEvent = (e) => {
     const r = ref.current.getBoundingClientRect()
@@ -105,6 +118,11 @@ function ScrubRuler({ t, len, onSeek }) {
       >
         <Playhead t={t} />
       </div>
+      {onSyncLoop && (
+        <Tooltip label="Sync loop — the end takes the start's values, so the loop is seamless" asChild>
+          <Button tone="ghost" quiet size="xs" iconOnly="repeat" aria-label="Sync loop" className="shrink-0" onClick={onSyncLoop} />
+        </Tooltip>
+      )}
     </div>
   )
 }
@@ -238,39 +256,115 @@ function TrackRow({ track, t, len, selected, setSelected, writeKeys, folded, onF
 }
 
 /* ── the curve (plan 14 § 8) ── */
-const W = 120, H = 80, PAD = 8
 const bezOf = (easing) => (Array.isArray(easing) ? easing : EASINGS[easing] ?? null)
-/* the unit square onto the SVG (y up) */
-const sx = (x) => PAD + x * (W - 2 * PAD)
-const sy = (y) => H - PAD - y * (H - 2 * PAD)
-function CurveEditor({ easing, onChange }) {
+/* THE VALUE GRAPH (the user, 2026-10-09: "bezier handles … should connect with keymarks on timeline
+ * using the height, ref adobe, davinci"). The lane of the selected key opens tall: each key at
+ * (time, value), each segment drawn as its real cubic-bezier, the handles hanging off the keys they
+ * belong to — out of key i, into key i+1. A handle writes the segment's `[x1, y1, x2, y2]` (x held to
+ * the segment, y free, so it can overshoot); a key drags in time and value. One write per gesture. */
+const GH = 132, GPAD = 14
+function GraphLane({ track, writeKeys, selected, setSelected }) {
   const ref = useRef(null)
-  const bez = bezOf(easing)
+  const [w, setW] = useState(0)
+  const [live, setLive] = useState(null)   /* the keys mid-gesture, committed on pointer-up */
   const drag = useRef(null)
-  if (!bez) return <p className="kol-mono-10 text-meta">Hold — no curve.</p>
-  const [x1, y1, x2, y2] = bez
-  const toUnit = (e) => {
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return undefined
+    const ro = new ResizeObserver(([e]) => setW(e.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const keys = live ?? track.keys
+  const vals = keys.map((k) => k.v)
+  let lo = Math.min(...vals), hi = Math.max(...vals)
+  if (drag.current?.range) [lo, hi] = drag.current.range   /* the scale holds still while dragging */
+  if (hi - lo < 1e-9) { lo -= 1; hi += 1 }
+  const X = (t) => t * w
+  const Y = (v) => GPAD + (1 - (v - lo) / (hi - lo)) * (GH - 2 * GPAD)
+  const fromPx = (e) => {
     const r = ref.current.getBoundingClientRect()
-    const x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H
-    return [Math.min(1, Math.max(0, (x - PAD) / (W - 2 * PAD))), Math.min(1.5, Math.max(-0.5, (H - PAD - y) / (H - 2 * PAD)))]
+    return { t: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), v: lo + (1 - (e.clientY - r.top - GPAD) / (GH - 2 * GPAD)) * (hi - lo) }
   }
-  const down = (which) => (e) => { e.stopPropagation(); e.currentTarget.setPointerCapture(e.pointerId); drag.current = which }
+  const segs = keys.slice(0, -1).map((a, i) => {
+    const b = keys[i + 1]
+    const bez = a.easing === 'hold' ? null : bezOf(a.easing ?? 'linear') ?? EASINGS.linear
+    return { i, a, b, bez }
+  })
+  const start = (kind, i) => (e) => {
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    drag.current = { kind, i, range: [lo, hi], moved: false }
+    if (kind === 'key') setSelected({ trackId: track.id, index: i })
+  }
   const move = (e) => {
-    if (drag.current == null) return
-    const [x, y] = toUnit(e)
-    const next = drag.current === 1 ? [x, y, x2, y2] : [x1, y1, x, y]
-    onChange(next.map((v) => Math.round(v * 100) / 100))
+    const d = drag.current
+    if (!d) return
+    d.moved = true
+    const p = fromPx(e)
+    const next = keys.map((k) => ({ ...k }))
+    if (d.kind === 'key') {
+      const prevT = next[d.i - 1]?.t ?? 0, nextT = next[d.i + 1]?.t ?? 1
+      next[d.i].t = Math.min(nextT, Math.max(prevT, p.t))
+      next[d.i].v = p.v
+    } else {
+      /* out-handle of segment i = control point 1, in-handle = control point 2, in the segment's unit box */
+      const a = next[d.i], b = next[d.i + 1]
+      const dt = b.t - a.t || 1e-6, dv = Math.abs(b.v - a.v) > 1e-9 ? b.v - a.v : (hi - lo)
+      const ux = Math.min(1, Math.max(0, (p.t - a.t) / dt)), uy = (p.v - a.v) / dv
+      const bez = [...(bezOf(a.easing ?? 'linear') ?? EASINGS.linear)]
+      if (d.kind === 'out') { bez[0] = ux; bez[1] = uy } else { bez[2] = ux; bez[3] = uy }
+      a.easing = bez.map((n) => Math.round(n * 1000) / 1000)
+    }
+    setLive(next)
   }
-  const up = () => { drag.current = null }
+  const end = () => {
+    const d = drag.current
+    drag.current = null
+    if (d?.moved && live) {
+      const moved = live[d.i]
+      writeKeys(track, live)
+      if (d.kind === 'key') setSelected({ trackId: track.id, index: [...live].sort((p, q) => p.t - q.t).indexOf(moved) })
+    }
+    setLive(null)
+  }
+  const sel = selected?.trackId === track.id ? selected.index : -1
+  const handle = (cx, cy, x0, y0, kind, i) => (
+    <g key={`${kind}${i}`}>
+      <line x1={x0} y1={y0} x2={cx} y2={cy} stroke="var(--kol-accent-primary)" strokeWidth={1} />
+      <circle cx={cx} cy={cy} r={4} fill="var(--kol-surface-primary)" stroke="var(--kol-accent-primary)" strokeWidth={1.5} style={{ cursor: 'grab' }}
+        onPointerDown={start(kind, i)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} />
+    </g>
+  )
   return (
-    <svg ref={ref} width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="shrink-0 rounded" style={{ background: 'var(--kol-fg-04)', touchAction: 'none' }} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
-      <line x1={sx(0)} y1={sy(0)} x2={sx(1)} y2={sy(1)} stroke="var(--kol-fg-16)" strokeWidth={1} />
-      <path d={`M ${sx(0)} ${sy(0)} C ${sx(x1)} ${sy(y1)}, ${sx(x2)} ${sy(y2)}, ${sx(1)} ${sy(1)}`} fill="none" stroke="var(--kol-fg-emphasis)" strokeWidth={1.5} />
-      <line x1={sx(0)} y1={sy(0)} x2={sx(x1)} y2={sy(y1)} stroke="var(--kol-accent-primary)" strokeWidth={1} />
-      <line x1={sx(1)} y1={sy(1)} x2={sx(x2)} y2={sy(y2)} stroke="var(--kol-accent-primary)" strokeWidth={1} />
-      <circle cx={sx(x1)} cy={sy(y1)} r={4} fill="var(--kol-accent-primary)" style={{ cursor: 'grab' }} onPointerDown={down(1)} />
-      <circle cx={sx(x2)} cy={sy(y2)} r={4} fill="var(--kol-accent-primary)" style={{ cursor: 'grab' }} onPointerDown={down(2)} />
-    </svg>
+    <div className="flex items-stretch gap-3">
+      <span className="shrink-0 flex flex-col justify-between items-end kol-helper-10 text-meta tabular-nums py-2" style={{ width: 120 }}>
+        <span>{Math.round(hi * 100) / 100}</span><span>{Math.round(lo * 100) / 100}</span>
+      </span>
+      <div ref={ref} className="relative flex-1 rounded" style={{ height: GH, background: 'var(--kol-fg-04)', touchAction: 'none' }}>
+        {w > 0 && (
+          <svg width={w} height={GH} className="absolute inset-0 overflow-visible">
+            {segs.map(({ i, a, b, bez }) => (bez
+              ? <path key={`s${i}`} d={`M ${X(a.t)} ${Y(a.v)} C ${X(a.t + bez[0] * (b.t - a.t))} ${Y(a.v + bez[1] * (b.v - a.v))}, ${X(a.t + bez[2] * (b.t - a.t))} ${Y(a.v + bez[3] * (b.v - a.v))}, ${X(b.t)} ${Y(b.v)}`} fill="none" stroke="var(--kol-fg-emphasis)" strokeWidth={1.5} />
+              : <path key={`s${i}`} d={`M ${X(a.t)} ${Y(a.v)} H ${X(b.t)} V ${Y(b.v)}`} fill="none" stroke="var(--kol-fg-emphasis)" strokeWidth={1.5} strokeDasharray="3 3" />))}
+            {/* handles on the segments either side of the selected key, After Effects' rule */}
+            {segs.filter(({ i, bez }) => bez && (i === sel || i + 1 === sel)).map(({ i, a, b, bez }) => {
+              const dv = Math.abs(b.v - a.v) > 1e-9 ? b.v - a.v : (hi - lo)
+              return [
+                i === sel ? handle(X(a.t + bez[0] * (b.t - a.t)), Y(a.v + bez[1] * dv), X(a.t), Y(a.v), 'out', i) : null,
+                i + 1 === sel ? handle(X(a.t + bez[2] * (b.t - a.t)), Y(a.v + bez[3] * dv), X(b.t), Y(b.v), 'in', i) : null,
+              ]
+            })}
+            {keys.map((k, i) => (
+              <rect key={`k${i}`} x={X(k.t) - 4.5} y={Y(k.v) - 4.5} width={9} height={9} rx={1.5}
+                transform={`rotate(45 ${X(k.t)} ${Y(k.v)})`}
+                fill={i === sel ? 'var(--kol-accent-primary)' : 'var(--kol-fg-emphasis)'} style={{ cursor: 'grab' }}
+                onPointerDown={start('key', i)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} />
+            ))}
+          </svg>
+        )}
+      </div>
+    </div>
   )
 }
 const CURVE_OPTIONS = [...EASING_OPTIONS, { value: 'custom', label: 'Custom' }]
@@ -318,8 +412,6 @@ function SelectedKeyEditor({ tracks, selected, setSelected, writeKeys, len }) {
           Close
         </Button>
       </div>
-      {/* the segment from this key to the next; the last key has no segment */}
-      {selected.index < track.keys.length - 1 && <CurveEditor easing={key.easing} onChange={(bez) => patchKey({ easing: bez })} />}
     </div>
   )
 }
@@ -329,7 +421,7 @@ const DOCK_KEY = 'kol-fxr:dock-h'
 const DOCK_MIN = 56, DOCK_MAX = 480
 const readDockH = () => { try { const n = Number(localStorage.getItem(DOCK_KEY)); return n >= DOCK_MIN ? n : null } catch { return null } }
 
-function DockGrab({ onDrag, onEnd }) {
+function DockGrab({ onDrag, onEnd, onReset }) {
   const ref = useRef(null)
   const start = useRef(null)
   const [dragging, setDragging] = useState(false)
@@ -343,12 +435,14 @@ function DockGrab({ onDrag, onEnd }) {
       onPointerMove={(e) => { if (start.current == null) return; onDrag(start.current - e.clientY); }}
       onPointerUp={(e) => { e.currentTarget.releasePointerCapture(e.pointerId); start.current = null; setDragging(false); onEnd?.() }}
       onPointerCancel={() => { start.current = null; setDragging(false); onEnd?.() }}
+      /* double-click: back to the default height (the user, 2026-10-09) */
+      onDoubleClick={onReset}
     />
   )
 }
 
 export default function TimelineDock() {
-  const { layers, updateLayer } = useComposeState()
+  const { layers, updateLayer, beginTransaction, commitTransaction } = useComposeState()
   const { t, seek, loopSeconds } = useTransport()
   const tracks = useMemo(() => collectTracks(layers), [layers])
   const [selected, setSelected] = useState(null)   /* { trackId, index } */
@@ -363,6 +457,13 @@ export default function TimelineDock() {
     const sorted = [...nextKeys].sort((a, b) => a.t - b.t)
     updateLayer(track.layerId, { [track.key]: { bind: 'track', keys: sorted } })
   }
+  /* every editable lane at once, one undo entry */
+  const syncLoop = () => {
+    beginTransaction()
+    /* not a morph's header: its keys are step indices and its cycle already wraps (Loop ends on N ≡ 0) */
+    for (const tr of tracks) if (!tr.readOnly && !tr.header && tr.keys.length > 1) writeKeys(tr, syncLoopKeys(tr.keys))
+    commitTransaction()
+  }
   const toggleFold = (id) => setFolded((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const shown = tracks.filter((tr) => !(tr.under && folded.has(tr.under)))
 
@@ -371,12 +472,19 @@ export default function TimelineDock() {
       <DockGrab
         onDrag={(dy) => { if (base.current == null) base.current = dockH ?? 0; setDockH(Math.min(DOCK_MAX, Math.max(DOCK_MIN, (base.current || 120) + dy))) }}
         onEnd={() => { base.current = null }}
+        onReset={() => setDockH(null)}
       />
-      <ScrubRuler t={t} len={loopSeconds} onSeek={seek} />
+      <ScrubRuler t={t} len={loopSeconds} onSeek={seek} onSyncLoop={syncLoop} />
       <div className="flex flex-col gap-1 min-h-0 overflow-y-auto">
         {shown.map((track) => (
-          <TrackRow key={track.id} track={track} t={t} len={loopSeconds} selected={selected} setSelected={setSelected} writeKeys={writeKeys}
-            folded={folded.has(track.id)} onFold={track.header && tracks.some((x) => x.under === track.id) ? () => toggleFold(track.id) : null} />
+          <Fragment key={track.id}>
+            <TrackRow track={track} t={t} len={loopSeconds} selected={selected} setSelected={setSelected} writeKeys={writeKeys}
+              folded={folded.has(track.id)} onFold={track.header && tracks.some((x) => x.under === track.id) ? () => toggleFold(track.id) : null} />
+            {/* the selected key's lane opens as a value graph (numbers only; a morph header is step indices) */}
+            {selected?.trackId === track.id && !track.header && !track.readOnly && track.keys.every((k) => typeof k.v === 'number') && (
+              <GraphLane track={track} writeKeys={writeKeys} selected={selected} setSelected={setSelected} />
+            )}
+          </Fragment>
         ))}
       </div>
       <SelectedKeyEditor tracks={tracks} selected={selected} setSelected={setSelected} writeKeys={writeKeys} len={loopSeconds} />

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MediaLibrary } from '@kolkrabbi/kol-component'
-import { proxied, isVideoType, getMediaClient } from '../../library/mediaLibrary'
+import { proxied, isVideoType } from '../../library/mediaLibrary'
 import { Button, ColorSwatch, Dropdown, InspectorSection, MenuDropdownItem, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
 import { LabeledControl } from '@kolkrabbi/kol-component'
 import { PopoverPanel, usePopover } from '@kolkrabbi/kol-component'
@@ -19,6 +18,7 @@ import { firstFilterDef } from '../filterChain'
 import { pack } from '../../packs'
 import { NumberField } from './NumberField'
 import { TextSurface } from './TextPanel'
+import MediaPickerDialog from '../../library/MediaPickerDialog'
 
 /**
  * LayerInspector — HIGH-LEVEL surface for the selected layer (Phase 6-A):
@@ -391,7 +391,7 @@ function ImageSource({ layer, patch }) {
         )}
       </div>
       {/* the DS modal library (2026-10-07) — the editor's own picker is retired; a media layer takes image or video */}
-      <MediaLibrary variant="modal" open={pickerOpen} client={getMediaClient()} accept={['image', 'video']} onClose={() => setPickerOpen(false)} onSelect={onLibraryPick} />
+      <MediaPickerDialog open={pickerOpen} accept={['image', 'video']} onClose={() => setPickerOpen(false)} onSelect={onLibraryPick} />
     </LabeledControl>
   )
 }

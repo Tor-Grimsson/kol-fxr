@@ -87,6 +87,8 @@ export default function FilesDialog({
     buckets: () => BUCKET,
     listMedia: async () => objects,
   }), [objects])
+  /* a saved frame's thumbnail (useComposeFile `captureThumb`); older files keep the glyph */
+  const thumbnailFor = (o) => { const src = find(o.key)?.thumb; return src ? <img src={src} alt="" className="size-full object-cover" /> : null }
   const refreshKey = useMemo(() => objects.map((o) => `${o.key}:${o.displayName}:${o.uploaded}`).join('|'), [objects])
 
   const fileActions = {
@@ -134,6 +136,7 @@ export default function FilesDialog({
           onSettingsChange={setSettings}
           fileActions={fileActions}
           onPickFile={setPicked}
+          thumbnailFor={thumbnailFor}
         />
         {error && <p className="kol-mono-12 text-ui-error">{error}</p>}
         {/* a build without VITE_FXR_API has no cloud and used to say nothing (audit F2) */}

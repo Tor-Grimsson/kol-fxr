@@ -54,11 +54,12 @@ _(none yet — ownership, deferral and context notes land in `archive/`)_
 
 Tickets this ledger does **not** govern — each row names the destination ledger
 that does. The **Remainder** is this repo's to do; the state is theirs to report.
-Thirty-four went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
+Thirty-five went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
 last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/INDEX.md`).
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [SegmentedSunkenNoBorder](outbox/SegmentedSunkenNoBorder.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-09 — kol-theme 0.171.0 | none — adopted 2026-10-09: kol-theme 0.171.0 pinned |
 | 🟢 | [HubWalkthroughEscape](outbox/HubWalkthroughEscape.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-09 — kol-shell 0.63.0 (audit A5) | none — adopted 2026-10-09: shell 0.63.0 pinned |
 | 🟢 | [EditorTransformGlyphs](outbox/EditorTransformGlyphs.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-09 — kol-icons 0.34.0, the nine Transform glyphs redrawn (review #14) | none — adopted 2026-10-09: icons 0.34.0 pinned |
 | 🟢 | [ButtonPrimaryHoverDeeper](outbox/ButtonPrimaryHoverDeeper.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-09 — kol-theme 0.170.0, the hover goes deeper (review #15) | none — adopted 2026-10-09: 0.170.0 pinned |
@@ -117,6 +118,7 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-09 | **`SegmentedSunkenNoBorder` filed into kol-ds-ui** — plan 17 item 3, the sunken strip's invisible border; receipt in `outbox/` |
 | 2026-10-09 | **`HubWalkthroughEscape` filed into kol-ds-ui** — audit A5, the Hub's carousel; receipt in `outbox/` |
 | 2026-10-09 | **`EditorTransformGlyphs` + `ButtonPrimaryHoverDeeper` + `HubSettingsHeaderAt390` filed into kol-ds-ui** — plan 20 § 8 (review #14 · #15 · audit A13); receipts in `outbox/` |
 | 2026-10-09 | **`StepList` + `SegmentedToggleOptionDisabled` returned 🟢 (kol-component 0.245.0 · kol-theme 0.169.0) and adopted** — `MorphTab.jsx` on the DS `StepList` + `options[].disabled`; the local list retired to `_tmp/2026-10-09-morph-steplist/` |
