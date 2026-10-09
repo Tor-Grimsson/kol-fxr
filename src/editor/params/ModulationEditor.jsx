@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Input, Slider, LabeledControl, ViewToggle } from '@kolkrabbi/kol-component'
+import { Button, Input, MenuDropdownItem, Slider, LabeledControl, ViewToggle } from '@kolkrabbi/kol-component'
 import { getSource } from './sources'
 import { learnCC } from './midi'
 import { learnGamepad, isGamepadSource } from './gamepad'
@@ -237,42 +237,25 @@ export function ModulationEditor({ layer, param, setProp }) {
           <ExprPlot expr={exprStr} />
           <div className="flex flex-col">
             {EXPR_EXAMPLES.map((ex) => (
-              <button
-                key={ex.code}
-                type="button"
-                onClick={() => patchTransform({ expr: ex.code })}
-                className="w-full kol-helper-10 h-6 inline-flex items-center gap-2 text-body hover:text-emphasis text-left"
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontVariantLigatures: 'none' }}
-              >
-                <span className="truncate" style={{ fontFamily: 'var(--kol-font-family-mono, monospace)' }}>{ex.code}</span>
-                <span className="flex-1 text-right text-meta truncate">{ex.desc}</span>
-              </button>
+              <MenuDropdownItem key={ex.code} onClick={() => patchTransform({ expr: ex.code })} rowClass="kol-mono-10 h-6" shortcut={<span className="kol-helper-10 text-meta">{ex.desc}</span>}>
+                {ex.code}
+              </MenuDropdownItem>
             ))}
           </div>
         </>
       )}
       {isMidi && (
         <LabeledControl label={tr?.cc != null ? `MIDI · CC ${tr.cc}` : 'MIDI · no CC yet'}>
-          <button
-            type="button"
-            onClick={onLearn}
-            className="kol-helper-12 px-2 py-1 rounded border border-oq-08 text-body hover:text-emphasis"
-            style={{ background: 'transparent', cursor: 'pointer' }}
-          >
+          <Button tone="outline" size="sm" onClick={onLearn}>
             {learning ? 'Move a knob…' : 'Learn'}
-          </button>
+          </Button>
         </LabeledControl>
       )}
       {isGamepad && (
         <LabeledControl label={getSource(source)?.label ?? 'Gamepad'}>
-          <button
-            type="button"
-            onClick={onPadLearn}
-            className="kol-helper-12 px-2 py-1 rounded border border-oq-08 text-body hover:text-emphasis"
-            style={{ background: 'transparent', cursor: 'pointer' }}
-          >
+          <Button tone="outline" size="sm" onClick={onPadLearn}>
             {padLearning ? 'Move a control…' : 'Learn'}
-          </button>
+          </Button>
         </LabeledControl>
       )}
     </div>

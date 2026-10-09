@@ -49,3 +49,14 @@ one hostname is `https://media.kolkrabbi.io`.
 - [ ] receipt returned to kol-website, which then detaches `admin.` — after the deploy
 
 🟢 when the live bundle at `fxr.kolkrabbi.io` is measured naming `media.` and not `admin.`.
+
+---
+
+## ✅ RESOLUTION — 2026-10-08 (kol-fxr)
+
+**Live bundle measured:** `https://fxr.kolkrabbi.io/assets/index-BRkByJQN.js` fetched 2026-10-08 —
+`media.kolkrabbi.io` × 1, `admin.kolkrabbi.io` × 0. The deploy carried 0.4.1; the bar is met.
+
+- [x] `kol-media-client` 0.4.1 installed; no `admin.kolkrabbi.io` in the source or the built bundle
+- [x] deployed; the live bundle names `media.kolkrabbi.io`
+- [ ] receipt returned to kol-website — **not written from here** (user ruling 2026-10-08: this agent does not touch other repos' lobbies). kol-website reads this `done/` entry when it detaches `admin.`.

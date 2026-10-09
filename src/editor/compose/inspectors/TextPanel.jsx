@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, Dropdown, InspectorSection, LabeledControl, PopoverPanel, SegmentedToggle, Slider, usePopover, ViewToggle, glyphSize, Tooltip } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, InspectorSection, LabeledControl, MenuDropdownItem, PopoverPanel, SegmentedToggle, Slider, usePopover, ViewToggle, glyphSize, Tooltip } from '@kolkrabbi/kol-component'
 import { Icon } from '@kolkrabbi/kol-icons'
 
 import BindDot from '../../params/BindDot'
@@ -289,15 +289,9 @@ function SizeCombo({ layer, setProp }) {
       <MetricInput param={p} layer={layer} setProp={setProp} round slotRight={chevron} />
       <PopoverPanel popover={popover} panel={false} focus={false} className="z-50 bg-surface-secondary border border-oq-08 rounded shadow-lg py-1" style={{ width: 72, maxHeight: '40vh', overflowY: 'auto' }}>
         {SIZE_PRESETS.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => { setProp('size', s); setOpen(false) }}
-            className="w-full kol-helper-12 px-3 h-7 inline-flex items-center justify-between text-body hover:text-emphasis text-left"
-          >
-            <span className="leading-normal">{s}</span>
-            {Math.round(layer.size) === s && <span className="kol-helper-10">✓</span>}
-          </button>
+          <MenuDropdownItem key={s} onClick={() => { setProp('size', s); setOpen(false) }} rowClass="kol-helper-12 px-3 h-7" shortcut={Math.round(layer.size) === s ? '✓' : undefined}>
+            {s}
+          </MenuDropdownItem>
         ))}
       </PopoverPanel>
       <BindDot layer={layer} param={p} setProp={setProp} />

@@ -1,4 +1,3 @@
-import { Icon } from '@kolkrabbi/kol-icons'
 import { useEffect, useRef, useState } from 'react'
 import { Button, LabeledControl, SegmentedToggle, ToggleSwitch, ViewToggle, Slider, Input, Tooltip } from '@kolkrabbi/kol-component'
 import { PickerRow, PickerDropdown } from './TreePicker'
@@ -123,7 +122,7 @@ function LayerEffects({ layer }) {
 
   if (!effectable) {
     return (
-      <p className="kol-helper-12 text-meta">
+      <p className="kol-mono-12 text-meta">
         {engineLoop
           ? "Engine loops can't host effects yet."
           : "This layer can't host an effect."}
@@ -352,17 +351,14 @@ export function StageRolls({ def, view, tab, onPatch, inline = false }) {
 /* One chain row: enable toggle · name · up/down · remove. Click selects. */
 function StageRow({ stage, selected, onSelect, onToggle, onRemove, onUp, onDown, canUp, canDown }) {
   const enabled = stage.enabled !== false
-  const iconBtn = (label, onClick, disabled, child) => (
-    <Tooltip label={label}><button
-      type="button"
+  const iconBtn = (label, onClick, disabled, icon, className = '') => (
+    <Tooltip label={label}><Button
+      tone="ghost" quiet size="xs" iconOnly={icon}
       aria-label={label}
       disabled={disabled}
       onClick={(e) => { e.stopPropagation(); onClick() }}
-      className="inline-flex items-center justify-center w-5 h-5 rounded shrink-0 text-oq-64 hover:text-emphasis disabled:opacity-30"
-      style={{ border: 'none', background: 'transparent', cursor: disabled ? 'default' : 'pointer' }}
-    >
-      {child}
-    </button></Tooltip>
+      className={`shrink-0 ${className}`}
+    /></Tooltip>
   )
   return (
     <div
@@ -372,17 +368,13 @@ function StageRow({ stage, selected, onSelect, onToggle, onRemove, onUp, onDown,
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect() }}
       className={`flex items-center gap-1 px-2 h-8 rounded cursor-pointer ${selected ? 'bg-oq-08' : 'hover:bg-oq-04'}`}
     >
-      {iconBtn(enabled ? 'Disable effect' : 'Enable effect', onToggle, false,
-        <Icon name={enabled ? 'eye-on' : 'eye-off'} size={12} />)}
+      {iconBtn(enabled ? 'Disable effect' : 'Enable effect', onToggle, false, enabled ? 'eye-on' : 'eye-off')}
       <span className={`kol-helper-12 flex-1 truncate ${enabled ? 'text-emphasis' : 'text-meta'}`}>
         {stage.def?.label ?? stage.id}
       </span>
-      {iconBtn('Move up', onUp, !canUp,
-        <Icon name="chevron-down" size={11} style={{ transform: 'rotate(180deg)' }} />)}
-      {iconBtn('Move down', onDown, !canDown,
-        <Icon name="chevron-down" size={11} />)}
-      {iconBtn('Remove effect', onRemove, false,
-        <Icon name="x" size={11} />)}
+      {iconBtn('Move up', onUp, !canUp, 'chevron-down', 'rotate-180')}
+      {iconBtn('Move down', onDown, !canDown, 'chevron-down')}
+      {iconBtn('Remove effect', onRemove, false, 'x')}
     </div>
   )
 }
@@ -439,29 +431,18 @@ export function SweepStack({ sweeps, onChange, inline = false }) {
                 </>
               ) : (
                 <>
-                  <Tooltip label={enabled ? 'Disable sweep' : 'Enable sweep'}><button
-                    type="button"
+                  <Tooltip label={enabled ? 'Disable sweep' : 'Enable sweep'}><Button
+                    tone="ghost" quiet size="xs" iconOnly={enabled ? 'eye-on' : 'eye-off'}
                     aria-label={enabled ? 'Disable sweep' : 'Enable sweep'}
                     onClick={() => setField(i, 'enabled', !enabled)}
-                    className="inline-flex items-center justify-center w-5 h-5 rounded shrink-0 text-oq-64 hover:text-emphasis"
-                    style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
-                  >
-                    <Icon name={enabled ? 'eye-on' : 'eye-off'} size={12} />
-                  </button></Tooltip>
+                    className="shrink-0"
+                  /></Tooltip>
                   <span className={`kol-helper-12 flex-1 truncate ${enabled ? 'text-emphasis' : 'text-meta'}`}>
                     {shapeLabel(sw.shape ?? 'linear')}
                   </span>
                 </>
               )}
-              <Tooltip label="Remove sweep"><button
-                type="button"
-                aria-label="Remove sweep"
-                onClick={() => removeAt(i)}
-                className="inline-flex items-center justify-center w-5 h-5 rounded shrink-0 text-oq-64 hover:text-emphasis"
-                style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
-              >
-                <Icon name="x" size={11} />
-              </button></Tooltip>
+              <Tooltip label="Remove sweep"><Button tone="ghost" quiet size="xs" iconOnly="x" aria-label="Remove sweep" className="shrink-0" onClick={() => removeAt(i)} /></Tooltip>
             </div>
             {enabled && (
               <>

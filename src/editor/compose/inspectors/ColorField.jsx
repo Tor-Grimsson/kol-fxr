@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ColorSwatch, Input, LabeledControl, PopoverPanel, usePopover } from '@kolkrabbi/kol-component'
+import { ColorSwatch, Input, LabeledControl, PopoverPanel, Tag, usePopover } from '@kolkrabbi/kol-component'
 import { resolveColor } from '../state'
 import { useControlSize } from '../../params/controlSize'
 
@@ -150,25 +150,15 @@ export function ColorField({ value, onChange, palette, label = 'Color', hideLabe
             the field has an autoValue) and None (disable → transparent). */}
         <div className="flex items-center gap-2">
           {autoValue && (
-            <button
-              type="button"
-              onClick={() => { onChange(autoValue); setOpen(false) }}
-              aria-pressed={isVar}
-              className="flex items-center gap-1.5 kol-helper-12 text-fg-64 rounded px-1.5 h-6 border border-oq-08"
-            >
+            <Tag size="xs" hash={false} active={isVar} aria-pressed={isVar} onClick={() => { onChange(autoValue); setOpen(false) }}>
               <ColorSwatch hex={resolveColor(autoValue, palette) ?? autoValue} size={14} hoverable={false} />
               Theme
-            </button>
+            </Tag>
           )}
-          <button
-            type="button"
-            onClick={() => { onChange(null); setOpen(false) }}
-            aria-pressed={isNone}
-            className="flex items-center gap-1.5 kol-helper-12 text-fg-64 rounded px-1.5 h-6 border border-oq-08"
-          >
+          <Tag size="xs" hash={false} active={isNone} aria-pressed={isNone} onClick={() => { onChange(null); setOpen(false) }}>
             <ColorSwatch hex="#FFFFFF" size={14} showTransparent transparentTone={isStroke ? 'error' : 'warning'} hoverable={false} />
             None
-          </button>
+          </Tag>
         </div>
       </PopoverPanel>
     </LabeledControl>

@@ -8,7 +8,6 @@
     "dev": "node scripts/dev.mjs",
     "dev:app": "vite --force",
     "build": "vite build",
-    "build:lib": "vite build --config vite.lib.config.js",
     "preview": "vite preview",
     "api:dev": "wrangler dev --config api/wrangler.toml --port 8787",
     "api:schema": "wrangler d1 execute kol-fxr --remote --file api/schema.sql --config api/wrangler.toml",

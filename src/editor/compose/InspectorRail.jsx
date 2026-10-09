@@ -29,7 +29,7 @@ export default function InspectorRail() {
         },
         multi: (ids) => (
           <InspectorSection pane>
-            <p className="kol-helper-12 text-meta">{ids.length} layers selected.</p>
+            <p className="kol-mono-12 text-meta">{ids.length} layers selected.</p>
             <AlignmentPanel />
             <Button
               tone="primary"

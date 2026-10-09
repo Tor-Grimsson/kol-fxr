@@ -54,7 +54,7 @@ export default function PatternPanel() {
       <div className="kol-compose-inspector-body">
         {pattern
           ? <PatternSurface key={pattern.id} layer={pattern} />
-          : <p className="kol-helper-12 text-meta">Select a pattern layer to edit it.</p>}
+          : <p className="kol-mono-12 text-meta">Select a pattern layer to edit it.</p>}
       </div>
     </div>
   )

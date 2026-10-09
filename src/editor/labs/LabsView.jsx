@@ -1,6 +1,6 @@
 import '../styles/kol-labs.css'
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { Tooltip } from '@kolkrabbi/kol-component'
+import { Button, Tooltip } from '@kolkrabbi/kol-component'
 import { EditorProviders } from '../Editor'
 import EditorShell from '../EditorShell'
 import { useFps } from '../shell/Canvas'
@@ -266,7 +266,7 @@ function LabsSheetHeader() {
   const { collapseParams, catalog, toggleCatalog } = useContext(TouchRails)
   const { layer } = useLabsLayer()
   /* the randomiser's "Start over" seat, with labs' one action: the catalog card in and out */
-  const action = <button className="kol-helper-12 text-meta py-2.5" aria-pressed={catalog} onClick={toggleCatalog}>Catalog</button>
+  const action = <Button tone="ghost" quiet size="sm" pressed={catalog} onClick={toggleCatalog}>Catalog</Button>
   return <PanelHeader title={sheetLabels(layer).title} onCollapse={collapseParams} className="px-4" action={action} />
 }
 
@@ -364,7 +364,15 @@ function LabsBody() {
   /* …and at a desk a pick OPENS the params rail: it folds with the shell rail (the 2026-08-30
      pairing), which opens closed, so a pick landed on a 48px strip and nothing to turn. Dropping
      the collapsed stamp here lets the pairing bring the shell rail out with it. */
-  useEffect(() => { if (layer && !touch) document.documentElement.removeAttribute('data-rail') }, [layer?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  /* Two frames, not now: a deep link (`?preset=`) seeds the layer on arrival, when the shell rail
+     has not reported its width yet — an immediate unfold is re-folded by the pairing's first sync
+     (the same race the Morph arrival below dodges). Two frames later both rails read and open. */
+  useEffect(() => {
+    if (!layer || touch) return undefined
+    let a = 0, b = 0
+    a = requestAnimationFrame(() => { b = requestAnimationFrame(() => document.documentElement.removeAttribute('data-rail')) })
+    return () => { cancelAnimationFrame(a); cancelAnimationFrame(b) }
+  }, [layer?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   /* …and so does arriving on the Morph rail (plan 13): with the rail folded, /morph was a 48px strip.
      On arrival the shell rail has not reported its width yet, so an immediate unfold is re-folded by
      the pairing's first sync; two frames later the pairing reads both rails and opens the left too. */

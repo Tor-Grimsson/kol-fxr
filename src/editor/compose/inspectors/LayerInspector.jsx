@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MediaLibrary } from '@kolkrabbi/kol-component'
 import { proxied, isVideoType, getMediaClient } from '../../library/mediaLibrary'
-import { Button, Dropdown, InspectorSection, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, InspectorSection, MenuDropdownItem, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
 import { LabeledControl } from '@kolkrabbi/kol-component'
 import { PopoverPanel, usePopover } from '@kolkrabbi/kol-component'
 import { ViewToggle } from '@kolkrabbi/kol-component'
@@ -173,20 +173,10 @@ export default function LayerInspector({ layer }) {
 }
 
 /* Small right-aligned header-row icon button (Section `actions`). */
-function SectionIconBtn({ label, onClick, active = false, refProps = {}, children }) {
+function SectionIconBtn({ label, icon, onClick, active = false, refProps = {} }) {
   return (
     <Tooltip asChild label={label}>
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      aria-pressed={active || undefined}
-      className={`inline-flex items-center justify-center rounded text-emphasis ${active ? '' : 'kol-btn-quiet'}`}
-      style={{ width: 26, height: 26, padding: 5 }}
-      {...refProps}
-    >
-      {children}
-    </button>
+      <Button tone="ghost" quiet size="sm" iconOnly={icon} aria-label={label} pressed={active} onClick={onClick} {...refProps} />
     </Tooltip>
   )
 }
@@ -213,27 +203,18 @@ function AppearanceSection({ layer, setProp, first }) {
       label="Appearance"
       actions={
         <>
-          <SectionIconBtn label={visible ? 'Hide layer' : 'Show layer'} active={!visible} onClick={() => toggleLayer(layer.id)}>
-            <Icon name={visible ? 'eye-on' : 'eye-off'} size={glyphSize('sm')} />
-          </SectionIconBtn>
+          <SectionIconBtn label={visible ? 'Hide layer' : 'Show layer'} icon={visible ? 'eye-on' : 'eye-off'} active={!visible} onClick={() => toggleLayer(layer.id)} />
           <SectionIconBtn
             label={`Blend: ${BLEND_MODES.find((b) => b.value === blend)?.label ?? blend}`}
+            icon="paint-drop"
             active={blend !== 'normal' || blendOpen}
             refProps={{ ref: blendPop.refs.setReference, ...blendPop.getReferenceProps() }}
-          >
-            <Icon name="paint-drop" size={glyphSize('sm')} />
-          </SectionIconBtn>
+          />
           <PopoverPanel popover={blendPop} panel={false} focus={false} className="z-50 bg-surface-secondary border border-oq-08 rounded shadow-lg py-1" style={{ width: 160 }}>
             {BLEND_MODES.map((b) => (
-              <button
-                key={b.value}
-                type="button"
-                onClick={() => { setProp('blend', b.value); setBlendOpen(false) }}
-                className="w-full kol-helper-12 px-3 h-8 inline-flex items-center gap-2 text-oq-64 hover:text-emphasis text-left"
-              >
-                <span className="flex-1 truncate leading-normal">{b.label}</span>
-                {blend === b.value && <Icon name="check" size={11} />}
-              </button>
+              <MenuDropdownItem key={b.value} onClick={() => { setProp('blend', b.value); setBlendOpen(false) }} shortcut={blend === b.value ? <Icon name="check" size={11} /> : undefined}>
+                {b.label}
+              </MenuDropdownItem>
             ))}
           </PopoverPanel>
         </>

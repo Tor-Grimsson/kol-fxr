@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Canvas, { CANVAS_VIRTUAL_W } from '../shell/Canvas'
 import { useComposeState, resolveColor, COVER_TYPES, CANVAS_W } from './state'
 import LayerRenderer from './LayerRenderer'
-import { SelectionOverlay, PathNodeOverlay, CropOverlay } from '@kolkrabbi/kol-component'
+import { SelectionOverlay, PathNodeOverlay, CropOverlay, MenuDropdownItem, MenuDropdownDivider } from '@kolkrabbi/kol-component'
 import { pathD, normalizePath, normalizePathRings, rotatePathNodes, scalePathNodes, dist } from './path-math'
 import { scaleBoolChildren } from './boolean-ops'
 import { findLayerDeep } from './helpers'
@@ -1578,18 +1578,8 @@ function CanvasContextMenu({ menu, layer, onClose, ops }) {
       onContextMenu={(e) => e.preventDefault()}
     >
       {items.map((it, i) => it.divider
-        ? <div key={`d${i}`} className="border-t border-oq-08 my-1" />
-        : (
-          <button
-            key={it.label}
-            type="button"
-            disabled={it.disabled}
-            onClick={it.act}
-            className="w-full kol-helper-12 px-3 h-8 inline-flex items-center text-body hover:text-emphasis disabled:opacity-40 text-left"
-          >
-            <span className="flex-1 truncate leading-normal">{it.label}</span>
-          </button>
-        ))}
+        ? <MenuDropdownDivider key={`d${i}`} />
+        : <MenuDropdownItem key={it.label} disabled={it.disabled} onClick={it.act}>{it.label}</MenuDropdownItem>)}
     </div>
   )
 }

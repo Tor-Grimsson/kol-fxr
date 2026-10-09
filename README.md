@@ -58,7 +58,6 @@ On Vercel, that's a `vercel.json` rewrite; any static host has an equivalent.
 
 ## Build
 
-- `pnpm build:lib` — build the library (`dist/design-editor.{js,css}`).
 - `pnpm build` — build the standalone app (deploy target, not published).
 - `pnpm dev` — run the standalone editor locally.
 

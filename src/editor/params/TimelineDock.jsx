@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Dropdown, Input, Tooltip, useGrabEdge } from '@kolkrabbi/kol-component'
-import { Icon } from '@kolkrabbi/kol-icons'
+import { Button, Dropdown, Input, Tooltip, useGrabEdge } from '@kolkrabbi/kol-component'
 import { useComposeState } from '../compose/state'
 import { labelForLayer } from '../compose/labels'
 import { keysFor } from '../morph/buildMorph'
@@ -185,9 +184,7 @@ function TrackRow({ track, t, len, selected, setSelected, writeKeys, folded, onF
           <span className={`${header ? 'kol-mono-12 text-emphasis' : 'kol-helper-10 text-meta'} truncate text-right`}>{track.label}</span>
         </Tooltip>
         {header && onFold && (
-          <button type="button" aria-label={folded ? 'Show the morph’s tracks' : 'Hide the morph’s tracks'} aria-expanded={!folded} onClick={onFold} className="text-meta hover:text-emphasis shrink-0" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
-            <Icon name="chevron-down" size={12} className={folded ? '-rotate-90' : ''} />
-          </button>
+          <Button tone="ghost" quiet size="xs" iconOnly="chevron-down" aria-label={folded ? 'Show the morph’s tracks' : 'Hide the morph’s tracks'} aria-expanded={!folded} onClick={onFold} className={`shrink-0 ${folded ? '-rotate-90' : ''}`} />
         )}
       </span>
       <div
@@ -250,7 +247,7 @@ function CurveEditor({ easing, onChange }) {
   const ref = useRef(null)
   const bez = bezOf(easing)
   const drag = useRef(null)
-  if (!bez) return <p className="kol-helper-10 text-meta">Hold — no curve.</p>
+  if (!bez) return <p className="kol-mono-10 text-meta">Hold — no curve.</p>
   const [x1, y1, x2, y2] = bez
   const toUnit = (e) => {
     const r = ref.current.getBoundingClientRect()
@@ -308,25 +305,18 @@ function SelectedKeyEditor({ tracks, selected, setSelected, writeKeys, len }) {
           value={easingName}
           onChange={(v) => patchKey({ easing: v === 'custom' ? [...(bezOf(key.easing) ?? EASINGS['in-out'])] : v })}
         />
-        <button
-          type="button"
-          className="kol-helper-10 text-meta hover:text-emphasis px-2"
-          style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+        <Button
+          tone="ghost" quiet size="sm"
           onClick={() => {
             if (track.keys.length > 1) writeKeys(track, track.keys.filter((_, i) => i !== selected.index))
             setSelected(null)
           }}
         >
           Delete key
-        </button>
-        <button
-          type="button"
-          className="kol-helper-10 text-meta hover:text-emphasis px-2 ml-auto"
-          style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-          onClick={() => setSelected(null)}
-        >
+        </Button>
+        <Button tone="ghost" quiet size="sm" className="ml-auto" onClick={() => setSelected(null)}>
           Close
-        </button>
+        </Button>
       </div>
       {/* the segment from this key to the next; the last key has no segment */}
       {selected.index < track.keys.length - 1 && <CurveEditor easing={key.easing} onChange={(bez) => patchKey({ easing: bez })} />}

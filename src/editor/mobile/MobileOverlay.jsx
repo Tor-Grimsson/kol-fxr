@@ -300,7 +300,7 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
           title={title}
           onCollapse={() => setOpen(false)}
           className={rail ? 'px-4 pt-2.5 pb-1.5' : 'px-3'}
-          action={<button className="kol-helper-12 text-meta py-2.5" onClick={onRestart}>Start over</button>}
+          action={<Button tone="ghost" quiet size="sm" onClick={onRestart}>Start over</Button>}
         />
 
         <div className={rail ? 'px-4 pb-5' : 'min-h-0 flex-1 overflow-y-auto px-3 pb-3'}>

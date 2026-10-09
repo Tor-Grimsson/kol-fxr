@@ -1,6 +1,5 @@
-import { Icon } from '@kolkrabbi/kol-icons'
 import { useEffect, useState } from 'react'
-import { Button, SegmentedToggle, ToggleSwitch, Divider, Dropdown, LabeledControlSection, Tooltip } from '@kolkrabbi/kol-component'
+import { Button, SegmentedToggle, ToggleSwitch, Divider, Dropdown, LabeledControlSection, Tag, Tooltip } from '@kolkrabbi/kol-component'
 import { useComposeState } from '../compose/state'
 import { useLayerEdit } from '../compose/useLayerEdit'
 import AutoControls from '../params/AutoControls'
@@ -92,18 +91,9 @@ function ChipsRow({ options, active, onPick, spread = false, pills = false }) {
     return (
       <div className="flex items-center gap-1 flex-wrap">
         {options.map((o) => (
-          <button
-            key={o.value}
-            type="button"
-            onClick={() => onPick(o.value)}
-            className={`px-2 py-0.5 rounded kol-helper-10 tracking-widest border transition-colors cursor-pointer ${
-              o.value === active
-                ? 'bg-fg-16 border-oq-24 text-emphasis'
-                : 'bg-transparent border-oq-08 text-meta hover:border-oq-16 hover:text-body'
-            }`}
-          >
+          <Tag key={o.value} size="xs" hash={false} active={o.value === active} onClick={() => onPick(o.value)}>
             {o.label}
-          </button>
+          </Tag>
         ))}
       </div>
     )
@@ -341,15 +331,7 @@ function StackCards({ chain, from = 0, layer, hostView, toggleFilter, removeFilt
             label={s.def?.label ?? s.id}
           />
           <Tooltip asChild label="Remove effect">
-          <button
-            type="button"
-            aria-label="Remove effect"
-            onClick={() => removeFilter(layer.id, idx)}
-            className="ml-auto inline-flex items-center justify-center w-5 h-5 shrink-0 text-oq-64 hover:text-emphasis cursor-pointer"
-            style={{ border: 'none', background: 'transparent' }}
-          >
-            <Icon name="x" size={12} />
-          </button>
+          <Button tone="ghost" quiet size="xs" iconOnly="x" aria-label="Remove effect" className="ml-auto shrink-0" onClick={() => removeFilter(layer.id, idx)} />
           </Tooltip>
         </div>
         {enabled && s.def && (
