@@ -2,7 +2,7 @@
 title: Operations
 type: guide
 status: active
-updated: 2026-10-08
+updated: 2026-10-09
 description: Repo machinery for kol-fxr — the app build and the D1 Worker, the pnpm build-script gate, Vite gotchas, the production-bundle rule, and deploy.
 tags:
   - project/kol-fxr
@@ -13,6 +13,7 @@ aliases:
 related:
   - "[[../documentation/00-overview/INDEX|overview]]"
   - "[[01-services|services]]"
+  - "[[02-cloud-sessions/INDEX|cloud sessions]]"
 ---
 
 # Operations
@@ -20,6 +21,8 @@ related:
 Repo machinery — how kol-fxr is developed, built and deployed. This is *process*, kept out of the subject [[../documentation/INDEX|documentation]] by design. Stack: **React 19 + Vite + Tailwind 4 + pnpm**, consuming the published `@kolkrabbi/kol-*` design system as a normal npm consumer.
 
 The external accounts this app runs on — the Cloudflare D1 database, the Vercel deploy, the shared CDN, and where each credential is kept — are [[01-services|services]].
+
+An agent working from a claude.ai container — no local machine, no skills, a fresh clone — starts at [[02-cloud-sessions/INDEX|cloud sessions]]: authorship, the branch and its handoff, what deploys where, and the house rules written down.
 
 ## Build targets
 
