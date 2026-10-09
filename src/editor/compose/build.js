@@ -25,7 +25,9 @@ import { paintAlphaExport } from './paint'
 import { textLayerFont, textOutlinePaths, axisTextGlyphs } from '../modes/type/textOutline'
 import { buildPatternSvg } from '../modes/pattern/render'
 import { getShapeSvg }     from '../modes/pattern/shapes'
-import { regularPolygonPoints, starPoints, trianglePoints } from './shape-math'
+import { shapeOutlineD, drawsAsOutline } from './shape-math'
+import { applyVectorFx } from './vectorEffects'
+import { canvasOutline } from './masks'
 import { pathD } from './path-math'
 import { computeBooleanCached } from './boolean-ops'
 import { hasEnabledFilters } from './filterChain'
@@ -86,10 +88,13 @@ function wrap(layer, body) {
    * Transform props are only ever set on layers with numeric bounds. */
   let xformAttr = ''
   const rot = typeof layer.rotation === 'number' ? layer.rotation : 0  /* animated rotation exports at base */
-  if ((rot || layer.flipX || layer.flipY) && layer.x != null && layer.w != null) {
+  const skewed = layer.skewX || layer.skewY
+  if ((rot || layer.flipX || layer.flipY || skewed) && layer.x != null && layer.w != null) {
     const cx = layer.x + layer.w / 2
     const cy = layer.y + layer.h / 2
-    const rotPart  = rot ? ` rotate(${rot.toFixed(2)})` : ''
+    /* CSS skew(ax, ay) = matrix(1, tan ay, tan ax, 1) — the renderer's shear, exactly */
+    const t = (d) => Math.tan(((d ?? 0) * Math.PI) / 180).toFixed(4)
+    const rotPart  = (rot ? ` rotate(${rot.toFixed(2)})` : '') + (skewed ? ` matrix(1 ${t(layer.skewY)} ${t(layer.skewX)} 1 0 0)` : '')
     const flipPart = (layer.flipX || layer.flipY)
       ? ` scale(${layer.flipX ? -1 : 1} ${layer.flipY ? -1 : 1})`
       : ''
@@ -241,6 +246,10 @@ function shapeLayerSvg(layer, palette) {
         (layer.strokeLinecap   ? ` stroke-linecap="${layer.strokeLinecap}"`     : '') +
         (layer.strokeLinejoin  ? ` stroke-linejoin="${layer.strokeLinejoin}"`   : '')
       : ''
+    /* a vector effect (or an ellipse arc) draws the shared outline */
+    if (drawsAsOutline(layer)) {
+      return `<path transform="translate(${lx.toFixed(2)} ${ly.toFixed(2)})" d="${shapeOutlineD(layer)}" fill="${fill}"${strokeAttrs}/>`
+    }
     if (kind === 'rect') {
       const x = lx + half
       const y = ly + half
@@ -256,12 +265,8 @@ function shapeLayerSvg(layer, palette) {
       const ry = Math.max(0, lh / 2 - half)
       return `<ellipse cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" rx="${rx.toFixed(2)}" ry="${ry.toFixed(2)}" fill="${fill}"${strokeAttrs}/>`
     }
-    /* polygon-style shapes share a translate-and-points pattern. */
-    let pts
-    if (kind === 'triangle') pts = trianglePoints(lw, lh, half)
-    else if (kind === 'polygon') pts = regularPolygonPoints(lw, lh, layer.sides ?? 5, half)
-    else                        pts = starPoints(lw, lh, layer.points ?? 5, layer.innerRatio ?? 0.5, half)
-    return `<polygon transform="translate(${lx.toFixed(2)} ${ly.toFixed(2)})" points="${pts}" fill="${fill}"${strokeAttrs}/>`
+    /* triangle · polygon · star: the shared outline (radius and apex included), translated */
+    return `<path transform="translate(${lx.toFixed(2)} ${ly.toFixed(2)})" d="${shapeOutlineD(layer)}" fill="${fill}"${strokeAttrs}/>`
   }
 
   if (kind === 'line') {
@@ -310,8 +315,8 @@ function shapeLayerSvg(layer, palette) {
 function pathLayerSvg(layer, palette) {
   const hasHoles = (layer.holes?.length ?? 0) > 0
   const d = hasHoles
-    ? [layer.nodes ?? [], ...layer.holes].map((r) => pathD(r, true)).join(' ')
-    : pathD(layer.nodes ?? [], layer.closed)
+    ? [layer.nodes ?? [], ...layer.holes].map((r) => pathD(applyVectorFx(layer, r, true), true)).join(' ')
+    : pathD(applyVectorFx(layer, layer.nodes ?? [], layer.closed), layer.closed)
   if (!d) return ''
   const hasFill     = layer.color !== null
   const fill        = hasFill ? (resolveColor(layer.color, palette) ?? '#FFFFFF') : 'none'
@@ -535,9 +540,20 @@ export function buildLayersSvg({ layers, palette, aspect = '1:1', customRatio = 
   const defs = []
   const bodies = []
 
+  /* masks (G8): a mask layer draws nothing; its target is wrapped in a clip of the mask's outline,
+     both in canvas coords */
+  const byId = new Map(layers.map((l) => [l.id, l]))
   layers.forEach((layer, idx) => {
+    if (layer.isMask) return
     const body = layerToSvg(layer, palette, vw, vh, idx, defs, snapScale)
-    if (body) bodies.push(body)
+    if (!body) return
+    const mask = layer.maskedBy && byId.get(layer.maskedBy)
+    const d = mask ? canvasOutline(mask) : null
+    if (d) {
+      const cid = `kol-mask-${idx}`
+      defs.push(`<clipPath id="${cid}"><path d="${d}"/></clipPath>`)
+      bodies.push(`<g clip-path="url(#${cid})">${body}</g>`)
+    } else bodies.push(body)
   })
 
   const defsBlock = defs.length ? `<defs>${defs.join('')}</defs>` : ''

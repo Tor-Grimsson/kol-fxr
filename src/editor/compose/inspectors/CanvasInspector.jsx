@@ -1,5 +1,7 @@
 import { useColorTarget } from '../../color/useColorTarget'
-import { Dropdown, LabeledControl, ToggleSwitch, InspectorSection } from '@kolkrabbi/kol-component'
+import Pane from '../../components/Pane'
+import { Dropdown, SettingsRow, ToggleSwitch } from '@kolkrabbi/kol-component'
+import { useControlSize, RAIL_LABEL_W } from '../../params/controlSize'
 import { useComposeState } from '../state'
 import { ASPECTS } from '../../shell/aspects'
 import { ColorField } from './LayerInspector'
@@ -20,6 +22,7 @@ export default function CanvasInspector() {
   /* writes through the colour target (editor review #12, 2026-09-27): setCanvasFill alone left the
    * shared paint pair stale, so the colour window showed white over a red canvas */
   const target = useColorTarget()
+  const cs = useControlSize()
   const {
     aspect, setAspect,
     canvasW, canvasH, setCanvasSize,
@@ -40,11 +43,11 @@ export default function CanvasInspector() {
    * infinite backdrop). */
   return (
     <div className="flex flex-col">
-      <InspectorSection pane label="Frame">
+      <Pane label="Frame">
         <div className="flex flex-col gap-1">
           <Dropdown
             variant="subtle"
-            size="sm"
+            size={cs}
             className="w-full"
             options={PRESET_OPTIONS}
             value={aspect}
@@ -59,10 +62,13 @@ export default function CanvasInspector() {
           </div>
         </div>
 
-        <ToggleSwitch variant="plain" label="Grid" checked={showGrid} onChange={toggleGrid} />
-      </InspectorSection>
+        {/* a switch row: label left, the switch at the row's end, on the rail's rung (spec R5.6, R6.3) */}
+        <SettingsRow label="Grid" labelWidth={RAIL_LABEL_W}>
+          <ToggleSwitch size={cs} checked={showGrid} onChange={toggleGrid} aria-label="Grid" />
+        </SettingsRow>
+      </Pane>
 
-      <InspectorSection pane label="Background">
+      <Pane label="Background">
         <ColorField
           label="Background"
           hideLabel
@@ -71,27 +77,28 @@ export default function CanvasInspector() {
           palette={palette}
           autoValue="var(--kol-surface-ab-split)"
         />
-        <LabeledControl label="Fill opacity">
+        <SettingsRow label="Fill opacity" align="fill" labelWidth={RAIL_LABEL_W}>
           {/* Input, not a slider (user ruling 2026-08-12: one-shot values
             * are typed, not dragged). */}
           <NumberField
-            variant="filled" size="sm" chars={4} suffix="%"
+            variant="filled" size={cs} chars={3} suffix="%"
             value={Math.round((canvasFillOpacity ?? 1) * 100)}
             onCommit={(raw) => {
               const n = Number(raw)
               if (Number.isFinite(n)) setCanvasFillOpacity(Math.min(1, Math.max(0, n / 100)))
             }}
           />
-        </LabeledControl>
+        </SettingsRow>
 
         <ColorField
+          inline
           label="Infinite"
           value={infiniteFill}
           onChange={setInfiniteFill}
           palette={palette}
           autoValue="var(--kol-surface-secondary)"
         />
-      </InspectorSection>
+      </Pane>
     </div>
   )
 }
@@ -99,13 +106,14 @@ export default function CanvasInspector() {
 /* Dimension field — the shared NumberField draft/commit core (typing "1920"
  * doesn't reshape the canvas at "1", "19", "192") with the W/H letter as an
  * IN-SHELL prefix (the 2026-08-12 prefixed-input idiom). */
+/* The property grid (spec R5.5): letter affordance, the field fills its cell. */
 function SizeField({ label, value, onCommit, num }) {
+  const cs = useControlSize()
   return (
     <NumberField
-      variant="filled"
-      size="sm"
-      chars={5}
-      prefix={label}
+      variant="property"
+      size={cs}
+      affordance={label}
       className="w-full min-w-0"
       value={value}
       onCommit={(raw) => onCommit(num(raw, value))}

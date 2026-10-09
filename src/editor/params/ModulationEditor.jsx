@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Input, MenuDropdownItem, Slider, LabeledControl, ViewToggle } from '@kolkrabbi/kol-component'
+import { Button, Input, MenuDropdownItem, Slider, LabeledControl } from '@kolkrabbi/kol-component'
 import { getSource } from './sources'
 import { learnCC } from './midi'
 import { learnGamepad, isGamepadSource } from './gamepad'
 import { isBinding } from './resolve'
 import { compileExpr } from './expr'
 import { transport } from './transport'
+import { useControlSize } from './controlSize'
+import { SegmentedToggle } from '@kolkrabbi/kol-component'
 
 /**
  * ModulationEditor — the transform editor for ONE bound param (range / invert /
@@ -143,6 +145,7 @@ function ExprPlot({ expr }) {
 }
 
 export function ModulationEditor({ layer, param, setProp }) {
+  const cs = useControlSize()
   const value = layer[param.key]
   const [exprDraft, setExprDraft] = useState(null)
   const [learning, setLearning] = useState(false)
@@ -186,13 +189,13 @@ export function ModulationEditor({ layer, param, setProp }) {
       <LabeledControl label="Range">
         <div className="flex items-center gap-2">
           <Input
-            variant="filled" size="sm" type="number" chars={5}
+            variant="filled" size={cs} type="number" chars={5}
             value={range[0]}
             onChange={(e) => patchTransform({ range: [num(e.target.value, range[0]), range[1]] })}
           />
           <span className="kol-helper-10 text-meta">to</span>
           <Input
-            variant="filled" size="sm" type="number" chars={5}
+            variant="filled" size={cs} type="number" chars={5}
             value={range[1]}
             onChange={(e) => patchTransform({ range: [range[0], num(e.target.value, range[1])] })}
           />
@@ -200,10 +203,10 @@ export function ModulationEditor({ layer, param, setProp }) {
       </LabeledControl>
       <div className="grid grid-cols-2 gap-2">
         <LabeledControl label="Invert">
-          <ViewToggle
+          <SegmentedToggle tone="sunken" size={cs} className="w-full"
             options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
-            viewMode={tr?.invert ? 'on' : 'off'}
-            onViewChange={(v) => patchTransform({ invert: v === 'on' })}
+            value={tr?.invert ? 'on' : 'off'}
+            onChange={(v) => patchTransform({ invert: v === 'on' })}
           />
         </LabeledControl>
         <LabeledControl label="Smooth">
@@ -227,7 +230,7 @@ export function ModulationEditor({ layer, param, setProp }) {
         <>
           <LabeledControl label="Expression">
             <Input
-              variant="ghost" size="sm"
+              variant="ghost" size={cs}
               value={exprDraft ?? exprStr}
               onChange={(e) => setExprDraft(e.target.value)}
               onBlur={(e) => commitExpr(e.target.value)}
@@ -246,14 +249,14 @@ export function ModulationEditor({ layer, param, setProp }) {
       )}
       {isMidi && (
         <LabeledControl label={tr?.cc != null ? `MIDI · CC ${tr.cc}` : 'MIDI · no CC yet'}>
-          <Button tone="outline" size="sm" onClick={onLearn}>
+          <Button tone="outline" size={cs} onClick={onLearn}>
             {learning ? 'Move a knob…' : 'Learn'}
           </Button>
         </LabeledControl>
       )}
       {isGamepad && (
         <LabeledControl label={getSource(source)?.label ?? 'Gamepad'}>
-          <Button tone="outline" size="sm" onClick={onPadLearn}>
+          <Button tone="outline" size={cs} onClick={onPadLearn}>
             {padLearning ? 'Move a control…' : 'Learn'}
           </Button>
         </LabeledControl>
@@ -276,7 +279,7 @@ export function ModulationList({ layer, schema, setProp }) {
   if (bound.length === 0) return null
   return (
     <div className="flex flex-col gap-4">
-      <span className="kol-helper-10 text-meta">Modulation</span>
+      <span className="kol-eyebrow text-fg-80">Modulation</span>
       {bound.map((p) => {
         const src = getSource(layer[p.key].source)
         return (

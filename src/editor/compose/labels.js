@@ -1,7 +1,9 @@
 /* Single source of truth for human-readable layer labels.
  *
- * Convention: Title Case everywhere. Layer rows, inspector titles, add-menu
- * options, library item names, dropdown labels — all read from this file. */
+ * Convention (spec R7.2, 2026-10-09): sentence case for every label, button, menu row and
+ * tooltip; Title Case only for proper names (preset names, Right Grotesk). Row labels are
+ * uppercased at render by SettingsRow, so the strings stay sentence case. Layer rows, inspector
+ * titles, add-menu options, library item names, dropdown labels — all read from this file. */
 
 export const TYPE_LABELS = {
   background: 'Background',
@@ -11,6 +13,7 @@ export const TYPE_LABELS = {
   text:       'Text',
   group:      'Group',
   bool:       'Boolean',
+  path:       'Path',
   loop:       'Loop',
   kinetic:    'Kinetic type',
   misc:       'Misc',
@@ -56,6 +59,8 @@ export function labelForLayer(layer) {
  * not "Shape · Rectangle"); text rows show the actual content (truncated
  * by the row's CSS). */
 export function rowLabelForLayer(layer) {
+  /* a mask says so in its row (G8) — the pair reads as mask over its target */
+  if (layer.isMask) return `${rowLabelForLayer({ ...layer, isMask: false })} (mask)`
   if (layer.name) return layer.name
   if (layer.type === 'text') return layer.text || TYPE_LABELS.text
   if (layer.type === 'shape') {

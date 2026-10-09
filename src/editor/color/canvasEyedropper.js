@@ -16,6 +16,7 @@ import { ASPECTS } from '../shell/aspects'
 import { CANVAS_VIRTUAL_W } from '../shell/Canvas'
 import { buildLayersSvg } from '../compose/build'
 import { rgbToHex } from './cssVar'
+import { CURSORS } from '../compose/cursors'
 
 /* Resolve aspect string to virtual canvas dimensions. */
 function aspectToWH(aspect, customRatio) {
@@ -63,13 +64,16 @@ export async function pickFromCanvas({
     const stageEl = document.querySelector('[data-tool]')
     if (!stageEl) { resolve(null); return }
 
+    /* the pipette pointer while a pick is armed (spec R8.2); layers inherit it (kol-editor.css) */
     const prevCursor = stageEl.style.cursor
-    stageEl.style.cursor = 'crosshair'
+    stageEl.style.cursor = CURSORS.eyedrop
+    stageEl.setAttribute('data-eyedropping', '')
 
     const cleanup = () => {
       document.removeEventListener('mousedown', onClick, true)
       document.removeEventListener('keydown',   onKey,   true)
       stageEl.style.cursor = prevCursor
+      stageEl.removeAttribute('data-eyedropping')
     }
 
     const onClick = (e) => {

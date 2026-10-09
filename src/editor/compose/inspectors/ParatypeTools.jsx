@@ -2,6 +2,7 @@ import { Button, Dropdown, LabeledControl, XYPad, Tooltip } from '@kolkrabbi/kol
 import { useComposeState } from '../state'
 import { visibleParams } from '../../params/schema'
 import { loopById } from '../../../loops/registry'
+import { useControlSize } from '../../params/controlSize'
 
 /**
  * ParatypeTools — the paratype loop's extra control surface, mounted once in
@@ -26,11 +27,12 @@ export default function ParatypeTools({ layer, patch, tab }) {
 }
 
 function FlattenAction({ layer }) {
+  const cs = useControlSize()
   const { flattenParatype } = useComposeState()
   if (!flattenParatype) return null
   return (
     <Tooltip label="Flatten the glyph(s) to vector shape layers (one-way)"><Button aria-label="Flatten the glyph(s) to vector shape layers (one-way)"
-      tone="primary" size="sm" className="w-full"
+      tone="primary" size={cs} className="w-full"
       onClick={() => flattenParatype(layer.id)}
     >
       Flatten to vector
@@ -39,6 +41,7 @@ function FlattenAction({ layer }) {
 }
 
 function ExplorePad({ layer, patch }) {
+  const cs = useControlSize()
   const loop = loopById(layer.loopId)
   const axes = visibleParams(loop?.params ?? [], layer).filter((q) => q.type === 'range')
   if (axes.length < 2) return null
@@ -64,18 +67,18 @@ function ExplorePad({ layer, patch }) {
 
   return (
     <>
-      <span className="kol-helper-10 text-meta">Explore</span>
+      <span className="kol-eyebrow text-fg-80">Explore</span>
       <div className="grid grid-cols-2 gap-2">
         <LabeledControl label="X axis">
           <Dropdown
-            variant="subtle" size="sm" className="w-full"
+            variant="subtle" size={cs} className="w-full"
             options={options} value={xKey}
             onChange={(v) => patch({ _xyX: v })}
           />
         </LabeledControl>
         <LabeledControl label="Y axis">
           <Dropdown
-            variant="subtle" size="sm" className="w-full"
+            variant="subtle" size={cs} className="w-full"
             options={options} value={yKey}
             onChange={(v) => patch({ _xyY: v })}
           />

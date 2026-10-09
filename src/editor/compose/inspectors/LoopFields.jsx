@@ -69,7 +69,7 @@ function OnOff({ inline, cs, on, onChange }) {
     : <ViewToggle size={cs} options={ONOFF} viewMode={on ? 'on' : 'off'} onViewChange={(v) => onChange(v === 'on')} />
 }
 
-export function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate, tab, tabStrip, tree, picker = true, inline = false, onReset }) {
+export function LoopFields({ layer, setProp, patch, updateLayer, palette, renderAnimate, tab, tabStrip, tree, picker = true, inline = false, showSeed = !inline, onReset }) {
   const cs = useControlSize()
   const loop = loopById(layer.loopId)
   const schema = loop?.params ?? []
@@ -180,11 +180,13 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
           labels … too many folded things"): it stood above every tab, three of the six rows a
           phone sheet shows, while Style and Animation have nothing to pick. The editor's own
           inspector (`inline` off) keeps it where it was. */}
+      {/* the strip FIRST, the pickers under it (spec R3.2, the user's 19): the picker stack heads
+          Generate only, so above the strip it moved the strip on every tab change */}
+      {tabStrip}
+
       {picker && (inline
         ? (tab === 'generate' && <LabeledControlSection divided><LoopPicker layer={layer} tree={tree} inline /></LabeledControlSection>)
         : <LoopPicker layer={layer} tree={tree} />)}
-
-      {tabStrip}
 
       {(tab === 'generate' || tab === 'labs-effect') && (
         <>
@@ -274,7 +276,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
             {/* RESET, VISIBLE (the user, 2026-10-09: "we need something for reset") — it was only ⌥ on
                 Randomize all. The host's reset when it has one (labs: back to the preset, same as R),
                 else the schema's defaults. */}
-            <Tooltip label="Reset to defaults (R)"><Button tone="primary" size={cs} iconOnly="rotate-left" aria-label="Reset to defaults" onClick={onReset ?? (() => resetScope(allScopeParams(schema, layer)))} className="shrink-0" /></Tooltip>
+            <Tooltip label="Reset to defaults" shortcut="R"><Button tone="primary" size={cs} iconOnly="rotate-left" aria-label="Reset to defaults" onClick={onReset ?? (() => resetScope(allScopeParams(schema, layer)))} className="shrink-0" /></Tooltip>
           </div>
           <RollScopesDialog open={scopesOpen} onClose={() => setScopesOpen(false)} schema={schema} layer={layer} size={cs} />
           {scopes.length > 0 && (
@@ -307,7 +309,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
           )}
           {/* labs keeps seed off the rail (info overlay only) — the labs
               skin (`inline`) hides it; the editor keeps its field. */}
-          {!inline && <SeedField seed={seed} />}
+          {showSeed && <SeedField seed={seed} inline={inline} />}
           {/* Pattern-rules tiles: the rule-stack editor (labs Rules section) —
               seeded rolls share the SeedField above. */}
           {layer.loopId === 'pattern-rules' && (layer.render ?? 'tiles') === 'tiles' && (
@@ -341,9 +343,9 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
 
       {tab === 'anim' && (
         <>
+          {/* "Motion" is a section, not a third heading rung (spec R4.4) */}
           {tables && (
-            <>
-              <span className="kol-helper-10 text-meta">Motion</span>
+            <LabeledControlSection label="Motion" divided>
               <Row inline={inline} label="Frame">
                 <Dropdown
                   variant="subtle" size={cs} className="w-full"
@@ -360,7 +362,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
                   onChange={applyMotionPreset('_formPreset', tables.form)}
                 />
               </Row>
-            </>
+            </LabeledControlSection>
           )}
           <ModulationList layer={layer} schema={schema} setProp={setParamProp} />
           <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="anim" inline={inline} />

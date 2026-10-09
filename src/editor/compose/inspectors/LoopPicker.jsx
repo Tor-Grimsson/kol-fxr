@@ -24,7 +24,7 @@ import { PickerRow, PickerDropdown } from './TreePicker'
  * layers) shows its identity read-only instead — those groups are not
  * pickable generative types (optic → EFFECTS > Pattern, paratype → misc).
  */
-export function LoopPicker({ layer, tree = PICKER_TREE, inline = false }) {
+export function LoopPicker({ layer, tree = PICKER_TREE, inline = true }) {
   const { updateLayer } = useComposeState()
   const group = layer.loopGroup ?? 'shape'
   const parent = tree.find((t) => t.groups.includes(group)) ?? null

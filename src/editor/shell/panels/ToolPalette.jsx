@@ -5,6 +5,7 @@ import { useComposeState, COVER_TYPES, CANVAS_W, CANVAS_H } from '../../compose/
 import { findLayerDeep } from '../../compose/helpers'
 import { isBooleanable } from '../../compose/boolean-ops'
 import { pack } from '../../packs'
+import { shortcutById, comboLabel } from '../../state/keymap'
 
 /**
  * ToolPalette — the editor's tool bar on kol-component's `ToolPalette` (lifted from this file,
@@ -13,12 +14,15 @@ import { pack } from '../../packs'
  * compose actions, and WHEN each item is disabled — KOL renders the row, the folds, the tooltips
  * (with the key as a chip) and the pinned-square rung (`md`: 32px square, 20px glyph).
  */
-const tool = (id) => ({ kind: 'tool', id, label: TOOL_META[id].label, icon: TOOL_META[id].icon, shortcut: TOOL_META[id].shortcut || undefined })
-const variant = (id) => ({ id, label: TOOL_META[id].label, icon: TOOL_META[id].icon, shortcut: TOOL_META[id].shortcut || undefined })
-const SHAPES = ['rect', 'ellipse', 'triangle', 'line', 'polygon', 'star'].map(variant)
+/* Shortcut chips come from keymap.js only (spec R9.4) — never a hand-typed '⇧H' beside it. */
+const key = (keymapId) => { const s = shortcutById(keymapId); return s ? comboLabel(s.combo) : undefined }
+const tool = (id) => ({ kind: 'tool', id, label: TOOL_META[id].label, icon: TOOL_META[id].icon, shortcut: key(`tool-${id}`) })
+const variant = (id) => ({ id, label: TOOL_META[id].label, icon: TOOL_META[id].icon, shortcut: key(`tool-${id}`) })
+/* Line rides the pen's fold (R9.3): both draw a stroke between points */
+const SHAPES = ['rect', 'ellipse', 'triangle', 'polygon', 'star'].map(variant)
 const BOOLEANS = [
   { id: 'unite', icon: 'boolean-unite', label: 'Unite' },
-  { id: 'subtract', icon: 'boolean-subtract', label: 'Subtract front' },
+  { id: 'subtract', icon: 'boolean-subtract', label: 'Subtract' },
   { id: 'intersect', icon: 'boolean-intersect', label: 'Intersect' },
   { id: 'exclude', icon: 'boolean-exclude', label: 'Exclude' },
 ]
@@ -62,35 +66,49 @@ export default function ToolPalette() {
     reader.readAsDataURL(file)
   }
 
+  /* TEN CELLS, NOT FIFTEEN (spec R9.3, the user's 9): related tools fold, the fold's trigger
+   * shows the last pick, one divider between groups, no glyph meaning two things (R9.2). */
   const items = [
-    tool('select'),
+    { kind: 'split', id: 'select-fold', label: 'Select', variants: [
+      variant('select'),
+      /* Node select = A (edit the selection's nodes); a one-shot row until it is a tool. The glyph is
+         a stand-in — a `node-select` cut is owed (plan 17). */
+      { id: 'node', label: 'Node select', icon: 'arrow-upleft', shortcut: key('node-edit'), action: true },
+    ] },
+    { kind: 'split', id: 'pen-fold', label: 'Pen', variants: [variant('pen'), variant('line')] },
+    { kind: 'split', id: 'shape-fold', label: 'Shape', variants: SHAPES },
     { kind: 'split', id: 'text-fold', label: 'Text', variants: [
       variant('text'),
-      /* kinetic type is the motion pack's (editor/packs.js) — a one-shot row in the tool fold */
-      ...(pack('motion') ? [{ id: 'kinetic', label: 'Kinetic type', icon: 'type', action: true }] : []),
+      /* kinetic type is the motion pack's (editor/packs.js) — a one-shot row in the tool fold;
+         `type-02`, because `type` is the Text tool (R9.2) */
+      ...(pack('motion') ? [{ id: 'kinetic', label: 'Kinetic type', icon: 'type-02', action: true }] : []),
     ] },
-    tool('pen'),
-    { kind: 'split', id: 'shape-fold', label: 'Shape', variants: SHAPES },
     tool('pattern'),
-    tool('zoom'),
-    tool('orbit'),
+    { kind: 'split', id: 'zoom-fold', label: 'Zoom', variants: [variant('zoom'), variant('hand'), variant('orbit')] },
     DIVIDER,
     /* ONE lock rule (audit B2/B8, 2026-10-09): a locked layer refuses every transform — flip,
-       rotate, nudge, delete, duplicate — not half of them. `canXform` carries it. */
-    { kind: 'action', id: 'flip-horizontal', icon: 'flip-horizontal', label: 'Flip horizontal', shortcut: '⇧H', disabled: !canXform },
-    { kind: 'action', id: 'flip-vertical', icon: 'flip-vertical', label: 'Flip vertical', shortcut: '⇧V', disabled: !canXform },
-    { kind: 'action', id: 'rotate-left', icon: 'rotate-left', label: 'Rotate 90° left', disabled: !canXform },
-    { kind: 'action', id: 'rotate-right', icon: 'rotate-right', label: 'Rotate 90° right', disabled: !canXform },
+       rotate, nudge, delete, duplicate — not half of them. `canXform` carries it. The fold's
+       trigger re-runs the last-picked turn. */
+    { kind: 'split', id: 'rotate-fold', label: 'Rotate', action: true, disabled: !canXform, variants: [
+      { id: 'rotate-left', icon: 'rotate-left', label: 'Rotate 90° left' },
+      { id: 'rotate-right', icon: 'rotate-right', label: 'Rotate 90° right' },
+      { id: 'flip-horizontal', icon: 'flip-horizontal', label: 'Flip horizontal', shortcut: key('flip-h') },
+      { id: 'flip-vertical', icon: 'flip-vertical', label: 'Flip vertical', shortcut: key('flip-v') },
+    ] },
     DIVIDER,
     { kind: 'split', id: 'boolean-fold', label: 'Boolean', action: true, variants: BOOLEANS, disabled: !canBool },
     DIVIDER,
     { kind: 'action', id: 'image', icon: 'image', label: 'Insert image' },
     { kind: 'action', id: 'crop', icon: 'crop', label: 'Crop image', disabled: selectedLayer?.type !== 'photo' || selectedLayer?.locked },
-    { kind: 'action', id: 'duplicate', icon: 'copy', label: 'Duplicate', shortcut: '⌘D', disabled: !selectedLayer || selectedLayer.locked },
+    { kind: 'action', id: 'duplicate', icon: 'copy', label: 'Duplicate', shortcut: key('duplicate'), disabled: !selectedLayer || selectedLayer.locked },
   ]
 
-  const onAction = (id) => {
+  /* a tool fold's one-shot rows land here too when the trigger re-arms them */
+  const onSelect = (id) => (id === 'node' || id === 'kinetic' ? onAction(id) : setTool(id))
+
+  function onAction(id) {
     if (id === 'kinetic') addLayer('kinetic')
+    else if (id === 'node') window.dispatchEvent(new CustomEvent('kol:node-edit'))
     else if (id === 'flip-horizontal') flipSelected('h')
     else if (id === 'flip-vertical') flipSelected('v')
     else if (id === 'rotate-left') rotateBy(-90)
@@ -103,7 +121,7 @@ export default function ToolPalette() {
 
   return (
     <>
-      <DsToolPalette items={items} activeId={active} onSelect={setTool} onAction={onAction}
+      <DsToolPalette items={items} activeId={active} onSelect={onSelect} onAction={onAction}
         size="md" className="px-3 h-12" />
       <input ref={fileRef} type="file" accept="image/*" onChange={onPickImage} className="hidden" />
     </>

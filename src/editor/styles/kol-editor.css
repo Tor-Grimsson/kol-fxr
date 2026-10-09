@@ -56,14 +56,41 @@
   outline: none;
 }
 
+/* ONE RAIL WIDTH (spec R1.3, the user's 13): both rails take the shell rail's open width,
+   `--kol-sidenav-w` (264; 320 from 1536), so three rails on one screen read as one system. Each
+   rail resizes and folds on its own token (R1.4, EditorShell's RailGrab → the DS useDragResize);
+   the gesture reads these siblings, and a missing one leaves it inert. */
+:root {
+  --kol-editor-left-w: var(--kol-sidenav-w, 264px);
+  --kol-editor-right-w: var(--kol-sidenav-w, 264px);
+  --kol-editor-left-w-collapsed: 48px;
+  --kol-editor-right-w-collapsed: 48px;
+  --kol-editor-left-snap: 192px;
+  --kol-editor-right-snap: 192px;
+  --kol-editor-left-step: 16px;
+  --kol-editor-right-step: 16px;
+  --kol-editor-left-snap-default: 16px;
+  --kol-editor-right-snap-default: 16px;
+}
 .kol-editor-grid {
+  --_left: var(--kol-editor-left-w);
+  --_right: var(--kol-editor-right-w);
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr) 320px;
+  grid-template-columns: var(--_left) minmax(0, 1fr) var(--_right);
   grid-template-rows: minmax(0, 1fr);
   grid-template-areas: "left canvas right";
   flex: 1 1 auto;
   min-height: 0;
 }
+:root[data-editor-left="collapsed"] .kol-editor-grid { --_left: var(--kol-editor-left-w-collapsed); }
+:root[data-editor-right="collapsed"] .kol-editor-grid { --_right: var(--kol-editor-right-w-collapsed); }
+/* a folded rail shows its edge only — the grab brings it back */
+:root[data-editor-left="collapsed"] .kol-editor-left > :not(.kol-rail-grab),
+:root[data-editor-right="collapsed"] .kol-editor-right > :not(.kol-rail-grab) { visibility: hidden; }
+/* the right rail's handle faces the canvas — the shell's strip, mirrored (as labs does) */
+.kol-editor-right > .kol-rail-grab { right: auto; left: -3.5px; }
+.kol-editor-left,
+.kol-editor-right { position: relative; min-width: 0; }
 .kol-editor-left {
   grid-area: left;
   border-right: 1px solid var(--kol-oq-08);
@@ -399,3 +426,20 @@
     var(--kol-grid-step) var(--kol-grid-step),
     var(--kol-grid-step) var(--kol-grid-step);
 }
+
+/* PREVIEW MODE (W — CanvasArea): the DS frame draws its edge and ratio label unconditionally, so
+   preview reaches them here until CanvasFrame grows `showEdge` / `showLabel` (plan 17). The
+   selectors are the frame's own children: the bordered div and the label span. */
+[data-view-mode="preview"] [data-canvas-frame] > div.pointer-events-none:first-child,
+[data-view-mode="preview"] [data-canvas-frame] > span { visibility: hidden; }
+
+/* An armed eyedropper pick (canvasEyedropper) wears the pipette over the layers too. */
+[data-eyedropping] [data-layer-id] { cursor: inherit !important; }
+/* The selection's rotate handle (the DS SelectionOverlay's `data-handle="ROT"`) wears the drawn
+   rotate cursor (spec R8.2) — CanvasArea sets the variable from compose/cursors.js. */
+[data-handle="ROT"] { cursor: var(--kol-cursor-rotate, grab) !important; }
+
+/* THE ZOOM READOUT MOVED TO THE STATUS BAR (spec R1.2): while one is mounted, the DS viewport's
+   own zoom chip (the button in its bottom-right chip row; the fps chip beside it stays) hides.
+   Reaches the DS markup until `Canvas showZoomChip` lands (plan 17 #5). */
+.kol-editor-canvas-column:has(.kol-editor-statusbar) main.kol-editor-canvas [class~="bottom-3"][class~="right-3"] > button { display: none; }

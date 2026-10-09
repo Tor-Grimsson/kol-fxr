@@ -5,6 +5,7 @@ import LayersAssetsPanel from './shell/panels/LayersAssetsPanel'
 import SelectionPalettePanel from './shell/panels/SelectionPalettePanel'
 import ToolPalette from './shell/panels/ToolPalette'
 import EditorFooter from './shell/panels/EditorFooter'
+import StatusBar from './shell/StatusBar'
 import { pack } from './packs'
 
 /**
@@ -24,6 +25,7 @@ import { pack } from './packs'
  * registered. Built at first render, not at import — packs register as their modules load. */
 const composeRegistry = () => ({
   canvas: CanvasArea,
+  resizableRails: true,
   panels: [
     { slot: 'canvas.header', order: 0,  Component: ToolPalette },
     { slot: 'left.body',     order: -1, Component: ColorModal },
@@ -31,6 +33,7 @@ const composeRegistry = () => ({
     { slot: 'left.footer',   order: 0,  Component: EditorFooter },
     { slot: 'right.body',    order: 0,  Component: SelectionPalettePanel },
     ...(pack('motion') ? [{ slot: 'canvas.footer', order: 0, Component: pack('motion').TimelineDock }] : []),
+    { slot: 'canvas.footer', order: 1, Component: StatusBar },
   ],
 })
 let registry = null

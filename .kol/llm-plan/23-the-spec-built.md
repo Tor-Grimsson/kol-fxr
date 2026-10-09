@@ -1,6 +1,7 @@
 # Plan — The spec, ruled and built (draft)
 
-**Status:** DRAFT 2026-10-10 (cloud) — waits on the user's rulings over `.kol/llm-context/audit/2026-10-10-editor-spec.md`. Build order is by spec rule, not by finding, so one change closes a class.
+**Status:** BUILT 2026-10-09 (local, two `/kol-goal` runs) — the user took every default the audit proposed instead of ruling (all seven spec rulings as written; `A` on a shape converts silently; effect slots replace the 2026-08-12 Add-effect ruling; Pattern is a layer type, its generators under Generative). The second run closed what the first left: Hand tool, rotate-handle + eyedropper cursors, Offset path · Smooth · Blend (with Distress · Zigzag), Distribute, ⌘A, and the grade (`audit/2026-10-10-H-spec-grade.md`) + gap matrix (`audit/2026-10-10-I-gaps.md`). Walked on `vite preview` at 1600 and 1280, 0 console errors. One spec default NOT taken: the Inspector stays empty with nothing selected — the 2026-08-12 ruling outranks R3.5. DS gaps → plan 17 #4–#12.
+**Was:** DRAFT 2026-10-10 (cloud) — waits on the user's rulings over `.kol/llm-context/audit/2026-10-10-editor-spec.md`. Build order is by spec rule, not by finding, so one change closes a class.
 **Origin:** plan 22 § 5.
 
 ## 0. Prerequisites

@@ -10,7 +10,7 @@ import { createContext, useContext, useState } from 'react'
  * user immediately gets normal selection gestures on the freshly-created
  * layer.
  */
-export const TOOLS = ['select', 'text', 'pen', 'rect', 'ellipse', 'triangle', 'line', 'polygon', 'star', 'pattern', 'zoom', 'orbit']
+export const TOOLS = ['select', 'text', 'pen', 'rect', 'ellipse', 'triangle', 'line', 'polygon', 'star', 'pattern', 'zoom', 'hand', 'orbit']
 
 export const TOOL_META = {
   select:   { id: 'select',   label: 'Select',     icon: 'pointer',   shortcut: 'V' },
@@ -26,10 +26,15 @@ export const TOOL_META = {
   /* Zoom is a viewport tool, not a create tool — click zooms in at the
    * pointer, Alt+click zooms out. Never commits a layer. */
   zoom:     { id: 'zoom',     label: 'Zoom',       icon: 'search',          shortcut: 'Z' },
+  /* Hand pans the viewport on drag — Space-drag as a tool (Affinity's H; `H` is hide here, so it
+   * has no key). `direction-cross` stands in until a `hand` cut lands (plan 17). */
+  hand:     { id: 'hand',     label: 'Hand',       icon: 'direction-cross', shortcut: '' },
   /* Orbit is a viewport tool for 3D layers — drag over a 3D-capable layer
    * (math 3D, Soft Forms 3D, GL scenes) rotates its camera, wheel zooms.
    * Layer move/marquee is off in this mode, so orbit never fights a drag. */
-  orbit:    { id: 'orbit',    label: 'Orbit',      icon: 'camera',        shortcut: 'C' },
+  /* `shape-torus`, not `camera` (spec R9.2, the user's 10): `camera` is the webcam on this screen,
+   * and no glyph means two things. An `orbit` cut is owed (plan 17). */
+  orbit:    { id: 'orbit',    label: 'Orbit',      icon: 'shape-torus',   shortcut: 'C' },
 }
 
 const ToolContext = createContext(null)

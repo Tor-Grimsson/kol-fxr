@@ -105,7 +105,7 @@ const getParsed = (src, frequency) => {
 
 /* the source's getModeOffset, verbatim recipes; uPhase is the one addition
  * (a whole-TAU phase advance per loop, so wave modes animate seamlessly) */
-const modeOffset = (mode, index, t, strength, freq, seed, uPhase) => {
+export const modeOffset = (mode, index, t, strength, freq, seed, uPhase) => {
   const base = random(seed + index * 12.9898)
   const alt = random(seed * 2.133 + index * 78.233)
   const a = base - 0.5
@@ -163,7 +163,7 @@ const toPath = (points, closed) => {
   return path
 }
 
-const MODE_OPTIONS = [
+export const MODE_OPTIONS = [
   { value: 'print-press', label: 'Print press' },
   { value: 'noise', label: 'Noise' },
   { value: 'jitter', label: 'Jitter' },

@@ -1,5 +1,5 @@
 import { TabsRow } from '@kolkrabbi/kol-component'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { StrokeBody }   from './StrokePanel'
 import { ColourBody }   from './ColourPanel'
 import { SwatchesBody } from './SwatchesPanel'
@@ -18,6 +18,12 @@ const COLOR_TABS = ['Stroke', 'Colour', 'Swatches'].map((t) => ({ id: t, label: 
 export default function ColorModal({ defaultTab = 'Colour', onClose, onMinimise }) {
   const [tab, setTab] = useState(defaultTab)
   const target = useColorTarget()
+  /* the inspector's Fill / Stroke swatches open this pane on a tab (spec R6.6) */
+  useEffect(() => {
+    const on = (e) => setTab(e.detail?.tab ?? 'Colour')
+    window.addEventListener('kol:open-color-pane', on)
+    return () => window.removeEventListener('kol:open-color-pane', on)
+  }, [])
 
   const onPickSwatch = (hex) => {
     target.onChange(hex.toUpperCase())

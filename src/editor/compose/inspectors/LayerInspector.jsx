@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import Pane from '../../components/Pane'
 import { proxied, isVideoType } from '../../library/mediaLibrary'
-import { Button, ColorSwatch, Dropdown, InspectorSection, MenuDropdownItem, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
-import { LabeledControl } from '@kolkrabbi/kol-component'
+import { Button, ColorSwatch, Dropdown, MenuDropdownItem, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
+import { LabeledControl, SettingsRow } from '@kolkrabbi/kol-component'
+import { useControlSize, RAIL_LABEL_W } from '../../params/controlSize'
 import { PopoverPanel, usePopover } from '@kolkrabbi/kol-component'
-import { ViewToggle } from '@kolkrabbi/kol-component'
 import AlignmentPanel from '../AlignmentPanel'
 import { SegmentedToggle } from '@kolkrabbi/kol-component'
 import StrokePanel from '../../color/StrokePanel'
@@ -31,6 +32,7 @@ import MediaPickerDialog from '../../library/MediaPickerDialog'
  * object's major interaction.
  */
 export default function LayerInspector({ layer }) {
+  const cs = useControlSize()
   const { ungroupLayer, flipLayer, palette } = useComposeState()
   const gen = pack('generators')
   /* Color writes route through useColorTarget so the inspector, the picker,
@@ -39,10 +41,15 @@ export default function LayerInspector({ layer }) {
 
   /* `coalesce` collapses slider drags + typed-input flurries into one undo
    * entry per quiet period. */
-  const edit = useLayerEdit(layer.id, { history: 'coalesce' })
+  /* ONE LOCK RULE (the walk: a locked layer still took Inspector writes): a locked layer's fields
+   * are read-only — the editor points at no layer, so every write is a no-op. */
+  const edit = useLayerEdit(layer.locked ? null : layer.id, { history: 'coalesce' })
   const setProp = edit.setProp
 
   const positioned = !COVER_TYPES.includes(layer.type)
+  /* the transform origin the typed W / H / rotation work about (G4) — panel state, as Affinity's */
+  const [anchor, setAnchorState] = useState(anchorStore.value)
+  const setAnchor = (a) => { anchorStore.value = a; setAnchorState(a) }
 
   /* PANES (inspector rebuild 2026-09-27, Affinity as the guide — user: "too many section
    * headers … why are we not sectioning off the panes?"): Transform · Appearance · Typography ·
@@ -52,18 +59,29 @@ export default function LayerInspector({ layer }) {
   return (
     <div className="flex flex-col">
       {positioned && (
-        <InspectorSection pane label="Transform">
+        <Pane label="Transform">
           <AlignmentPanel />
-          <PositionFields layer={layer} setProp={setProp} />
-          <LayoutFields layer={layer} setProp={setProp} patch={edit.patch} />
+          <div className="flex items-center gap-2">
+            <AnchorPicker value={anchor} onChange={setAnchor} />
+            <div className="flex-1 min-w-0"><PositionFields layer={layer} setProp={setProp} /></div>
+          </div>
+          <LayoutFields layer={layer} setProp={setProp} patch={edit.patch} anchor={anchor} />
+          {/* SHEAR (G3 — Affinity's S field): degrees along each axis, about the layer's centre */}
+          <div className="grid grid-cols-2 gap-2">
+            <AxisField label="SX" suffix="°" tooltip="Skew horizontal" value={Math.round(layer.skewX ?? 0)}
+              onCommit={(raw) => setProp('skewX', clampSkew(raw))} />
+            <AxisField label="SY" suffix="°" tooltip="Skew vertical" value={Math.round(layer.skewY ?? 0)}
+              onCommit={(raw) => setProp('skewY', clampSkew(raw))} />
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="flex items-center gap-1 min-w-0">
               <AxisField
-                label={<Icon name="angle" size={glyphSize('sm')} />} suffix="°" tooltip="Rotation"
+                label={<Icon name="angle" size={glyphSize(cs)} />} suffix="°" tooltip="Rotation"
                 value={typeof layer.rotation === 'number' ? Math.round(layer.rotation) : 0}
                 onCommit={(raw) => {
                   const n = Number(raw)
-                  setProp('rotation', Number.isFinite(n) ? ((Math.round(n) % 360) + 360) % 360 : 0)
+                  const next = Number.isFinite(n) ? ((Math.round(n) % 360) + 360) % 360 : 0
+                  edit.patch({ rotation: next, ...rotateAboutAnchor(layer, next, anchor) })
                 }}
               />
               <BindDot
@@ -78,13 +96,13 @@ export default function LayerInspector({ layer }) {
               * padding are 163px in a 140px track — Crop sat half outside the rail (found in
               * apps/panels, 2026-10-03). Three cells already filled the track, so they do not move. */}
             <SegmentedToggle
-              variant="filled" size="sm" value={null}
+              tone="sunken" size={cs} value={null}
               ariaLabel="Transform"
               className="[&_.kol-seg-cell]:min-w-0 [&_.kol-seg-cell]:px-1"
               options={[
-                { value: 'rot', ariaLabel: 'Rotate 90° left', label: <Icon name="rotate-left" size={glyphSize('sm', true)} /> },
-                { value: 'fh', ariaLabel: 'Flip horizontal', label: <span style={{ color: layer.flipX ? 'var(--kol-accent-primary)' : undefined, display: 'inline-flex' }}><Icon name="flip-horizontal" size={glyphSize('sm', true)} /></span> },
-                { value: 'fv', ariaLabel: 'Flip vertical', label: <span style={{ color: layer.flipY ? 'var(--kol-accent-primary)' : undefined, display: 'inline-flex' }}><Icon name="flip-vertical" size={glyphSize('sm', true)} /></span> },
+                { value: 'rot', ariaLabel: 'Rotate 90° left', label: <Icon name="rotate-left" size={glyphSize(cs, true)} /> },
+                { value: 'fh', ariaLabel: 'Flip horizontal', label: <span style={{ color: layer.flipX ? 'var(--kol-accent-primary)' : undefined, display: 'inline-flex' }}><Icon name="flip-horizontal" size={glyphSize(cs, true)} /></span> },
+                { value: 'fv', ariaLabel: 'Flip vertical', label: <span style={{ color: layer.flipY ? 'var(--kol-accent-primary)' : undefined, display: 'inline-flex' }}><Icon name="flip-vertical" size={glyphSize(cs, true)} /></span> },
               ]}
               onChange={(op) => {
                 if (op === 'rot') setProp('rotation', (((Math.round(layer.rotation ?? 0) - 90) % 360) + 360) % 360)
@@ -98,37 +116,38 @@ export default function LayerInspector({ layer }) {
             /* Real behavior, not chrome: fixed keeps the box; auto modes measure the rendered text
              * (TextLayer effect) and write it. Selected = the dark tile. */
             <SegmentedToggle
-              variant="filled" size="sm"
+              tone="sunken" size={cs}
               ariaLabel="Resizing"
               value={layer.resizing ?? 'fixed'}
               onChange={(v) => setProp('resizing', v)}
               options={[
-                { value: 'fixed',  ariaLabel: 'Fixed size',  label: <Icon name="resize-fixed" size={glyphSize('sm', true)} /> },
-                { value: 'auto-w', ariaLabel: 'Auto width',  label: <Icon name="resize-auto-w" size={glyphSize('sm', true)} /> },
-                { value: 'auto-h', ariaLabel: 'Auto height', label: <Icon name="resize-auto-h" size={glyphSize('sm', true)} /> },
+                { value: 'fixed',  ariaLabel: 'Fixed size',  label: <Icon name="resize-fixed" size={glyphSize(cs, true)} /> },
+                { value: 'auto-w', ariaLabel: 'Auto width',  label: <Icon name="resize-auto-w" size={glyphSize(cs, true)} /> },
+                { value: 'auto-h', ariaLabel: 'Auto height', label: <Icon name="resize-auto-h" size={glyphSize(cs, true)} /> },
               ]}
             />
           )}
-        </InspectorSection>
+        </Pane>
       )}
 
-      <AppearanceSection layer={layer} setProp={setProp} first={!positioned} />
+      <AppearanceSection layer={layer} setProp={setProp} edit={edit} first={!positioned} />
 
       {(layer.type === 'loop' || layer.type === 'misc') && gen && (
-        <InspectorSection pane label="Preset">
+        <Pane label="Preset">
           {/* Loop pickers + backdrop — bg toggle hidden for loops whose bg
             * feeds their color math. The generators pack's (editor/packs.js). */}
           <gen.LoopPicker layer={layer} tree={layer.type === 'misc' ? gen.MISC_TREE : undefined} />
           {gen.loopBgToggleable(gen.loopById(layer.loopId)) && (
-            <LabeledControl label="Background">
-              <ViewToggle
+            <SettingsRow label="Background" align="fill" labelWidth={RAIL_LABEL_W}>
+              <SegmentedToggle
+                tone="sunken" size={cs} className="w-full"
                 options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
-                viewMode={layer.bgOn === false ? 'off' : 'on'}
-                onViewChange={(v) => setProp('bgOn', v === 'on')}
+                value={layer.bgOn === false ? 'off' : 'on'}
+                onChange={(v) => setProp('bgOn', v === 'on')}
               />
-            </LabeledControl>
+            </SettingsRow>
           )}
-        </InspectorSection>
+        </Pane>
       )}
 
       {/* Text's whole surface = the Typography pane, which TextSurface renders itself so its
@@ -137,11 +156,11 @@ export default function LayerInspector({ layer }) {
       {layer.type === 'text' && <TextSurface key={layer.id} layer={layer} />}
 
       {layer.type === 'photo' && (
-        <InspectorSection pane label="Image">
+        <Pane label="Image">
           {/* Content source — what the layer IS; fit + filters live in
             * Parameters. */}
           <ImageSource layer={layer} patch={edit.patch} />
-        </InspectorSection>
+        </Pane>
       )}
 
       {/* No Fill / Stroke sections (editor review #12, 2026-09-27 — user: "colour is changed in the
@@ -149,23 +168,24 @@ export default function LayerInspector({ layer }) {
         * The removed sections are in _tmp/2026-09-27-editor-copies/. */}
 
       {layer.type === 'path' && (
-        <InspectorSection pane label="Path">
+        <Pane label="Path">
           {/* Open ↔ closed — renderer + export honor `closed` via pathD;
             * in node-edit, clicking the first anchor also closes. */}
-          <ViewToggle
+          <SegmentedToggle
+            tone="sunken" size={cs} className="w-full"
             options={[{ value: 'open', label: 'Open' }, { value: 'closed', label: 'Closed' }]}
-            viewMode={layer.closed ? 'closed' : 'open'}
-            onViewChange={(v) => setProp('closed', v === 'closed')}
+            value={layer.closed ? 'closed' : 'open'}
+            onChange={(v) => setProp('closed', v === 'closed')}
           />
-        </InspectorSection>
+        </Pane>
       )}
 
       <ParamsLink layer={layer} />
 
       {layer.type === 'group' && (
-        <InspectorSection pane label="Group">
+        <Pane label="Group">
           <GroupFields layer={layer} ungroupLayer={ungroupLayer} />
-        </InspectorSection>
+        </Pane>
       )}
     </div>
   )
@@ -173,9 +193,10 @@ export default function LayerInspector({ layer }) {
 
 /* Small right-aligned header-row icon button (Section `actions`). */
 function SectionIconBtn({ label, icon, onClick, active = false, refProps = {} }) {
+  const cs = useControlSize()
   return (
     <Tooltip asChild label={label}>
-      <Button tone="ghost" quiet size="sm" iconOnly={icon} aria-label={label} pressed={active} onClick={onClick} {...refProps} />
+      <Button tone="ghost" quiet size={cs} iconOnly={icon} aria-label={label} pressed={active} onClick={onClick} {...refProps} />
     </Tooltip>
   )
 }
@@ -184,7 +205,8 @@ function SectionIconBtn({ label, icon, onClick, active = false, refProps = {} })
  * the header, Opacity and Corner-radius as INPUTS in the body (no sliders
  * for one-shot values — user ruling 2026-08-12). Radius only where the
  * renderer honors it (rect shapes). */
-function AppearanceSection({ layer, setProp, first }) {
+function AppearanceSection({ layer, setProp, edit, first }) {
+  const cs = useControlSize()
   const { toggleLayer, palette } = useComposeState()
   const [blendOpen, setBlendOpen] = useState(false)
   const blendPop = usePopover({ open: blendOpen, onOpenChange: setBlendOpen, placement: 'bottom-end', offset: 4 })
@@ -198,7 +220,7 @@ function AppearanceSection({ layer, setProp, first }) {
     return Number.isFinite(n) ? Math.min(1, Math.max(0, n / 100)) : fallback
   }
   return (
-    <InspectorSection pane
+    <Pane
       label="Appearance"
       actions={
         <>
@@ -223,40 +245,84 @@ function AppearanceSection({ layer, setProp, first }) {
         {/* no Opacity / Corner radius labels — the glyph + tooltip name the field (pane rule) */}
         <Tooltip label="Opacity" triggerClassName="flex min-w-0">
           <NumberField
-            variant="property" size="sm" unit="%" className="w-full min-w-0"
-            affordance={<Icon name="opacity" size={glyphSize('sm')} />}
+            variant="property" size={cs} unit="%" className="w-full min-w-0"
+            affordance={<Icon name="opacity" size={glyphSize(cs)} />}
             value={Math.round((layer.opacity ?? 1) * 100)}
             onCommit={(raw) => setProp('opacity', clamp01(raw, layer.opacity ?? 1))}
           />
         </Tooltip>
         {hasRadius && (
-          <Tooltip label="Corner radius" triggerClassName="flex min-w-0">
-            <NumberField
-              variant="property" size="sm" className="w-full min-w-0"
-              affordance={<Icon name="corner-radius" size={glyphSize('sm')} />}
-              value={Math.round(layer.radius ?? 0)}
-              onCommit={(raw) => {
-                const n = Number(raw)
-                setProp('radius', Number.isFinite(n) && n > 0 ? Math.round(n) : 0)
-              }}
-            />
-          </Tooltip>
+          <div className="flex items-center gap-1 min-w-0">
+            {Array.isArray(layer.radii) ? <span className="flex-1" /> : (
+              <Tooltip label="Corner radius" triggerClassName="flex flex-1 min-w-0">
+                <NumberField
+                  variant="property" size={cs} className="w-full min-w-0"
+                  affordance={<Icon name="corner-radius" size={glyphSize(cs)} />}
+                  value={Math.round(layer.radius ?? 0)}
+                  onCommit={(raw) => {
+                    const n = Number(raw)
+                    setProp('radius', Number.isFinite(n) && n > 0 ? Math.round(n) : 0)
+                  }}
+                />
+              </Tooltip>
+            )}
+            {/* PER-CORNER (G2): unlink and each corner takes its own radius; relink and they
+                collapse back to the first. Rects only — text clips its frame with one radius. */}
+            {layer.type === 'shape' && (
+              <Tooltip label={Array.isArray(layer.radii) ? 'Link corners' : 'Edit corners separately'}>
+                <Button tone="ghost" quiet size={cs} iconOnly="maximize" /* four corners; a `link` cut is owed (plan 17) — lock already means two things */
+                  aria-label={Array.isArray(layer.radii) ? 'Link corners' : 'Edit corners separately'}
+                  pressed={Array.isArray(layer.radii)}
+                  onClick={() => (Array.isArray(layer.radii)
+                    ? edit.patch({ radius: layer.radii[0] ?? 0, radii: null })
+                    : edit.patch({ radii: [0, 1, 2, 3].map(() => Math.round(layer.radius ?? 0)) }))} />
+              </Tooltip>
+            )}
+          </div>
         )}
       </div>
-      {/* WHERE THE COLOUR IS (the user's 20, 2026-10-09: "shapes have no color parameters"). Paint
-          left the inspector by the 2026-09-27 ruling — it is the left rail's Colour and Stroke
-          panels — and nothing here said so. The layer's own fill and stroke, read-only, and the
-          door to the panel that edits them. */}
-      {'color' in layer && (
-        <div className="flex items-center gap-2 pt-1">
-          <ColorSwatch hex={resolveColor(layer.color, palette) ?? '#FFFFFF'} size={14} hoverable={false} />
-          <span className="kol-helper-10 text-meta">Fill</span>
-          <ColorSwatch hex={resolveColor(layer.stroke, palette) ?? '#FFFFFF'} size={14} showTransparent={!layer.stroke} hoverable={false} />
-          <span className="kol-helper-10 text-meta">Stroke</span>
-          <Button tone="ghost" quiet size="xs" className="ms-auto" onClick={() => window.dispatchEvent(new CustomEvent('kol:open-color-modal'))}>Colour…</Button>
+      {hasRadius && Array.isArray(layer.radii) && (
+        <div className="grid grid-cols-2 gap-2">
+          {['Top left', 'Top right', 'Bottom right', 'Bottom left'].map((name, i) => (
+            <Tooltip key={name} label={`${name} radius`} triggerClassName="flex min-w-0">
+              <NumberField
+                variant="property" size={cs} className="w-full min-w-0"
+                affordance={['TL', 'TR', 'BR', 'BL'][i]}
+                value={Math.round(layer.radii[i] ?? 0)}
+                onCommit={(raw) => {
+                  const n = Number(raw)
+                  setProp('radii', layer.radii.map((r, j) => (j === i ? (Number.isFinite(n) && n > 0 ? Math.round(n) : 0) : r)))
+                }}
+              />
+            </Tooltip>
+          ))}
         </div>
       )}
-    </InspectorSection>
+      {/* FILL AND STROKE ARE SWATCHES YOU CLICK (spec R6.6, the user's 15 and 16): each focuses its
+          paint and opens the Color pane on it. The `Colour…` button that stood here opened the
+          palette generator, not the Color pane, and is gone. A stroke with no weight reads as none. */}
+      {'color' in layer && (
+        <div className="flex items-center gap-2 pt-1">
+          <PaintSwatch paint="fill" label="Fill" hex={resolveColor(layer.color, palette)} none={!layer.color} />
+          <PaintSwatch paint="stroke" label="Stroke" hex={resolveColor(layer.stroke, palette)} none={!layer.stroke || !layer.strokeWidth} />
+        </div>
+      )}
+    </Pane>
+  )
+}
+
+/* One paint swatch + its label, a button: focus that paint, open the Color pane on it. */
+function PaintSwatch({ paint, label, hex, none }) {
+  const { setActivePaint } = useComposeState()
+  const open = () => {
+    setActivePaint(paint)
+    window.dispatchEvent(new CustomEvent('kol:open-color-pane', { detail: { tab: 'Colour' } }))
+  }
+  return (
+    <span className="inline-flex items-center gap-2">
+      <ColorSwatch hex={none ? undefined : (hex ?? '#FFFFFF')} size={24} showTransparent={none} onClick={open} aria-label={`${label} color`} title={label} />
+      <span className="kol-helper-10 tracking-widest text-meta">{label.toUpperCase()}</span>
+    </span>
   )
 }
 
@@ -276,33 +342,35 @@ const PARAMS_LABELS = {
 const PARAMS_EVENTS = { pattern: 'kol:open-pattern' }
 
 function ParamsLink({ layer }) {
+  const cs = useControlSize()
   const openParams  = () => window.dispatchEvent(new CustomEvent(PARAMS_EVENTS[layer.type] ?? 'kol:open-params'))
   const labelFor = PARAMS_LABELS[layer.type]
   /* Effects section REMOVED from the Inspector (user ruling 2026-08-12) —
    * the Effects TAB owns effects; only the Parameters jump stays. */
   if (!labelFor) return null
   return (
-    <InspectorSection pane label="Parameters">
+    <Pane label="Parameters">
       <Tooltip label={layer.type === 'pattern' ? 'Open the Pattern tab' : 'Open the Parameters tab'}><Button aria-label={layer.type === 'pattern' ? 'Open the Pattern tab' : 'Open the Parameters tab'}
-        tone="primary" size="sm" className="w-full"
+        tone="primary" size={cs} className="w-full"
         onClick={openParams}
       >
         {labelFor(layer)}
       </Button></Tooltip>
-    </InspectorSection>
+    </Pane>
   )
 }
 
 function GroupFields({ layer, ungroupLayer }) {
+  const cs = useControlSize()
   const childCount = Array.isArray(layer.children) ? layer.children.length : 0
   return (
     <>
-      <LabeledControl label="Children">
+      <SettingsRow label="Children" align="fill" labelWidth={RAIL_LABEL_W}>
         <span className="kol-helper-12 text-meta">{childCount} layer{childCount === 1 ? '' : 's'}</span>
-      </LabeledControl>
+      </SettingsRow>
       <Button
         tone="primary"
-        size="sm"
+        size={cs}
         className="w-full"
         onClick={() => ungroupLayer(layer.id)}
       >
@@ -316,6 +384,7 @@ function GroupFields({ layer, ungroupLayer }) {
  * write sets srcType so image ↔ video swaps render correctly (library picks
  * can be videos; the URL is proxied same-origin so filters don't taint). */
 function ImageSource({ layer, patch }) {
+  const cs = useControlSize()
   const fileRef = useRef(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   /* Context menu's "Replace image" routes here — the file input lives in
@@ -341,7 +410,7 @@ function ImageSource({ layer, patch }) {
     if (fileRef.current) fileRef.current.value = ''
   }
   return (
-    <LabeledControl label="Source">
+    <LabeledControl label={'Source'.toUpperCase()}>
       <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
       {layer.src && (
         layer.srcType === 'video' ? (
@@ -369,23 +438,23 @@ function ImageSource({ layer, patch }) {
       )}
       <div className="flex items-center gap-2">
         <Button
-          tone="primary" size="sm" iconLeft="upload" iconSize={12}
+          tone="primary" size={cs} iconLeft="upload" iconSize={12}
           className="flex-1"
           onClick={() => fileRef.current?.click()}
         >
           {layer.src ? 'Replace' : 'Upload image'}
         </Button>
         <Button
-          tone="primary" size="sm"
+          tone="primary" size={cs}
           className="flex-1"
           onClick={() => setPickerOpen(true)}
         >
           Library
         </Button>
         {layer.src && (
-          <Tooltip label="Clear image"><Button
-            tone="primary" size="sm" iconOnly="trash" iconSize={12}
-            aria-label="Clear image"
+          <Tooltip label="Delete image"><Button
+            tone="primary" size={cs} iconOnly="trash" iconSize={12}
+            aria-label="Delete image"
             onClick={onClear}
           /></Tooltip>
         )}
@@ -403,10 +472,11 @@ function ImageSource({ layer, patch }) {
  * never reshapes the layer. String affordances get 4px extra air — the
  * shipped 6px reads glued against mono digits (the "balanced" ref). */
 function AxisField({ label, value, onCommit, suffix, tooltip }) {
+  const cs = useControlSize()
   return (
     <Tooltip label={tooltip} triggerClassName="flex flex-1 min-w-0">
     <NumberField
-      variant="property" size="sm"
+      variant="property" size={cs}
       affordance={typeof label === 'string' ? <span className="pr-1">{label}</span> : label} unit={suffix}
       className="w-full min-w-0"
       value={value}
@@ -433,7 +503,8 @@ function PositionFields({ layer, setProp }) {
 }
 
 /* Layout section — W/H + the aspect lock. */
-function LayoutFields({ layer, setProp, patch }) {
+function LayoutFields({ layer, setProp, patch, anchor = [0, 0] }) {
+  const cs = useControlSize()
   /* Lock state lives on the layer (not local) so canvas drag handlers can
    * read it too. Encoded as a single number-or-null: a finite number is
    * the locked aspect ratio; null/undefined means unlocked. */
@@ -462,25 +533,19 @@ function LayoutFields({ layer, setProp, patch }) {
       ...(layer.holes?.length ? { holes: layer.holes.map((r) => scalePathNodes(r, sx, sy)) } : {}),
     }
   }
+  /* the anchor point stays put (G4): a box growing by dw moves left by dw × its anchor x */
+  const anchored = (p) => ({
+    ...p,
+    ...(p.w != null ? { x: Math.round(layer.x - (p.w - layer.w) * anchor[0]) } : {}),
+    ...(p.h != null ? { y: Math.round(layer.y - (p.h - layer.h) * anchor[1]) } : {}),
+  })
   const onChangeW = (raw) => {
     const w = Math.max(8, numOr0(raw))
-    if (aspectLocked) {
-      patch(withPathScale({ w, h: Math.max(8, Math.round(w / aspect)) }))
-    } else if (isPath) {
-      patch(withPathScale({ w }))
-    } else {
-      setProp('w', w)
-    }
+    patch(anchored(withPathScale(aspectLocked ? { w, h: Math.max(8, Math.round(w / aspect)) } : { w })))
   }
   const onChangeH = (raw) => {
     const h = Math.max(8, numOr0(raw))
-    if (aspectLocked) {
-      patch(withPathScale({ w: Math.max(8, Math.round(h * aspect)), h }))
-    } else if (isPath) {
-      patch(withPathScale({ h }))
-    } else {
-      setProp('h', h)
-    }
+    patch(anchored(withPathScale(aspectLocked ? { w: Math.max(8, Math.round(h * aspect)), h } : { h })))
   }
   return (
     <div className="flex items-center gap-2">
@@ -492,9 +557,54 @@ function LayoutFields({ layer, setProp, patch }) {
         * more common"): a KOL Button on the inputs' rung, a lock that closes when constrained. It was
         * a raw <button> inking a corner glyph `fg` from its wrapper. */}
       <Tooltip label={aspectLocked ? 'Unconstrain proportions' : 'Constrain proportions'}>
-        <Button tone="ghost" size="sm" iconOnly={aspectLocked ? 'lock' : 'unlock'} pressed={aspectLocked}
+        <Button tone="ghost" size={cs} iconOnly={aspectLocked ? 'lock' : 'unlock'} pressed={aspectLocked}
           aria-label={aspectLocked ? 'Unconstrain proportions' : 'Constrain proportions'} onClick={toggleLock} />
       </Tooltip>
+    </div>
+  )
+}
+
+const clampSkew = (raw) => {
+  const n = Number(raw)
+  return Number.isFinite(n) ? Math.max(-89, Math.min(89, Math.round(n))) : 0
+}
+
+/* The anchor survives the inspector remounting on every selection change. Top-left by default —
+ * Affinity's Transform panel. */
+const anchorStore = { value: [0, 0] }
+
+/* Rotating to `next` about the anchor (G4): the layer still rotates about its own centre (the
+ * renderer and the selection box both do), so the anchor is held still by moving the centre —
+ * C' = O + R(Δ)(C − O), O the anchor point as currently drawn. */
+function rotateAboutAnchor(layer, next, [ax, ay]) {
+  const prev = layer.rotation ?? 0
+  const d = ((next - prev) * Math.PI) / 180
+  if (!d || layer.w == null) return {}
+  const cx = layer.x + layer.w / 2, cy = layer.y + layer.h / 2
+  const r = (prev * Math.PI) / 180
+  const lx = (ax - 0.5) * layer.w, ly = (ay - 0.5) * layer.h
+  const ox = cx + lx * Math.cos(r) - ly * Math.sin(r), oy = cy + lx * Math.sin(r) + ly * Math.cos(r)
+  const vx = cx - ox, vy = cy - oy
+  const ncx = ox + vx * Math.cos(d) - vy * Math.sin(d), ncy = oy + vx * Math.sin(d) + vy * Math.cos(d)
+  return { x: Math.round(ncx - layer.w / 2), y: Math.round(ncy - layer.h / 2) }
+}
+
+/* The 9-point transform origin (G4 — Affinity's anchor selector): the pressed dot is the point
+ * the typed W / H / rotation hold still. */
+function AnchorPicker({ value, onChange }) {
+  const steps = [0, 0.5, 1]
+  return (
+    <div role="radiogroup" aria-label="Transform origin" className="grid grid-cols-3 gap-px p-1 rounded bg-surface-secondary shrink-0">
+      {steps.flatMap((y) => steps.map((x) => {
+        const on = value[0] === x && value[1] === y
+        return (
+          <button key={`${x}${y}`} type="button" role="radio" aria-checked={on}
+            aria-label={`Origin ${['left', 'center', 'right'][x * 2]} ${['top', 'middle', 'bottom'][y * 2]}`}
+            onClick={() => onChange([x, y])}
+            className="w-[6px] h-[6px] p-0 m-[1px] rounded-full border-0 cursor-pointer"
+            style={{ background: on ? 'var(--kol-accent-primary)' : 'var(--kol-fg-24)' }} />
+        )
+      }))}
     </div>
   )
 }

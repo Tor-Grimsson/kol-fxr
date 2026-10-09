@@ -130,13 +130,13 @@ export default function RuleRow({ rule, onChange, onRemove, onReroll }) {
           className="shrink-0"
           style={{ padding: 6 }}
         /></Tooltip>
-        <Tooltip label="Remove rule"><Button
+        <Tooltip label="Delete rule"><Button
           tone="ghost"
           size="sm"
           iconOnly="x"
           iconSize={12}
           onClick={onRemove}
-          aria-label="Remove rule"
+          aria-label="Delete rule"
           className="shrink-0"
           style={{ padding: 6 }}
         /></Tooltip>

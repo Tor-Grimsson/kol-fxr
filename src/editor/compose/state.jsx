@@ -579,7 +579,9 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
    * actually selected. */
   const [activePaint, setActivePaint] = useState('fill')   /* 'fill' | 'stroke' */
   const [paintFill,   setPaintFill]   = useState('#FFFFFF') /* hex | null */
-  const [paintStroke, setPaintStroke] = useState('#000000') /* hex | null */
+  /* null: a new shape is FILL ONLY until a stroke is set (the user's 7; Figma, Affinity) — it was
+   * '#000000', a black stroke at weight 0 on every shape */
+  const [paintStroke, setPaintStroke] = useState(null) /* hex | null */
 
   /* ─── Frame: palette ─── */
   const [poolId, setPoolId]   = useState('brand')
@@ -1355,12 +1357,30 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
       const bw = single ? CANVAS_W : Math.max(...xs2) - bx
       const bh = single ? virtualHRef.current : Math.max(...ys2) - by
 
+      /* DISTRIBUTE (≥3): the first and last stay, the rest take equal gaps between them along the
+       * axis — Figma / Affinity's distribute spacing. */
+      let spread = null
+      if (mode === 'distribute') {
+        if (located.length < 3) return prev
+        const key = axis === 'h' ? xs : ys
+        const size = located.map((f) => (axis === 'h' ? (f.layer.w ?? 0) : (f.layer.h ?? 0)))
+        const order = located.map((_, i) => i).sort((a, b) => key[a] - key[b])
+        const first = order[0], last = order[order.length - 1]
+        const gap = ((key[last] + size[last]) - key[first] - size.reduce((t, v) => t + v, 0)) / (order.length - 1)
+        spread = {}
+        let at = key[first]
+        order.forEach((i) => { spread[i] = at; at += size[i] + gap })
+      }
+
       let next = prev
       located.forEach((f, i) => {
         const l = f.layer
         let ax = xs[i]
         let ay = ys[i]
-        if (axis === 'h') {
+        if (spread) {
+          if (axis === 'h') ax = spread[i]
+          else ay = spread[i]
+        } else if (axis === 'h') {
           if (mode === 'start')  ax = bx
           if (mode === 'center') ax = bx + (bw - (l.w ?? 0)) / 2
           if (mode === 'end')    ax = bx + bw - (l.w ?? 0)
@@ -1941,6 +1961,8 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
     canUndo,
     canRedo,
     undo, redo,
+    /* the stacks themselves, for the History panel (G6) — snapshots, oldest first / next first */
+    historyPast: past, historyFuture: future,
     beginTransaction, commitTransaction,
   }), [
     selectedId, selectedIds, select, selectCanvas, toggleSelection, selectMany,
@@ -1957,7 +1979,7 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
     addFilter, removeFilter, toggleFilter, moveFilter, patchFilter, replaceFilter,
     flipLayer, flipSelected, booleanGroup, flattenSelected, convertShapeToPath,
     groupLayers, ungroupLayer, releaseBoolean, reparentLayer, alignSelected, flattenPattern, flattenText, flattenParatype, addFlattenedFromFrame, loadPreset, insertFromLibrary,
-    canUndo, canRedo, undo, redo, beginTransaction, commitTransaction,
+    canUndo, canRedo, undo, redo, beginTransaction, commitTransaction, past, future,
   ])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

@@ -5,7 +5,8 @@ import { buildPatternSvg } from '../modes/pattern/render'
 import { getShapeSvg } from '../modes/pattern/shapes'
 import { resolveColor, COVER_TYPES, useComposeState } from './state'
 import { useTool } from '../state/tools'
-import { regularPolygonPoints, starPoints, trianglePoints } from './shape-math'
+import { shapeOutlineD, drawsAsOutline } from './shape-math'
+import { applyVectorFx } from './vectorEffects'
 import { pathD } from './path-math'
 import { computeBooleanCached } from './boolean-ops'
 import { hasBindings, resolveLayer } from '../params/resolve'
@@ -85,12 +86,16 @@ export default function LayerRenderer({ layer: rawLayer, palette }) {
    * entry bakes. */
   const rot  = layer.rotation ?? 0
   const flip = layer.flipX || layer.flipY
+  /* shear (G3): skew between the rotate and the mirror — the export emits the same matrix */
+  const skew = (layer.skewX || layer.skewY) ? `skew(${layer.skewX ?? 0}deg, ${layer.skewY ?? 0}deg)` : ''
   const layerStyle = {
     opacity:      layer.opacity ?? 1,
     mixBlendMode: layer.blend && layer.blend !== 'normal' ? layer.blend : undefined,
-    transform: (rot || flip)
-      ? `${rot ? `rotate(${rot}deg)` : ''}${flip ? ` scale(${layer.flipX ? -1 : 1}, ${layer.flipY ? -1 : 1})` : ''}`.trim()
+    transform: (rot || flip || skew)
+      ? `${rot ? `rotate(${rot}deg)` : ''} ${skew}${flip ? ` scale(${layer.flipX ? -1 : 1}, ${layer.flipY ? -1 : 1})` : ''}`.trim()
       : undefined,
+    /* a mask's outline, resolved into this layer's own px by compose/masks.js (G8) */
+    clipPath: layer._clipD ? `path('${layer._clipD}')` : undefined,
   }
 
   switch (layer.type) {
@@ -1579,8 +1584,9 @@ function ShapeLayer({ layer, palette, layerStyle }) {
         width: layer.w, height: layer.h,
         color,
         cursor: 'move',
-        /* a line's box can be ~0px tall; it lets its hit band (below) out */
-        overflow: kind === 'line' ? 'visible' : 'hidden',
+        /* a line's box can be ~0px tall; it lets its hit band (below) out — and a vector effect
+           (offset, zigzag, distress) grows the outline past the box, so it draws out too */
+        overflow: kind === 'line' || drawsAsOutline(layer) ? 'visible' : 'hidden',
         ...layerStyle,
       }}
     >
@@ -1615,9 +1621,10 @@ function ShapeLayer({ layer, palette, layerStyle }) {
           width="100%" height="100%"
           viewBox={`0 0 ${Math.max(1, layer.w ?? 1)} ${Math.max(1, layer.h ?? 1)}`}
           preserveAspectRatio="none"
-          style={{ display: 'block' }}
+          style={{ display: 'block', overflow: 'visible' }}
         >
-          <rect
+          <RectOrOutline
+            layer={layer}
             x={half} y={half}
             width={Math.max(0, (layer.w ?? 0) - sw)}
             height={Math.max(0, (layer.h ?? 0) - sw)}
@@ -1636,9 +1643,11 @@ function ShapeLayer({ layer, palette, layerStyle }) {
           width="100%" height="100%"
           viewBox={`0 0 ${Math.max(1, layer.w ?? 1)} ${Math.max(1, layer.h ?? 1)}`}
           preserveAspectRatio="none"
-          style={{ display: 'block' }}
+          style={{ display: 'block', overflow: 'visible' }}
         >
-          <ellipse
+          {/* a partial arc draws as a pie (shape-math), the whole ring as the ellipse it always was */}
+          <EllipseOrArc
+            layer={layer}
             cx={(layer.w ?? 0) / 2}
             cy={(layer.h ?? 0) / 2}
             rx={Math.max(0, (layer.w ?? 0) / 2 - half)}
@@ -1657,10 +1666,10 @@ function ShapeLayer({ layer, palette, layerStyle }) {
           width="100%" height="100%"
           viewBox={`0 0 ${Math.max(1, layer.w ?? 1)} ${Math.max(1, layer.h ?? 1)}`}
           preserveAspectRatio="none"
-          style={{ display: 'block' }}
+          style={{ display: 'block', overflow: 'visible' }}
         >
-          <polygon
-            points={trianglePoints(layer.w ?? 0, layer.h ?? 0, half)}
+          <path
+            d={shapeOutlineD(layer)}
             fill={hasFill ? 'currentColor' : 'none'}
             stroke={strokeColor ?? 'none'}
             strokeWidth={sw}
@@ -1709,10 +1718,10 @@ function ShapeLayer({ layer, palette, layerStyle }) {
           width="100%" height="100%"
           viewBox={`0 0 ${Math.max(1, layer.w ?? 1)} ${Math.max(1, layer.h ?? 1)}`}
           preserveAspectRatio="none"
-          style={{ display: 'block' }}
+          style={{ display: 'block', overflow: 'visible' }}
         >
-          <polygon
-            points={regularPolygonPoints(layer.w ?? 0, layer.h ?? 0, layer.sides ?? 5, half)}
+          <path
+            d={shapeOutlineD(layer)}
             fill={hasFill ? 'currentColor' : 'none'}
             stroke={strokeColor ?? 'none'}
             strokeWidth={sw}
@@ -1727,10 +1736,10 @@ function ShapeLayer({ layer, palette, layerStyle }) {
           width="100%" height="100%"
           viewBox={`0 0 ${Math.max(1, layer.w ?? 1)} ${Math.max(1, layer.h ?? 1)}`}
           preserveAspectRatio="none"
-          style={{ display: 'block' }}
+          style={{ display: 'block', overflow: 'visible' }}
         >
-          <polygon
-            points={starPoints(layer.w ?? 0, layer.h ?? 0, layer.points ?? 5, layer.innerRatio ?? 0.5, half)}
+          <path
+            d={shapeOutlineD(layer)}
             fill={hasFill ? 'currentColor' : 'none'}
             stroke={strokeColor ?? 'none'}
             strokeWidth={sw}
@@ -1759,8 +1768,8 @@ function PathLayer({ layer, palette, layerStyle }) {
    * holes punch through. Plain paths keep the single-ring fast path. */
   const hasHoles    = (layer.holes?.length ?? 0) > 0
   const d           = hasHoles
-    ? [layer.nodes ?? [], ...layer.holes].map((r) => pathD(r, true)).join(' ')
-    : pathD(layer.nodes ?? [], layer.closed)
+    ? [layer.nodes ?? [], ...layer.holes].map((r) => pathD(applyVectorFx(layer, r, true), true)).join(' ')
+    : pathD(applyVectorFx(layer, layer.nodes ?? [], layer.closed), layer.closed)
 
   return (
     <svg
@@ -2004,3 +2013,17 @@ function TextLayer({ layer, palette, layerStyle }) {
 }
 
 export { COVER_TYPES }
+
+/* An ellipse layer: the whole ring as <ellipse>, a partial arc (arcStart/arcEnd) as the pie path. */
+function EllipseOrArc({ layer, cx, cy, rx, ry, ...paint }) {
+  return drawsAsOutline(layer)
+    ? <path d={shapeOutlineD(layer)} {...paint} />
+    : <ellipse cx={cx} cy={cy} rx={rx} ry={ry} {...paint} />
+}
+
+/* A rect layer: the <rect> it always was, or the outline path when a vector effect bends it. */
+function RectOrOutline({ layer, x, y, width, height, rx, ...paint }) {
+  return drawsAsOutline(layer)
+    ? <path d={shapeOutlineD(layer)} {...paint} />
+    : <rect x={x} y={y} width={width} height={height} rx={rx} {...paint} />
+}

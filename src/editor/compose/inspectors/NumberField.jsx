@@ -18,12 +18,14 @@ import { Input } from '@kolkrabbi/kol-component'
  * on every render. Remaining Input props (variant/size/chars/suffix…) pass
  * through untouched.
  */
+/* `chars` sizes the box to its value (spec R6.1) through the HTML `size` attribute, which
+ * `type="number"` ignores — so a chars-sized field is a text input with a decimal keypad. */
 export function NumberField({ value, onCommit, ...inputProps }) {
   const [draft, setDraft] = useState(String(value))
   useEffect(() => { setDraft(String(value)) }, [value])
   return (
     <Input
-      type="number"
+      {...(inputProps.chars ? { type: 'text', inputMode: 'decimal' } : { type: 'number' })}
       {...inputProps}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { LabeledControlSection, SettingsRow, SettingsSwitch } from '@kolkrabbi/kol-component'
+import { useEffect, useRef, useState } from 'react'
+import { LabeledControlSection, SettingsRow, SettingsSwitch, useDragResize } from '@kolkrabbi/kol-component'
 import './styles/kol-editor.css'
 import { panelsForSlot } from './state/panels'
 import { useComposeState } from './compose/state'
@@ -60,12 +60,22 @@ function SettingsDrawerHost() {
  * LibraryTab. Rails now host only context-for-selection panels.
  */
 
-function Rail({ side, panels }) {
+/* A rail's grab edge (spec R1.4): the shell rail's own gesture — drag to resize, click to fold
+ * to its closed width, state kept per rail. Its own token per side, so the two rails never drag
+ * one variable (`--kol-editor-left-w` / `--kol-editor-right-w`, declared in kol-editor.css). */
+function RailGrab({ side, railRef }) {
+  const { grabProps } = useDragResize(railRef, { token: `kol-editor-${side}`, side: side === 'left' ? 'left' : 'right' })
+  return <div {...grabProps} />
+}
+
+function Rail({ side, panels, resizable }) {
+  const ref = useRef(null)
   const header = panelsForSlot(panels, `${side}.header`)
   const body   = panelsForSlot(panels, `${side}.body`)
   const footer = panelsForSlot(panels, `${side}.footer`)
   return (
-    <aside className={`kol-editor-${side}`}>
+    <aside ref={ref} className={`kol-editor-${side}`}>
+      {resizable && <RailGrab side={side} railRef={ref} />}
       {header.length > 0 && (
         <div className="kol-editor-rail-header">
           {header.map(({ Component }, i) => <Component key={i} />)}
@@ -103,7 +113,7 @@ export default function EditorShell({ registry }) {
     <div className="kol-editor-shell" data-editor-keep-selection>
       <Topbar />
       <div className="kol-editor-grid">
-        <Rail side="left"  panels={registry?.panels} />
+        <Rail side="left"  panels={registry?.panels} resizable={registry?.resizableRails} />
         <div className="kol-editor-canvas-column">
           {canvasHeader.length > 0 && (
             <div className="kol-editor-canvas-header">
@@ -120,7 +130,7 @@ export default function EditorShell({ registry }) {
             </div>
           )}
         </div>
-        <Rail side="right" panels={registry?.panels} />
+        <Rail side="right" panels={registry?.panels} resizable={registry?.resizableRails} />
       </div>
       <ShortcutsOverlay />
       <SettingsDrawerHost />

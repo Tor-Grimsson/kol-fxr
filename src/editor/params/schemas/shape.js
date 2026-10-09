@@ -33,6 +33,7 @@ const SLOPE_OPTIONS = [
 ]
 
 const isKind = (k) => (l) => (l.kind ?? 'logo') === k
+const isKinds = (...ks) => (l) => ks.includes(l.kind ?? 'logo')
 
 export const SHAPE_SCHEMA = [
   { key: 'kind',       label: 'Kind',        type: 'select',    default: 'logo',     options: KIND_OPTIONS },
@@ -42,4 +43,11 @@ export const SHAPE_SCHEMA = [
   { key: 'points',     label: 'Points',      type: 'range', min: 3, max: 12, step: 1,    default: 5,   format: (v) => `${v}`,     when: isKind('star'),    animatable: false, section: 'Geometry' },
   { key: 'innerRatio', label: 'Inner ratio', type: 'range', min: 0.2, max: 0.9, step: 0.05, default: 0.5, format: (v) => v.toFixed(2), when: isKind('star'),    animatable: false, section: 'Geometry' },
   { key: 'slope',      label: 'Slope',       type: 'segmented', default: '\\',        options: SLOPE_OPTIONS, when: isKind('line'), section: 'Geometry' },
+  /* EVERY PRIMITIVE HAS PARAMETERS (the user's 21 — a triangle showed Kind only). One geometry
+     source (shape-math: roundCorners · trianglePoints apex · the ellipse arc) feeds the render, the
+     export, the booleans and Convert to path, so each of these reads the same in all four. */
+  { key: 'apex',       label: 'Apex',        type: 'range', min: 0, max: 1, step: 0.01, default: 0.5, format: (v) => `${Math.round(v * 100)}%`, when: isKind('triangle'), animatable: false, section: 'Geometry' },
+  { key: 'arcStart',   label: 'Arc start',   type: 'range', min: 0, max: 360, step: 1,  default: 0,   format: (v) => `${v}°`, when: isKind('ellipse'), animatable: false, section: 'Geometry' },
+  { key: 'arcEnd',     label: 'Arc end',     type: 'range', min: 0, max: 360, step: 1,  default: 360, format: (v) => `${v}°`, when: isKind('ellipse'), animatable: false, section: 'Geometry' },
+  { key: 'radius',     label: 'Corner radius', type: 'range', min: 0, max: 200, step: 1, default: 0, format: (v) => `${v}`, when: isKinds('rect', 'triangle', 'polygon', 'star'), animatable: false, section: 'Geometry' },
 ]

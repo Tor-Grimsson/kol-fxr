@@ -116,7 +116,7 @@ const APP = {
   subtitle: 'Pick a chrome. All three run the same engine.',
   logomark: logomarkUrl,
   about: (
-    <>A DOM/SVG design compositor — frames, layers, vector tools — with generative, kinetic-type and effects layers on the same engine, served through three chromes: the Editor, Labs, and the Randomiser. Ships as a standalone app and as the embeddable <code>@kolkrabbi/design-editor</code> library.</>
+    <>A DOM/SVG design compositor — frames, layers, vector tools — with generative, kinetic-type and effects layers on the same engine, served through three chromes: the Editor, Labs, and the Randomiser.</>
   ),
   links: [
     { label: 'GitHub', url: 'https://github.com/Tor-Grimsson/kol-fxr' },

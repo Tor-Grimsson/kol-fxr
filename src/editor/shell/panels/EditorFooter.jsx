@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Dropdown, LabeledControlSection, SegmentedToggle, FullscreenOverlay, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, LabeledControlSection, SegmentedToggle, FullscreenOverlay, TabsRow, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
 import { proxied, isVideoType } from '../../library/mediaLibrary'
 import { useTransport } from '../../params/transport'
 import { pack } from '../../packs'
@@ -138,7 +138,7 @@ function PhotoFileTab({ layer }) {
       <Button tone="primary" size={cs} className="w-full" iconLeft="upload" iconSize={12} onClick={() => videoRef.current?.click()}>
         Upload video
       </Button>
-      <Button tone="primary" size={cs} className="w-full" iconLeft="image" iconSize={12} onClick={() => setPickerOpen(true)}>
+      <Button tone="primary" size={cs} className="w-full" iconLeft="nav-library" iconSize={12} onClick={() => setPickerOpen(true)}>
         From library
       </Button>
       <Button tone="primary" size={cs} className="w-full" iconLeft="camera" iconSize={12} onClick={onWebcam}>
@@ -266,7 +266,7 @@ export default function EditorFooter() {
   }
 
   return (
-    <div className="relative border-t border-oq-08 flex flex-col gap-3" style={{ padding: '16px 20px 24px 20px' }}>
+    <div className="relative border-t border-oq-08 flex flex-col gap-3" style={{ padding: '16px 16px 20px' }}>
       <div className="flex items-center gap-2">
         {/* the 26px pin is 'sm' geometry — above it the strip is on the ladder */}
         {/* the default strip — raised cells, dividers, the selected one on the ground — filling
@@ -276,13 +276,22 @@ export default function EditorFooter() {
           * the ▶ cell lit while the transport sheet is up. */}
         {/* ON TOUCH THE TRANSPORT LEFT THE STRIP (plan 15 § 2): it is the floating play button over the
           * canvas (`TransportFab`, the motion pack's `canvas.overlay`), so the row is Output · File. */}
-        <SegmentedToggle
-          value={tab}
-          onChange={(v) => setTab((t) => (touch && t === v ? null : v))}
-          options={tabs}
-          size={cs}
-          className={`flex-1 min-w-0 ${cs === 'sm' ? TOGGLE_FIX : (stripClamp(cs) ?? '')}`.trim()}
-        />
+        {/* A PANE'S TABS ARE THE UNDERLINE ROW on the desk (spec R3.1): Layers · Assets and
+          * Inspector · Parameters · Effects are TabsRows, so this pane's Transport · Output · File
+          * is one too. Touch keeps the strip — a second tap on a cell closes its sheet. */}
+        {touch ? (
+          <SegmentedToggle
+            value={tab}
+            onChange={(v) => setTab((t) => (t === v ? null : v))}
+            options={tabs}
+            size={cs}
+            className={`flex-1 min-w-0 ${stripClamp(cs) ?? ''}`.trim()}
+          />
+        ) : (
+          <div className="flex-1 min-w-0">
+            <TabsRow tabs={tabs.map((t) => ({ id: t.value, label: t.label }))} value={tab} onChange={setTab} />
+          </div>
+        )}
       </div>
       {/* stays mounted hidden on desktop so playback chrome never re-inits on a
           tab switch; on touch the bar lives in the sheet below */}
@@ -325,7 +334,7 @@ export default function EditorFooter() {
             </Button>
             {/* Multi-size matrix — tick aspects × scales, bundle every PNG into
                 one .zip. */}
-            <Button tone="primary" size={cs} className="w-full" iconLeft="copy" iconSize={12} onClick={() => setBatchOpen(true)}>
+            <Button tone="primary" size={cs} className="w-full" iconLeft="layers" iconSize={12} onClick={() => setBatchOpen(true)}>
               Batch export
             </Button>
           </LabeledControlSection>

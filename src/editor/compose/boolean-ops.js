@@ -17,7 +17,7 @@
  */
 import paper from 'paper/dist/paper-core'
 import { pathD, shiftNode, scalePathNodes } from './path-math'
-import { regularPolygonPoints, starPoints, trianglePoints } from './shape-math'
+import { shapeOutlineD, drawsAsOutline } from './shape-math'
 
 export const BOOLEAN_OPS = ['unite', 'subtract', 'intersect', 'exclude']
 
@@ -48,14 +48,6 @@ function ensurePaper() {
   }
 }
 
-/* "x,y x,y ..." (shape-math point string) → paper segments in canvas coords */
-function pointsToSegments(pts, ox, oy) {
-  return pts.split(' ').map((p) => {
-    const [x, y] = p.split(',').map(Number)
-    return [ox + x, oy + y]
-  })
-}
-
 /* Layer → paper.PathItem in canvas coords, with rotation/flip applied about
  * the layer's box center (matching the renderer's transform). */
 function layerToPaperItem(layer) {
@@ -83,19 +75,23 @@ function layerToPaperItem(layer) {
     const { x, y, w, h } = layer
     switch (layer.kind) {
       case 'rect':
-        item = new paper.Path.Rectangle({ point: [x, y], size: [w, h] })
+        if (drawsAsOutline(layer)) { item = paper.PathItem.create(shapeOutlineD({ ...layer, strokeWidth: 0 })); item.translate(new paper.Point(x, y)); break }
+        item = new paper.Path.Rectangle({ point: [x, y], size: [w, h], radius: layer.radius > 0 ? layer.radius : 0 })
         break
       case 'ellipse':
-        item = new paper.Path.Ellipse({ point: [x, y], size: [w, h] })
+        if (drawsAsOutline(layer)) {
+          item = paper.PathItem.create(shapeOutlineD({ ...layer, strokeWidth: 0 }))
+          item.translate(new paper.Point(x, y))
+        } else {
+          item = new paper.Path.Ellipse({ point: [x, y], size: [w, h] })
+        }
         break
+      /* the shared outline, so a radius or an apex booleans as it renders (shape-math) */
       case 'triangle':
-        item = new paper.Path({ segments: pointsToSegments(trianglePoints(w, h, 0), x, y), closed: true })
-        break
       case 'polygon':
-        item = new paper.Path({ segments: pointsToSegments(regularPolygonPoints(w, h, layer.sides ?? 5, 0), x, y), closed: true })
-        break
       case 'star':
-        item = new paper.Path({ segments: pointsToSegments(starPoints(w, h, layer.points ?? 5, layer.innerRatio ?? 0.5, 0), x, y), closed: true })
+        item = paper.PathItem.create(shapeOutlineD({ ...layer, strokeWidth: 0 }))
+        item.translate(new paper.Point(x, y))
         break
       default:
         return null

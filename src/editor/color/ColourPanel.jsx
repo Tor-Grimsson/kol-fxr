@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { colord } from 'colord'
 import { Slider } from '@kolkrabbi/kol-component'
-import { Dropdown } from '@kolkrabbi/kol-component'
-import { LabeledControl } from '@kolkrabbi/kol-component'
+import { Button, SettingsRow, Tooltip } from '@kolkrabbi/kol-component'
 import { SegmentedToggle } from '@kolkrabbi/kol-component'
 import { SwatchStack, EyedropPick } from '@kolkrabbi/kol-component'
 import { HueStrip, SBSquare, WheelTriangle } from '@kolkrabbi/kol-component'
@@ -11,6 +10,7 @@ import { useComposeState, resolveColor } from '../compose/state'
 import { useLayerEdit } from '../compose/useLayerEdit'
 import { findLayerDeep } from '../compose/helpers'
 import { pickFromCanvas } from './canvasEyedropper'
+import { useControlSize, RAIL_LABEL_W } from '../params/controlSize'
 
 const MODE_OPTIONS = [
   { value: 'hue',     label: 'Hue'     },
@@ -36,10 +36,13 @@ export function ColourBody() {
    * app-level paint state always exists). No "no target" fallback needed. */
   const target = useColorTarget({ history: 'coalesce' })
   const [mode, setMode] = useState('hue')
+  const cs = useControlSize()
 
   return (
     <div className="p-4 flex flex-col gap-3 h-full min-h-0">
-      <TopRow mode={mode} setMode={setMode} target={target} />
+      {/* the mode is a strip inside the pane, full width (spec R3.2) — it was a 110px dropdown */}
+      <SegmentedToggle tone="sunken" size={cs} className="w-full" ariaLabel="Color mode" value={mode} onChange={setMode} options={MODE_OPTIONS} />
+      <TopRow target={target} />
       <div className="flex-1 min-h-0 flex flex-col">
         {mode === 'hue'     && <HueMode     target={target} />}
         {mode === 'wheel'   && <WheelMode   target={target} />}
@@ -63,7 +66,10 @@ export default function ColourPanel() {
 
 /* ────────── Top row: front swatch + eyedrop pick + mode select ────────── */
 
-function TopRow({ mode, setMode, target }) {
+const NATIVE_EYEDROP = typeof window !== 'undefined' && 'EyeDropper' in window
+
+function TopRow({ target }) {
+  const cs = useControlSize()
   /* Read activePaint from the target (already clamped to a supported paint)
    * so SwatchStack's "front" indicator always matches what the picker
    * actually writes. */
@@ -111,16 +117,15 @@ function TopRow({ mode, setMode, target }) {
         onClear={onClear}
       />
       <EyedropPick sampleColor={sampleColor} onPick={onPickEyedrop} />
-      <div className="ml-auto">
-        <Dropdown
-          variant="subtle"
-          size="sm"
-          options={MODE_OPTIONS}
-          value={mode}
-          onChange={setMode}
-          className="w-[110px]"
-        />
-      </div>
+      {/* THE PIPETTE IN EVERY BROWSER (spec R6.9, the user's 12): the DS button renders only where
+          `window.EyeDropper` exists (Chromium) — but this pick samples our own canvas and never
+          calls that API, so where the DS hides it (Firefox, Safari) the same pick gets a plain DS
+          icon button. Retires when EyedropPick drops its gate (plan 17 #6). */}
+      {!NATIVE_EYEDROP && (
+        <Tooltip label="Eyedropper" shortcut="I">
+          <Button tone="ghost" quiet size={cs} iconOnly="eyedrop" aria-label="Eyedropper" onClick={onPickEyedrop} />
+        </Tooltip>
+      )}
     </div>
   )
 }
@@ -197,18 +202,17 @@ const MODEL_OPTIONS = [
   { value: 'rgb', label: 'RGB' },
 ]
 function ModelToggle({ model, setModel }) {
-  return (
-    <div className="flex items-center">
-      <SegmentedToggle variant="filled" value={model} onChange={setModel} options={MODEL_OPTIONS} />
-    </div>
-  )
+  const cs = useControlSize()
+  return <SegmentedToggle tone="sunken" size={cs} className="w-full" value={model} onChange={setModel} options={MODEL_OPTIONS} />
 }
 
+/* the rail's one row (spec R5.1): uppercase label in the 112 column, the slider fills, its
+   readout as wide as the channel's longest value (R6.1) */
 function SliderRow({ label, hint, max, value, onChange }) {
   return (
-    <LabeledControl inline label={label} hint={hint}>
-      <Slider min={0} max={max} value={value} onChange={onChange} />
-    </LabeledControl>
+    <SettingsRow label={label} hint={hint} align="fill" labelWidth={RAIL_LABEL_W}>
+      <Slider min={0} max={max} value={value} onChange={onChange} displayWidth={String(max).length} className="flex-1" />
+    </SettingsRow>
   )
 }
 
@@ -220,7 +224,7 @@ function OpacityRow() {
 
   /* Coalesce like LayerInspector's opacity slider — a drag fires per tick,
    * and each raw updateLayer would push its own undo entry. */
-  const edit = useLayerEdit(layer?.id ?? null, { history: 'coalesce' })
+  const edit = useLayerEdit(layer && !layer.locked ? layer.id : null, { history: 'coalesce' }) /* one lock rule */
 
   /* Local fallback so dragging always moves the slider, even with no target. */
   const [localOpacity, setLocalOpacity] = useState(100)
@@ -237,10 +241,11 @@ function OpacityRow() {
       ? (v) => edit.setProp('opacity', v / 100)
       : setLocalOpacity
 
+  /* "100" is three digits — the readout was a 6-char box (spec R6.1, the user's 14) */
   return (
-    <LabeledControl inline label="Opacity">
-      <Slider min={0} max={100} value={value} onChange={onChange} />
-    </LabeledControl>
+    <SettingsRow label="Opacity" align="fill" labelWidth={RAIL_LABEL_W}>
+      <Slider min={0} max={100} value={value} onChange={onChange} displayWidth={3} className="flex-1" />
+    </SettingsRow>
   )
 }
 

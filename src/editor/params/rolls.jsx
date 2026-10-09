@@ -174,7 +174,7 @@ export function useRollSeed(layer) {
 
 /** The editable seed field — commit (Enter/blur) arms the seed for the next
  * roll press. Draft/commit via the shared NumberField idiom. */
-export function SeedField({ seed, inline = false }) {
+export function SeedField({ seed, inline = true }) {
   const cs = useControlSize()
   const field = (
       <NumberField

@@ -49,7 +49,7 @@ import { useControlSize, RAIL_LABEL_W, stripClamp } from './controlSize'
  * (user, 2026-08-27) — same "labeled control group" idea, older type role.
  * The hairline still comes from `divided`; nothing here is styled locally.
  */
-export default function AutoControls({ schema, layer, setProp, palette, renderAnimate, tab, emptyHint, inline = false }) {
+export default function AutoControls({ schema, layer, setProp, palette, renderAnimate, tab, emptyHint, inline = true }) {
   let params = visibleParams(schema, layer)
   if (tab) params = params.filter((p) => paramTab(p) === tab)
   if (params.length === 0) {
@@ -146,6 +146,10 @@ function RangeField({ param: p, layer, setProp }) {
   const shown = boundExpr
     ? (raw.transform?.expr ?? 'wave(t)')
     : (p.format ? String(p.format(numVal)) : (stepDecimals ? numVal.toFixed(stepDecimals) : String(Math.round(numVal))))
+  /* AS WIDE AS ITS LONGEST VALUE (spec R6.1): the range's widest end plus its decimals — a 0–200
+     radius is three characters, a 0.025 step five. It was a fixed 5. */
+  const chars = Math.max(2, String(Math.round(p.max ?? 0)).length, String(Math.round(p.min ?? 0)).length)
+    + (stepDecimals ? stepDecimals + 1 : 0)
   const [draft, setDraft] = useState(shown)
   const [editing, setEditing] = useState(false)
   useEffect(() => { if (!editing) setDraft(shown) }, [shown, editing])
@@ -184,7 +188,7 @@ function RangeField({ param: p, layer, setProp }) {
         /* 5 chars holds "0.025" and a 4-digit value; 6 was a third of a touch
            row (user, 2026-09-01: "unnecessarily wide"). An expression still
            types in — the field scrolls. */
-        type="text" variant="filled" size={cs} chars={5}
+        type="text" variant="filled" size={cs} chars={chars}
         value={draft}
         title="Number sets a constant · an expression like sin(t) binds it"
         onFocus={(e) => { setEditing(true); e.target.select() }}

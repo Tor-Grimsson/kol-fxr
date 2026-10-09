@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Dropdown, Tooltip } from '@kolkrabbi/kol-component'
-import { LabeledControl } from '@kolkrabbi/kol-component'
+import { SettingsRow } from '@kolkrabbi/kol-component'
 import { SegmentedToggle } from '@kolkrabbi/kol-component'
 import { useComposeState } from '../state'
 import { findLayerDeep } from '../helpers'
@@ -13,10 +13,12 @@ import { SHAPE_SCHEMA } from '../../params/schemas/shape'
 import { PATTERN_SCHEMA } from '../../params/schemas/pattern'
 import { TEXT_SCHEMA } from '../../params/schemas/text'
 import { PHOTO_SCHEMA } from '../../params/schemas/photo'
+import { VECTOR_FX_SCHEMA } from '../vectorEffects'
 import { TEXT_TAB_KEYS, VariableBlock } from './TextPanel'
 import { layerFamily, isOutlineFamily } from '../../modes/type/families'
 import Hint from '../../components/Hint'
 import { pack } from '../../packs'
+import { useControlSize, RAIL_LABEL_W } from '../../params/controlSize'
 
 /**
  * ParametersPanel — the Parameters tab of the right rail (Phase 6-A).
@@ -62,7 +64,7 @@ export default function ParametersPanel() {
       <div className="kol-compose-inspector-body">
         {layer
           ? <LayerParameters key={layer.id} layer={layer} />
-          : <Hint>Select a layer to edit its parameters.</Hint>}
+          : <Hint always>Select a layer to edit its parameters.</Hint>}
       </div>
     </div>
   )
@@ -72,6 +74,7 @@ function LayerParameters({ layer }) {
   const { updateLayer, convertShapeToPath, palette } = useComposeState()
   const edit = useLayerEdit(layer.id, { history: 'coalesce' })
   const setProp = edit.setProp
+  const cs = useControlSize()
   const [tab, setTab] = useState('style')
   /* Deep-link a subtab (context menu's "Morph" lands on Style). */
   useEffect(() => {
@@ -80,8 +83,12 @@ function LayerParameters({ layer }) {
     return () => window.removeEventListener('kol:params-subtab', onSubtab)
   }, [])
   const renderAnimate = (p) => <BindDot layer={layer} param={p} setProp={setProp} />
-  const shared = { layer, setProp, patch: edit.patch, updateLayer, palette, renderAnimate, tab }
-  const tabStrip = <SegmentedToggle variant="filled" value={tab} onChange={setTab} options={SUBTAB_OPTIONS} />
+  /* `inline` — the rail's one row, one label voice, one strip (spec R5, R6.5): the editor's
+   * Parameters tab renders the same skin as the labs rail. */
+  const shared = { layer, setProp, patch: edit.patch, updateLayer, palette, renderAnimate, tab, inline: true }
+  /* the mode strip on the rail's rung, sunken (spec R3.2, R6.3 — the user's 18: it was the DS
+   * default md, 32px beside 26px fields) */
+  const tabStrip = <SegmentedToggle tone="sunken" size={cs} className="w-full" value={tab} onChange={setTab} options={SUBTAB_OPTIONS} />
 
   let body = null
   /* Loop places the strip itself — Category/Preset stay above it. */
@@ -91,17 +98,18 @@ function LayerParameters({ layer }) {
       <>
         {tab === 'generate' && ['rect', 'ellipse', 'triangle', 'polygon', 'star', 'line'].includes(layer.kind) && (
           <Tooltip label="Convert the shape to an editable bezier path (one-way)"><Button aria-label="Convert the shape to an editable bezier path (one-way)"
-            tone="primary" size="sm" className="w-full"
+            tone="primary" size={cs} className="w-full"
             onClick={() => convertShapeToPath(layer.id)}
           >
             Convert to path
           </Button></Tooltip>
         )}
-        {tab === 'style' && <AutoControls schema={SHAPE_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="style" />}
+        {tab === 'style' && <AutoControls schema={SHAPE_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="style" inline />}
+        {tab === 'style' && <AutoControls schema={VECTOR_FX_SCHEMA} layer={layer} setProp={setProp} palette={palette} tab="style" inline />}
         {tab === 'anim' && (
           <>
             <ModulationList layer={layer} schema={SHAPE_SCHEMA} setProp={setProp} />
-            <AutoControls schema={SHAPE_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" />
+            <AutoControls schema={SHAPE_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" inline />
           </>
         )}
       </>
@@ -114,11 +122,11 @@ function LayerParameters({ layer }) {
     /* Fit only — the filter picker + params live in the Effects tab. */
     body = (
       <>
-        {tab === 'style' && <AutoControls schema={PHOTO_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="style" />}
+        {tab === 'style' && <AutoControls schema={PHOTO_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="style" inline />}
         {tab === 'anim' && (
           <>
             <ModulationList layer={layer} schema={PHOTO_SCHEMA} setProp={setProp} />
-            <AutoControls schema={PHOTO_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" />
+            <AutoControls schema={PHOTO_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" inline />
           </>
         )}
       </>
@@ -127,24 +135,25 @@ function LayerParameters({ layer }) {
     /* loop/misc are the generators pack's, kinetic the motion pack's (editor/packs.js) — a layer
      * whose pack is absent has no parameters here */
     const LoopFields = pack('generators')?.LoopFields
-    if (!LoopFields) return <Hint>This layer has no parameters.</Hint>
-    body = <LoopFields {...shared} tabStrip={tabStrip} />
+    if (!LoopFields) return <Hint always>This layer has no parameters.</Hint>
+    body = <LoopFields {...shared} tabStrip={tabStrip} showSeed />
     stripInBody = true
   } else if (layer.type === 'misc') {
     const g = pack('generators')
-    if (!g) return <Hint>This layer has no parameters.</Hint>
-    body = <g.LoopFields {...shared} tabStrip={tabStrip} tree={g.MISC_TREE} />
+    if (!g) return <Hint always>This layer has no parameters.</Hint>
+    body = <g.LoopFields {...shared} tabStrip={tabStrip} tree={g.MISC_TREE} showSeed />
     stripInBody = true
   } else if (layer.type === 'kinetic') {
     /* Kinetic places the strip itself — picker + Elements stay above it. */
     const KineticPanel = pack('motion')?.KineticPanel
-    if (!KineticPanel) return <Hint>This layer has no parameters.</Hint>
+    if (!KineticPanel) return <Hint always>This layer has no parameters.</Hint>
     body = <KineticPanel {...shared} tabStrip={tabStrip} />
     stripInBody = true
   } else if (layer.type === 'path') {
-    body = null
+    /* a path's parameters are its vector effects (the user's 22: the tab was empty for paths) */
+    body = tab === 'style' ? <AutoControls schema={VECTOR_FX_SCHEMA} layer={layer} setProp={setProp} palette={palette} tab="style" inline /> : null
   } else {
-    return <Hint>This layer has no parameters.</Hint>
+    return <Hint always>This layer has no parameters.</Hint>
   }
 
   return (
@@ -165,6 +174,7 @@ function LayerParameters({ layer }) {
  * save slot) and copies params into the layer.
  */
 function PatternFields({ layer, setProp, updateLayer, palette, renderAnimate, tab }) {
+  const cs = useControlSize()
   const { library }        = useGeneratorLibrary()
   const { flattenPattern } = useComposeState()
   const patterns = library.pattern ?? []
@@ -200,18 +210,18 @@ function PatternFields({ layer, setProp, updateLayer, palette, renderAnimate, ta
       {tab === 'generate' && (
         <>
           {patterns.length > 0 && (
-            <LabeledControl label="Apply saved pattern">
+            <SettingsRow label="Apply saved pattern" align="fill" labelWidth={RAIL_LABEL_W}>
               <Dropdown
-                variant="subtle" size="sm" className="w-full"
+                variant="subtle" size={cs} className="w-full"
                 options={patternOptions}
                 value=""
                 onChange={onPickSpec}
               />
-            </LabeledControl>
+            </SettingsRow>
           )}
 
           <div className="pt-2 border-t border-oq-08">
-            <Tooltip label="Flatten the pattern to static SVG shapes (one-way)"><Button aria-label="Flatten the pattern to static SVG shapes (one-way)" tone="primary" size="sm" className="w-full" onClick={onFlatten}
+            <Tooltip label="Flatten the pattern to static SVG shapes (one-way)"><Button aria-label="Flatten the pattern to static SVG shapes (one-way)" tone="primary" size={cs} className="w-full" onClick={onFlatten}
              >
               Flatten
             </Button></Tooltip>
@@ -226,7 +236,7 @@ function PatternFields({ layer, setProp, updateLayer, palette, renderAnimate, ta
       {tab === 'anim' && (
         <>
           <ModulationList layer={layer} schema={PATTERN_SCHEMA} setProp={setProp} />
-          <AutoControls schema={PATTERN_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" />
+          <AutoControls schema={PATTERN_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" inline />
         </>
       )}
     </>
@@ -243,6 +253,7 @@ function PatternFields({ layer, setProp, updateLayer, palette, renderAnimate, ta
  * the layer (no live link — layer stays self-contained).
  */
 function TextFields({ layer, setProp, updateLayer, palette, renderAnimate, tab }) {
+  const cs = useControlSize()
   const { library } = useGeneratorLibrary()
   const { flattenText } = useComposeState()
   const specs = library.type ?? []
@@ -276,21 +287,21 @@ function TextFields({ layer, setProp, updateLayer, palette, renderAnimate, tab }
       {tab === 'generate' && (
         <>
           {specs.length > 0 && (
-            <LabeledControl label="Apply saved spec">
+            <SettingsRow label="Apply saved spec" align="fill" labelWidth={RAIL_LABEL_W}>
               <Dropdown
-                variant="subtle" size="sm" className="w-full"
+                variant="subtle" size={cs} className="w-full"
                 options={specOptions}
                 value=""
                 onChange={onPickSpec}
               />
-            </LabeledControl>
+            </SettingsRow>
           )}
 
           <Tooltip label={isOutlineFamily(layerFamily(layer))
               ? 'Flatten the text to glyph-outline shapes (one-way)'
               : 'Flatten needs an outline font — switch the Family to Right Grotesk'}><Button aria-label={isOutlineFamily(layerFamily(layer))
               ? 'Flatten the text to glyph-outline shapes (one-way)'
-              : 'Flatten needs an outline font — switch the Family to Right Grotesk'} tone="primary" size="sm" className="w-full" onClick={onFlatten}
+              : 'Flatten needs an outline font — switch the Family to Right Grotesk'} tone="primary" size={cs} className="w-full" onClick={onFlatten}
             disabled={!isOutlineFamily(layerFamily(layer))}
            >
             Flatten
@@ -303,14 +314,14 @@ function TextFields({ layer, setProp, updateLayer, palette, renderAnimate, tab }
           {/* Morph — the text layer's option surface (user ruling 2026-08-12:
               options live in Parameters, the Inspector shows what's set). */}
           <VariableBlock layer={layer} setProp={setProp} />
-          <AutoControls schema={TEXT_PARAMS_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="style" />
+          <AutoControls schema={TEXT_PARAMS_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="style" inline />
         </>
       )}
 
       {tab === 'anim' && (
         <>
           <ModulationList layer={layer} schema={TEXT_SCHEMA} setProp={setProp} />
-          <AutoControls schema={TEXT_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" />
+          <AutoControls schema={TEXT_SCHEMA} layer={layer} setProp={setProp} palette={palette} renderAnimate={renderAnimate} tab="anim" inline />
         </>
       )}
     </>

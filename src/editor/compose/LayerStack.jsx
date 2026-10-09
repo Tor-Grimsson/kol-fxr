@@ -1,5 +1,7 @@
-import { LayerStack as DsLayerStack, AddLayerButton as DsAddLayerButton, BLEND_MODES } from '@kolkrabbi/kol-component'
+import { LayerStack as DsLayerStack, AddLayerButton as DsAddLayerButton, BLEND_MODES, Button, Tooltip } from '@kolkrabbi/kol-component'
 import { useComposeState, layerTypes } from './state'
+import { findLayerDeep } from './helpers'
+import { useControlSize } from '../params/controlSize'
 import { rowLabelForLayer } from './labels'
 
 /**
@@ -20,6 +22,7 @@ const TYPE_ICONS = {
   text:       'type',
   group:      'layers',
   bool:       'layers',
+  path:       'pen',
   loop:       'refresh',
   misc:       'refresh',
   kinetic:    'type',
@@ -71,6 +74,36 @@ export function LayerStackBody() {
       labelFor={rowLabelForLayer}
       iconFor={iconFor}
     />
+  )
+}
+
+/* The layer verbs, in a bar under the list (spec R2.3 — the user's 20; Figma and Affinity put
+ * delete below the layers). Delete · duplicate · lock · hide act on the selection; the
+ * canvas row is never a target; group is the stack's own ≥2-selected button. A footer slot on the DS LayerStack is owed (plan 17) — until then
+ * the bar sits under it in the same pane. */
+export function LayerActions() {
+  const cs = useControlSize()
+  const {
+    selectedIds, layers, deleteSelected, duplicateLayer, toggleLayer, toggleLayerLock,
+  } = useComposeState()
+  const ids = (selectedIds ?? []).filter((id) => id !== 'canvas')
+  const sel = ids.map((id) => findLayerDeep(layers, id)).filter(Boolean)
+  const none = sel.length === 0
+  const hidden = !none && sel.every((l) => l.visible === false)
+  const locked = !none && sel.every((l) => l.locked)
+  const act = (label, icon, onClick, { disabled = none, pressed } = {}) => (
+    <Tooltip key={label} label={label}>
+      <Button tone="ghost" quiet size={cs} iconOnly={icon} aria-label={label} pressed={pressed} disabled={disabled} onClick={onClick} />
+    </Tooltip>
+  )
+  return (
+    <div className="flex items-center gap-1 px-3 py-1 border-t border-oq-08">
+      {act(hidden ? 'Show' : 'Hide', hidden ? 'eye-off' : 'eye-on', () => sel.forEach((l) => toggleLayer(l.id)), { pressed: hidden })}
+      {act(locked ? 'Unlock' : 'Lock', locked ? 'lock' : 'unlock', () => sel.forEach((l) => toggleLayerLock(l.id)), { pressed: locked })}
+      <span className="flex-1" />
+      {act('Duplicate', 'copy', () => sel.forEach((l) => duplicateLayer(l.id)))}
+      {act('Delete', 'trash', deleteSelected)}
+    </div>
   )
 }
 

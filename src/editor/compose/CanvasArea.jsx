@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import Canvas, { CANVAS_VIRTUAL_W } from '../shell/Canvas'
 import { useComposeState, resolveColor, COVER_TYPES, CANVAS_W } from './state'
 import LayerRenderer from './LayerRenderer'
-import { SelectionOverlay, PathNodeOverlay, CropOverlay, MenuDropdownItem, MenuDropdownDivider, ContextMenu, useContextMenu } from '@kolkrabbi/kol-component'
-import { pathD, normalizePath, normalizePathRings, rotatePathNodes, scalePathNodes, dist } from './path-math'
+import { SelectionOverlay, PathNodeOverlay, CropOverlay, MenuDropdownItem, MenuDropdownDivider, ContextMenu, useContextMenu, useModal } from '@kolkrabbi/kol-component'
+import { pathD, normalizePath, normalizePathRings, rotatePathNodes, scalePathNodes, dist, nearestSegmentT, splitSegment } from './path-math'
 import { scaleBoolChildren } from './boolean-ops'
 import { findLayerDeep } from './helpers'
 import KineticElementOverlay from './KineticElementOverlay'
@@ -16,20 +16,28 @@ import { computeSnapTargets, findSnap } from './snap'
 import { transport } from '../params/transport'
 import { toggleDots } from '../params/dotVisibility'
 import { saveClip } from '../lib/clipStore'
+import { CURSORS } from './cursors'
+import { resolveMasks, canMask } from './masks'
+import { CanvasZoomContext } from '../shell/Canvas'
+import { setZoom } from '../shell/zoomStore'
 
-/* Per-tool cursor on the canvas stage. Using system cursors directly —
- * `crosshair` for shape-creation tools (Photoshop/Figma convention),
- * `cell` for pattern (suggests grid drag-fill), `text` for the text
- * insertion I-beam. Custom SVG cursors were attempted but Vite's `?url`
- * + browser SVG-cursor support is fragile across environments; the
- * system cursors are universally reliable and read instantly. */
+/* Per-tool cursor on the canvas stage (spec R8.1–R8.2): every tool sets its own. Shape tools
+ * `crosshair` (Photoshop/Figma), `cell` for pattern, the `text` I-beam, `zoom-in` (⌥ zoom-out);
+ * the pen and orbit wear drawn glyphs (./cursors — inline `data:` SVG, which needs no asset
+ * pipeline; the Vite `?url` import was what failed before). */
 const CURSOR_FOR_TOOL = {
-  rect:    'crosshair',
-  ellipse: 'crosshair',
-  pattern: 'cell',
-  text:    'text',
-  pen:     'crosshair',
-  zoom:    'zoom-in',
+  rect:     'crosshair',
+  ellipse:  'crosshair',
+  triangle: 'crosshair',
+  polygon:  'crosshair',
+  star:     'crosshair',
+  line:     'crosshair',
+  pattern:  'cell',
+  text:     'text',
+  pen:      CURSORS.pen,
+  zoom:     'zoom-in',
+  hand:     'grab',
+  orbit:    CURSORS.orbit,
 }
 
 /**
@@ -65,15 +73,45 @@ function fillWithAlpha(fill, alpha) {
   return `color-mix(in srgb, ${fill} ${Math.round(alpha * 100)}%, transparent)`
 }
 
+/* the primitives a path can be made from (state.convertShapeToPath / shapeToPathNodes) */
+/* Publishes the viewport's zoom for the status bar (it sits outside the DS viewport). */
+function ZoomProbe() {
+  const z = useContext(CanvasZoomContext)
+  useEffect(() => { setZoom(z) }, [z])
+  return null
+}
+
+/* the band outside the frame that selects the canvas, in screen px */
+const FRAME_EDGE = 8
+const NO_GUIDES = { h: [], v: [] }
+
+/* The selected path's segment under a virtual point, within `tol` virtual px — the Pen's
+ * add-anchor target (Illustrator). ponytail: unrotated paths only; a rotated path is normalised
+ * on entering node-edit, so rotate-aware hit testing waits until someone pens onto a rotated one. */
+function segmentHit(layer, vx, vy, tol) {
+  if (layer?.type !== 'path' || layer.locked || layer.rotation || !Array.isArray(layer.nodes)) return null
+  const nodes = layer.nodes
+  const lx = vx - layer.x, ly = vy - layer.y
+  const segs = nodes.length - 1 + (layer.closed ? 1 : 0)
+  let best = null
+  for (let i = 0; i < segs; i++) {
+    const hit = nearestSegmentT(nodes[i], nodes[(i + 1) % nodes.length], lx, ly)
+    if (hit.dist <= tol && (!best || hit.dist < best.dist)) best = { index: i, ...hit }
+  }
+  return best
+}
+
+const CONVERTIBLE_KINDS = new Set(['rect', 'ellipse', 'triangle', 'polygon', 'star', 'line'])
+
 export default function CanvasArea() {
   const {
     aspect, view, layers, palette,
     canvasRatio, showGrid,
     canvasFill, canvasFillOpacity, infiniteFill,
-    selectedId, selectedIds, select, toggleSelection, selectMany,
+    selectedId, selectedIds, select, selectCanvas, toggleSelection, selectMany,
     addLayer,
     updateLayer, removeLayer, deleteSelected, duplicateLayer, toggleLayer, toggleLayerLock,
-    flipSelected, flattenSelected, releaseBoolean, flattenText,
+    flipSelected, flattenSelected, releaseBoolean, flattenText, convertShapeToPath,
     groupLayers, ungroupLayer,
     insertFromLibrary,
     activePaint, setActivePaint,
@@ -87,6 +125,8 @@ export default function CanvasArea() {
   /* Paint shortcuts (D / X / Shift+X / N) write through useColorTarget so
    * the inspector, the picker, and the keymap share one writer. */
   const colorTarget = useColorTarget()
+  const strokePaintRef = useRef(null)
+  strokePaintRef.current = colorTarget.strokeHex ?? null
   /* Arrow-key nudges write through the shared coalescing editor (same
    * mechanism as the inspector's slider drags) so a burst of keypresses
    * collapses into ONE undo entry. 600ms of quiet commits; a selection
@@ -121,7 +161,8 @@ export default function CanvasArea() {
    * whole stage behind the grid + frame. */
   const infiniteColor = infiniteFill == null ? 'transparent' : (resolveColor(infiniteFill, palette) ?? 'transparent')
 
-  const visibleLayers = layers
+  /* masks resolved for drawing (G8): a mask layer hides, its target carries the clip */
+  const visibleLayers = useMemo(() => resolveMasks(layers), [layers])
 
   /* ─── stage ref + on-demand scale ───────────────────────────────────
    * Scale (screen-px / virtual-px) is computed fresh from the stage rect
@@ -269,7 +310,9 @@ export default function CanvasArea() {
     addLayer('path', {
       nodes: norm.nodes, closed,
       x: norm.dx, y: norm.dy, w: norm.w, h: norm.h,
-      color: null, stroke: 'palette:dark', strokeWidth: 2,
+      /* the stroke CARRIES (the user's 5): the paint pair's stroke — which follows the last
+         selection — else the palette's dark; an outline, no fill */
+      color: null, stroke: strokePaintRef.current ?? 'palette:dark', strokeWidth: 2,
     })
     setTool('select')
   }, [addLayer, setTool])
@@ -334,7 +377,7 @@ export default function CanvasArea() {
      * never create/select from the stage while it's armed. Orbit is a 3D
      * viewport mode — the per-layer camera rig (LayerRenderer) owns the
      * pointer over 3D layers; the stage does nothing (no move/create). */
-    if (tool === 'zoom' || tool === 'orbit') return
+    if (tool === 'zoom' || tool === 'orbit' || tool === 'hand') return
     /* Prevent the document-level click-away listener from clobbering this
      * canvas selection. */
     e.nativeEvent.stopPropagation()
@@ -346,6 +389,21 @@ export default function CanvasArea() {
       e.preventDefault()
       const { vx, vy } = clientToVirtual(e.clientX, e.clientY)
       const nodes = penRef.current?.nodes ?? []
+      /* ADD ANCHOR (G1 — Illustrator's pen over a selected path): no draft running and the press is
+         on a segment of the selected path → split it there, shape-preserving */
+      if (nodes.length === 0) {
+        const hit = segmentHit(selectedLayer, vx, vy, 8 / getScale())
+        if (hit) {
+          const cur = selectedLayer.nodes
+          const { a, mid, b } = splitSegment(cur[hit.index], cur[(hit.index + 1) % cur.length], hit.t)
+          const next = [...cur]
+          next[hit.index] = a
+          next[(hit.index + 1) % cur.length] = b
+          next.splice(hit.index + 1, 0, mid)
+          updateLayer(selectedLayer.id, { nodes: next })
+          return
+        }
+      }
       if (nodes.length >= 2) {
         const first = nodes[0]
         if (dist(vx, vy, first.x, first.y) * getScale() < 10) {
@@ -359,38 +417,41 @@ export default function CanvasArea() {
       return
     }
 
-    /* Line is a pen tool — click-click instead of drag. First click sets
-     * P1; second click commits the layer between the two endpoints. */
+    /* Line — click-click OR press-drag-release (the walk: a drag drew nothing and left the tool
+     * armed). The first press sets P1; a release more than a few px away commits there, else the
+     * next click does. */
     if (tool === 'line') {
       e.preventDefault()
       const { vx, vy } = clientToVirtual(e.clientX, e.clientY)
+      const commitLine = (x1, y1, x2, y2) => {
+        /* Slope picks which bbox diagonal renders. '\\' → ↘ from top-left,
+         * '/' → ↙ from bottom-left. Derived from the sign of (P2 - P1). */
+        const slope = ((x2 >= x1) === (y2 >= y1)) ? '\\' : '/'
+        addLayer('shape', {
+          x: Math.min(x1, x2), y: Math.min(y1, y2),
+          w: Math.max(1, Math.abs(x2 - x1)), h: Math.max(1, Math.abs(y2 - y1)),
+          kind: 'line',
+          slope,
+          color: null,
+          stroke: strokePaintRef.current ?? 'palette:dark',
+          strokeWidth: 2,
+        })
+        setLinePlacement(null)
+        setLinePreview(null)
+        setTool('select')
+      }
       if (!linePlacement) {
         setLinePlacement({ x1: vx, y1: vy })
         setLinePreview({ vx, vy })
+        const up = (ev) => {
+          window.removeEventListener('mouseup', up)
+          const p = clientToVirtual(ev.clientX, ev.clientY)
+          if (dist(p.vx, p.vy, vx, vy) * getScale() > 4) commitLine(vx, vy, p.vx, p.vy)
+        }
+        window.addEventListener('mouseup', up)
         return
       }
-      const x1 = linePlacement.x1
-      const y1 = linePlacement.y1
-      const x2 = vx
-      const y2 = vy
-      const x  = Math.min(x1, x2)
-      const y  = Math.min(y1, y2)
-      const w  = Math.max(1, Math.abs(x2 - x1))
-      const h  = Math.max(1, Math.abs(y2 - y1))
-      /* Slope picks which bbox diagonal renders. '\' → ↘ from top-left,
-       * '/' → ↙ from bottom-left. Derived from the sign of (P2 - P1). */
-      const slope = ((x2 >= x1) === (y2 >= y1)) ? '\\' : '/'
-      addLayer('shape', {
-        x, y, w, h,
-        kind: 'line',
-        slope,
-        color: null,
-        stroke: 'palette:dark',
-        strokeWidth: 2,
-      })
-      setLinePlacement(null)
-      setLinePreview(null)
-      setTool('select')
+      commitLine(linePlacement.x1, linePlacement.y1, vx, vy)
       return
     }
 
@@ -909,17 +970,32 @@ export default function CanvasArea() {
    * inside it (audit B1, the user's 22: the only way to clear a selection was the Layers panel).
    * The stage's own mousedown owns everything inside the frame; this catches the rest of the
    * viewport pane and nothing else — not the rails, not a context menu, not an overlay. */
+  /* …except a press on the frame's EDGE, which selects the canvas (the user's 1, Figma's frame
+   * title/edge): a band FRAME_EDGE px wide just outside the frame, outlined accent on hover. */
+  const [edgeHover, setEdgeHover] = useState(false)
   useEffect(() => {
-    const down = (e) => {
-      if (e.button !== 0 || tool !== 'select') return
-      const pane = e.target.closest?.('main.kol-editor-canvas')
-      if (!pane || stageRef.current?.contains(e.target)) return
-      if (e.target.closest('[data-kol-ctxmenu], .kol-popover, .kol-overlay-scrim, button, input')) return
-      select(null)
+    const onEdge = (e) => {
+      const r = stageRef.current?.getBoundingClientRect()
+      if (!r) return false
+      const out = e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom
+      return out && e.clientX > r.left - FRAME_EDGE && e.clientX < r.right + FRAME_EDGE
+        && e.clientY > r.top - FRAME_EDGE && e.clientY < r.bottom + FRAME_EDGE
     }
+    const inPane = (e) => {
+      const pane = e.target.closest?.('main.kol-editor-canvas')
+      if (!pane || stageRef.current?.contains(e.target)) return false
+      return !e.target.closest('[data-kol-ctxmenu], .kol-popover, .kol-overlay-scrim, button, input')
+    }
+    const down = (e) => {
+      if (e.button !== 0 || tool !== 'select' || !inPane(e)) return
+      if (onEdge(e)) selectCanvas()
+      else select(null)
+    }
+    const move = (e) => setEdgeHover(tool === 'select' && inPane(e) && onEdge(e))
     document.addEventListener('pointerdown', down)
-    return () => document.removeEventListener('pointerdown', down)
-  }, [tool, select])
+    document.addEventListener('pointermove', move)
+    return () => { document.removeEventListener('pointerdown', down); document.removeEventListener('pointermove', move) }
+  }, [tool, select, selectCanvas])
 
   /* CROP MODE HAS TO LOOK LIKE A MODE (audit B4, the user's 27 "crop image tool doesn't do
    * anything"): a cover-fit photo fills its frame exactly, so the crop window coincides with the
@@ -973,6 +1049,104 @@ export default function CanvasArea() {
     setNodeEditId(layer.id)
   }, [select, updateLayer])
 
+  /* DIRECT SELECTION ON EVERY SHAPE (the user's 3 and 6; spec gap "Expand shape"): A, the
+   * toolbar's Node select and a double-click node-edit a path — and a primitive is converted to a
+   * path first, silently, as Figma does. The conversion lands next render, so the node-edit waits
+   * for the layer to come back a path. */
+  const [pendingNodeEdit, setPendingNodeEdit] = useState(null)
+  /* HAND: a drag pans the viewport. The DS viewport pans on a plain wheel, so the drag is fed to
+   * it as wheel deltas — no second copy of its pan state. */
+  const [handDragging, setHandDragging] = useState(false)
+  const onHandDown = (e) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const target = stageRef.current
+    let lx = e.clientX, ly = e.clientY
+    setHandDragging(true)
+    const move = (ev) => {
+      const dx = ev.clientX - lx, dy = ev.clientY - ly
+      lx = ev.clientX; ly = ev.clientY
+      target?.dispatchEvent(new WheelEvent('wheel', { deltaX: -dx, deltaY: -dy, clientX: ev.clientX, clientY: ev.clientY, bubbles: true, cancelable: true }))
+    }
+    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); setHandDragging(false) }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+  /* the Pen over a selected path's segment shows the add-anchor cursor (G1) */
+  const [penAddHover, setPenAddHover] = useState(false)
+  useEffect(() => {
+    if (tool !== 'pen') { setPenAddHover(false); return }
+    const move = (e) => {
+      if (penRef.current?.nodes?.length) { setPenAddHover(false); return }
+      if (!stageRef.current?.contains(e.target)) { setPenAddHover(false); return }
+      const { vx, vy } = clientToVirtual(e.clientX, e.clientY)
+      setPenAddHover(!!segmentHit(selectedLayer, vx, vy, 8 / getScale()))
+    }
+    window.addEventListener('pointermove', move)
+    return () => window.removeEventListener('pointermove', move)
+  }, [tool, selectedLayer, clientToVirtual, getScale])
+  /* preview / work display (W) — see the keymap entry */
+  const [preview, setPreview] = useState(false)
+  /* RIGHT-CLICK ON A LAYER ROW opens this same menu (the user's 23; the DS LayerStack has no
+   * onContextMenu — plan 17 #1 — so the Layers pane forwards the event). */
+  useEffect(() => {
+    const on = (e) => {
+      const { id, x, y } = e.detail ?? {}
+      if (!id) return
+      if (!selectedIds.includes(id)) select(id)
+      ctxMenu.openAt({ clientX: x, clientY: y, preventDefault() {}, stopPropagation() {} }, id)
+    }
+    window.addEventListener('kol:layer-context', on)
+    return () => window.removeEventListener('kol:layer-context', on)
+  }, [selectedIds, select, ctxMenu])
+  /* MASK OPS (G8) — the layer directly below a top-level layer, and the two writes */
+  const layerBelow = useCallback((id) => {
+    const i = layers.findIndex((l) => l.id === id)
+    return i > 0 ? layers[i - 1] : null
+  }, [layers])
+  const useAsMask = useCallback((id) => {
+    const below = layerBelow(id)
+    if (!below) return
+    beginTransaction()
+    updateLayer(id, { isMask: true })
+    updateLayer(below.id, { maskedBy: id })
+    commitTransaction()
+  }, [layerBelow, updateLayer, beginTransaction, commitTransaction])
+  const releaseMask = useCallback((id) => {
+    beginTransaction()
+    updateLayer(id, { isMask: false })
+    layers.filter((l) => l.maskedBy === id).forEach((l) => updateLayer(l.id, { maskedBy: null }))
+    commitTransaction()
+  }, [layers, updateLayer, beginTransaction, commitTransaction])
+  /* ⌥ with the Zoom tool shows zoom-out (spec R8.2) */
+  const [altHeld, setAltHeld] = useState(false)
+  useEffect(() => {
+    if (tool !== 'zoom') return
+    const on = (e) => setAltHeld(e.altKey)
+    window.addEventListener('keydown', on)
+    window.addEventListener('keyup', on)
+    return () => { window.removeEventListener('keydown', on); window.removeEventListener('keyup', on); setAltHeld(false) }
+  }, [tool])
+  useEffect(() => {
+    if (!pendingNodeEdit) return
+    const l = findLayerDeep(layers, pendingNodeEdit)
+    if (l?.type === 'path') { setPendingNodeEdit(null); enterNodeEdit(l) }
+  }, [layers, pendingNodeEdit]) // eslint-disable-line react-hooks/exhaustive-deps
+  const directSelect = useCallback((layer) => {
+    if (!layer || layer.locked) return
+    if (layer.type === 'path') { setTool('select'); enterNodeEdit(layer); return }
+    if (layer.type === 'shape' && CONVERTIBLE_KINDS.has(layer.kind)) {
+      setTool('select')
+      convertShapeToPath(layer.id)
+      setPendingNodeEdit(layer.id)
+    }
+  }, [setTool, convertShapeToPath, enterNodeEdit])
+  useEffect(() => {
+    const on = () => directSelect(selectedLayer)
+    window.addEventListener('kol:node-edit', on)
+    return () => window.removeEventListener('kol:node-edit', on)
+  })
+
   /* Double-click with the Select tool → node-edit (paths) or crop (photos). */
   const onStageDoubleClick = useCallback((e) => {
     if (tool !== 'select') return
@@ -980,14 +1154,14 @@ export default function CanvasArea() {
     if (!layerEl) return
     const id = layerEl.getAttribute('data-layer-id')
     const layer = layers.find((l) => l.id === id)
-    if (layer?.type === 'path') {
+    if (layer?.type === 'path' || (layer?.type === 'shape' && CONVERTIBLE_KINDS.has(layer.kind))) {
       e.preventDefault()
-      enterNodeEdit(layer)
+      directSelect(layer)
     } else if (layer?.type === 'photo' && !layer.locked) {
       e.preventDefault()
       enterCrop(layer)
     }
-  }, [tool, layers, enterNodeEdit, enterCrop])
+  }, [tool, layers, directSelect, enterCrop])
 
   /* Live pen-preview path: the committed segments plus a rubber-band cubic
    * from the last anchor (honoring its out-handle) to the cursor. */
@@ -1200,6 +1374,18 @@ export default function CanvasArea() {
         }
 
         case 'toggle-rulers':     e.preventDefault(); toggleRulers(); return
+        case 'view-preview':      e.preventDefault(); setPreview((v) => !v); return
+        /* ⌘A — every top-level layer that is neither hidden nor locked (Figma's select all) */
+        case 'select-all':
+          e.preventDefault()
+          selectMany(layers.filter((l) => l.visible !== false && !l.locked && !COVER_TYPES.includes(l.type)).map((l) => l.id))
+          return
+        case 'convert-path':
+          e.preventDefault()
+          if (selectedLayer?.locked) return
+          if (selectedLayer?.type === 'bool') flattenSelected()
+          else if (selectedLayer?.type === 'shape' && CONVERTIBLE_KINDS.has(selectedLayer.kind)) convertShapeToPath(selectedLayer.id)
+          return
         case 'toggle-lock':       if (layer) { e.preventDefault(); toggleLayerLock(layer.id) }; return
         case 'toggle-visibility': if (layer) { e.preventDefault(); toggleLayer(layer.id) }; return
 
@@ -1249,7 +1435,7 @@ export default function CanvasArea() {
         /* A = direct-select: drop into node-edit on the selected path. */
         case 'node-edit': {
           e.preventDefault()
-          if (selectedLayer?.type === 'path') { setTool('select'); enterNodeEdit(selectedLayer) }
+          directSelect(selectedLayer)
           return
         }
         case 'tool-text':    e.preventDefault(); setTool('text');    return
@@ -1300,7 +1486,7 @@ export default function CanvasArea() {
   }, [
     selectedLayer, selectedIds, isPositionedSel, layers,
     select, removeLayer, deleteSelected, updateLayer, nudgeEdit, duplicateLayer, toggleLayer, toggleLayerLock,
-    flipSelected, enterNodeEdit,
+    flipSelected, enterNodeEdit, directSelect, flattenSelected, convertShapeToPath, selectMany,
     groupLayers, ungroupLayer,
     colorTarget, beginTransaction, commitTransaction,
     undo, redo, canUndo, canRedo, setTool,
@@ -1334,14 +1520,22 @@ export default function CanvasArea() {
    * overrides their inline `cursor: 'move'`. Cursor is an inherited CSS
    * property, so the stage and its descendants pick up the wrapper's
    * declaration without a redundant inline style. */
+  /* the pen over its first anchor (≥2 nodes, inside the 10px close radius): the ○ badge says the
+     click closes the path (the user's 5) */
+  const penCloses = tool === 'pen' && pen?.nodes?.length >= 2 && pen.cursor
+    && dist(pen.cursor.x, pen.cursor.y, pen.nodes[0].x, pen.nodes[0].y) * getScale() < 10
   const wrapperCursor =
-    drag?.mode === 'move' ? 'grabbing'
+    drag?.mode === 'move' || handDragging ? 'grabbing'
+      : penCloses ? CURSORS.penClose
+      : penAddHover ? CURSORS.penAdd
+      : tool === 'zoom' && altHeld ? 'zoom-out'
       : tool !== 'select'  ? (CURSOR_FOR_TOOL[tool] ?? 'crosshair')
       : 'default'
   return (
     <div
       className="relative w-full h-full"
-      style={{ cursor: wrapperCursor, background: infiniteColor }}
+      data-view-mode={preview ? 'preview' : undefined}
+      style={{ cursor: wrapperCursor, background: infiniteColor, '--kol-cursor-rotate': CURSORS.rotate }}
       /* Zoom tool — click zooms in at the pointer, Alt+click zooms out.
        * Lives on the wrapper so the dark backdrop zooms too; the viewport
        * (PanZoomViewport) applies it via the kol:zoom-at event. */
@@ -1350,7 +1544,7 @@ export default function CanvasArea() {
         window.dispatchEvent(new CustomEvent('kol:zoom-at', {
           detail: { clientX: e.clientX, clientY: e.clientY, factor: e.altKey ? 0.5 : 2 },
         }))
-      } : undefined}
+      } : tool === 'hand' ? onHandDown : undefined}
       /* Right-click → the selection-aware context menu (T7 2026-08-12).
        * The system menu is suppressed over the canvas area ONLY — the rails
        * and menus keep the browser default. A layer under the cursor gets
@@ -1367,16 +1561,17 @@ export default function CanvasArea() {
         aspect={aspect}
         customRatio={canvasRatio}
         bgColor={bgColor ?? undefined}
-        showGrid={showGrid}
-        showRulers={showRulers}
+        showGrid={showGrid && !preview}
+        showRulers={showRulers && !preview}
         /* Ruler guides render at the viewport level (full-viewport span,
          * Figma behavior) — state stays here in compose; the shell viewport
          * gets it as props, same threading as showGrid/showRulers. */
-        guides={guides}
+        guides={preview ? NO_GUIDES : guides}
         setGuides={setGuides}
         guidesInteractive={tool === 'select' && !drag}
         panEnabled
       >
+        <ZoomProbe />
         <div
           ref={stageRef}
           data-tool={tool}
@@ -1479,6 +1674,10 @@ export default function CanvasArea() {
               onExit={() => setNodeEditId(null)}
             />
           )}
+          {/* the frame-edge band is live: the frame outlines accent, a press selects the canvas */}
+          {edgeHover && (
+            <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ outline: '1px solid var(--kol-accent-primary)', zIndex: 5 }} />
+          )}
           {pen && (
             <svg
               width="100%" height="100%"
@@ -1580,8 +1779,9 @@ export default function CanvasArea() {
             layer={layerId ? findLayerDeep(layers, layerId) : null}
             onClose={ctxMenu.close}
             ops={{
-              select, duplicateLayer, removeLayer, toggleLayer, toggleLayerLock,
-              flattenSelected, releaseBoolean, flattenText, enterCrop,
+              select, duplicateLayer, removeLayer, toggleLayer, toggleLayerLock, updateLayer,
+              flattenSelected, releaseBoolean, flattenText, enterCrop, convertShapeToPath,
+              useAsMask, releaseMask, layerBelow,
               undo, redo, canUndo, canRedo,
             }}
           />
@@ -1595,6 +1795,7 @@ export default function CanvasArea() {
  * Selection-aware ops for the layer under the cursor; global undo/redo on empty canvas. The
  * positioning, the click-away, Escape and the chrome are the DS popover's — this is the ROWS. */
 function CanvasMenuItems({ layer, onClose, ops }) {
+  const modal = useModal()
   const run = (fn) => () => { onClose(); fn() }
   const open = (event, detail) => () => { onClose(); window.dispatchEvent(new CustomEvent(event, detail !== undefined ? { detail } : undefined)) }
 
@@ -1608,11 +1809,24 @@ function CanvasMenuItems({ layer, onClose, ops }) {
         window.dispatchEvent(new CustomEvent('kol:params-subtab', { detail: { tab: 'style' } }))
       } })
       items.push({ label: 'Flatten text', act: run(() => ops.flattenText(layer.id)) })
+      /* from the right rail's retired ⋯ menu (spec R2.4) — the layer's own verbs live on the layer */
+      items.push({ label: 'Edit object…', act: async () => {
+        onClose()
+        const next = await modal.prompt('Edit text', layer.text ?? '')
+        if (next != null) ops.updateLayer(layer.id, { text: next })
+      } })
+      items.push({ label: 'Save type to library', act: open('kol:save-type', layer.id) })
     }
     if (t === 'bool') {
-      items.push({ label: 'Flatten shape', act: run(() => ops.flattenSelected()) })
+      items.push({ label: 'Convert to path', act: run(() => ops.flattenSelected()) })
       items.push({ label: 'Release boolean', act: run(() => ops.releaseBoolean()) })
     }
+    if (t === 'shape' && CONVERTIBLE_KINDS.has(layer.kind)) {
+      items.push({ label: 'Convert to path', act: run(() => ops.convertShapeToPath(layer.id)) })
+    }
+    /* masks (G8): the layer clips the one directly below it */
+    if (layer.isMask) items.push({ label: 'Release mask', act: run(() => ops.releaseMask(layer.id)) })
+    else if (canMask(layer) && ops.layerBelow(layer.id)) items.push({ label: 'Use as mask', act: run(() => ops.useAsMask(layer.id)) })
     if (t === 'photo') {
       items.push({ label: 'Crop image', act: run(() => ops.enterCrop(layer)) })
       items.push({ label: 'Replace image', act: open('kol:photo-replace', layer.id) })
@@ -1625,10 +1839,11 @@ function CanvasMenuItems({ layer, onClose, ops }) {
       items.push({ label: 'Add effect', act: open('kol:open-effects') })
     }
     items.push({ divider: true })
-    items.push({ label: 'Duplicate', act: run(() => ops.duplicateLayer(layer.id)) })
+    /* one lock rule: a locked layer refuses duplicate and delete here as it does on the toolbar */
+    items.push({ label: 'Duplicate', act: run(() => ops.duplicateLayer(layer.id)), disabled: !!layer.locked })
     items.push({ label: layer.visible === false ? 'Show' : 'Hide', act: run(() => ops.toggleLayer(layer.id)) })
     items.push({ label: layer.locked ? 'Unlock' : 'Lock', act: run(() => ops.toggleLayerLock(layer.id)) })
-    items.push({ label: 'Delete', act: run(() => ops.removeLayer(layer.id)) })
+    items.push({ label: 'Delete', act: run(() => ops.removeLayer(layer.id)), disabled: !!layer.locked })
   } else {
     items.push({ label: 'Undo', act: run(() => ops.undo()), disabled: !ops.canUndo })
     items.push({ label: 'Redo', act: run(() => ops.redo()), disabled: !ops.canRedo })

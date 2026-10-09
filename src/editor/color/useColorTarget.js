@@ -67,7 +67,8 @@ export function useColorTarget({ history = 'discrete', coalesceMs = 250 } = {}) 
 
   const isCanvas = selectedId === 'canvas'
   const layer    = !isCanvas && selectedId ? findLayerDeep(layers, selectedId) : null
-  const isColorLayer = !!layer && COLOR_LAYER_TYPES.has(layer.type)
+  /* a locked layer takes no paint (one lock rule) — the app-level pair still moves */
+  const isColorLayer = !!layer && COLOR_LAYER_TYPES.has(layer.type) && !layer.locked
   /* Narrow, identity-stable derivations — the callbacks/memo below key on
    * these instead of the layer OBJECT, whose identity churns on every layer
    * patch (60×/s during drags) and would rebuild the return each render. */

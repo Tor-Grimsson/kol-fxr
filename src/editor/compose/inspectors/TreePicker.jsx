@@ -18,7 +18,7 @@ export function PickerDropdown(props) {
  * label-above LabeledControl in both skins, so TYPE · CATEGORY · PRESET sat
  * sentence-case over a rail of uppercase rows (user: "why are so many section
  * eyebrows lowercase?"). The editor keeps label-above. */
-export function PickerRow({ label, options, value, onChange, children, inline = false }) {
+export function PickerRow({ label, options, value, onChange, children, inline = true }) {
   const control = children ?? <PickerDropdown options={options} value={value} onChange={onChange} />
   return inline
     ? <SettingsRow label={label} align="fill" labelWidth={RAIL_LABEL_W}>{control}</SettingsRow>
@@ -41,7 +41,7 @@ export function PickerRow({ label, options, value, onChange, children, inline = 
  * keeps its own logic — its hierarchy has an extra registry-group level plus
  * a read-only legacy fallback that don't fit this flat shape.
  */
-export function TreePicker({ tree, presets, current, onPick, inline = false }) {
+export function TreePicker({ tree, presets, current, onPick, inline = true }) {
   const type = tree.find((t) => t.subs.includes(current.sub)) ?? tree[0]
   const subPresets = presets.filter((p) => p.sub === current.sub)
   const firstOf = (sub) => presets.find((p) => p.sub === sub)

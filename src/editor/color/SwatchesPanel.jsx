@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Dropdown } from '@kolkrabbi/kol-component'
 import { ColorSwatch } from '@kolkrabbi/kol-component'
 import { resolveCssVar } from './cssVar'
+import { useControlSize } from '../params/controlSize'
 
 /**
  * SwatchesPanel — AC brand-token swatch picker.
@@ -41,6 +42,7 @@ const PALETTES = [
 export function SwatchesBody({ onPick }) {
   const [palette, setPalette] = useState('ac')
   const [tick, setTick]       = useState(0)
+  const cs = useControlSize()
 
   /* Re-resolve when the document theme shifts (kol-system rebrand events). */
   useEffect(() => {
@@ -68,7 +70,7 @@ export function SwatchesBody({ onPick }) {
     <div className="p-4 flex flex-col gap-4 h-full min-h-0">
       <Dropdown
         variant="subtle"
-        size="sm"
+        size={cs}
         options={PALETTES}
         value={palette}
         onChange={setPalette}

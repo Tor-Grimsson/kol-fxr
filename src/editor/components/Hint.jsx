@@ -33,6 +33,9 @@
  * that is not a single line. Keep using this for the plain one-line case so
  * the type stays consistent.
  */
-export default function Hint({ children, className = 'kol-mono-12 text-meta' }) {
-  return <p className={`kol-placeholder ${className}`}>{children}</p>
+/* `always` — an EMPTY STATE, not an explainer (spec R3.5, ruled 2026-10-09 with the audit): the one
+ * sentence that says why a pane is blank shows on every profile. With the gate off by default
+ * nobody saw "Select a layer to edit its parameters" — a blank rail read as broken. */
+export default function Hint({ children, className = 'kol-mono-12 text-meta', always = false }) {
+  return <p className={`${always ? '' : 'kol-placeholder '}${className}`}>{children}</p>
 }

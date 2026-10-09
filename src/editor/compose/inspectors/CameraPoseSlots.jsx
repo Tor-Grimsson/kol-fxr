@@ -1,4 +1,5 @@
 import { Button, Tooltip } from '@kolkrabbi/kol-component'
+import { useControlSize } from '../../params/controlSize'
 
 /**
  * CameraPoseSlots — labs CameraPanel's save/recall pose slots + Reset
@@ -15,6 +16,7 @@ import { Button, Tooltip } from '@kolkrabbi/kol-component'
  * module is already loaded whenever an engine layer is live.
  */
 export default function CameraPoseSlots({ layer, patch, camParams, isEngine, showHeader = false }) {
+  const cs = useControlSize()
   const raw = Array.isArray(layer._camSlots) ? layer._camSlots : []
   const slots = [raw[0] ?? null, raw[1] ?? null, raw[2] ?? null]
 
@@ -41,18 +43,18 @@ export default function CameraPoseSlots({ layer, patch, camParams, isEngine, sho
 
   return (
     <>
-      {showHeader && <span className="kol-helper-10 text-meta">Camera</span>}
+      {showHeader && <span className="kol-eyebrow text-fg-80">Camera</span>}
       <div className="flex items-center gap-1">
         {camParams.length > 0 && slots.map((s, i) => (
           <Tooltip key={i} label={s ? 'Recall pose (shift-click = overwrite)' : 'Save pose'}><Button aria-label={s ? 'Recall pose (shift-click = overwrite)' : 'Save pose'}
             tone={s ? 'inverted' : 'ghost'}
-            size="sm"
+            size={cs}
             onClick={(e) => ((e.shiftKey || !s) ? save(i) : recall(i))}
           >
             {i + 1}
           </Button></Tooltip>
         ))}
-        <Button tone="primary" size="sm" className="ml-auto" onClick={reset}>
+        <Button tone="primary" size={cs} className="ml-auto" onClick={reset}>
           Reset
         </Button>
       </div>

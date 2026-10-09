@@ -11,8 +11,12 @@ import { openFiles } from '../library/filesDialogStore'
 import { MODES, goMode } from '../mode'
 import { findLayerDeep } from '../compose/helpers'
 import { isBooleanable } from '../compose/boolean-ops'
+import { BOOL_OP_LABELS } from '../compose/labels'
+import { comboLabel, shortcutById } from '../state/keymap'
 import { bareChain } from '../compose/filterChain'
 import { pack } from '../packs'
+import { blendLayers, canBlend } from '../compose/blend'
+import { canMask } from '../compose/masks'
 
 /* The seam (editor/packs.js) — the Generative menu is the generators pack's, the Effects menu the
  * effects pack's; each shows only when its pack is registered. */
@@ -57,7 +61,8 @@ export default function MenuTop() {
     aspect, setAspect,
     view, setView,
     layers, selectedId, selectedIds, updateLayer, addLayer, addFilter,
-    flattenSelected, releaseBoolean,
+    flattenSelected, releaseBoolean, booleanSelected, convertShapeToPath, groupLayers, palette,
+    beginTransaction, commitTransaction,
     canUndo, canRedo, undo, redo,
     clearLayers,
     currentPresetId, currentPresetName, setCurrentPresetName,
@@ -156,6 +161,37 @@ export default function MenuTop() {
     (vectorSel.length >= 2 && vectorSel.every(isBooleanable))
   /* Release = un-boolean (top-level bools, ungroup scope). */
   const canRelease = layers.some((l) => l.id === selectedId && l.type === 'bool')
+  /* Convert to path (the user's 6): a bool bakes (flatten), a primitive becomes a path */
+  const convertible = vectorSel.length === 1 && vectorSel[0].type === 'shape' && !vectorSel[0].locked
+    && ['rect', 'ellipse', 'triangle', 'polygon', 'star', 'line'].includes(vectorSel[0].kind)
+  const onConvert = () => (convertible ? convertShapeToPath(vectorSel[0].id) : flattenSelected())
+  /* Blend… (the user's 23): exactly two outlined layers; asks for the step count */
+  const blendable = vectorSel.length === 2 && canBlend(vectorSel[0], vectorSel[1])
+  const onBlend = async () => {
+    const raw = await modal.prompt('Blend steps', '5')
+    const steps = Math.max(1, Math.min(50, Math.round(Number(raw)) || 0))
+    if (raw == null || !steps) return
+    const ids = blendLayers(vectorSel[0], vectorSel[1], steps, palette).map((patch) => addLayer('path', patch))
+    if (ids.length) groupLayers(ids)
+  }
+  /* masks (G8): the one selected top-level layer clips the layer directly below it */
+  const maskSel = vectorSel.length === 1 ? vectorSel[0] : null
+  const maskIdx = maskSel ? layers.findIndex((l) => l.id === maskSel.id) : -1
+  const canUseAsMask = !!maskSel && !maskSel.isMask && maskIdx > 0 && canMask(maskSel)
+  const onUseAsMask = () => {
+    beginTransaction()
+    updateLayer(maskSel.id, { isMask: true })
+    updateLayer(layers[maskIdx - 1].id, { maskedBy: maskSel.id })
+    commitTransaction()
+  }
+  const onReleaseMask = () => {
+    beginTransaction()
+    updateLayer(maskSel.id, { isMask: false })
+    layers.filter((l) => l.maskedBy === maskSel.id).forEach((l) => updateLayer(l.id, { maskedBy: null }))
+    commitTransaction()
+  }
+  /* booleans are toolbar + menu verbs (spec R2.4) — the same gate as the toolbar fold */
+  const canBool = vectorSel.filter(isBooleanable).length >= 2
 
   /* EFFECTS > Pattern — the four labs /optic/* generator pages. They insert
    * loop layers (nothing to filter), so they render without an fx target. */
@@ -207,19 +243,6 @@ export default function MenuTop() {
 
   return (
     <div className="kol-editor-topbar flex items-center gap-3 px-4 h-12 border-b border-oq-08">
-      {/* `md`, the menu bar's rung — at `sm` it stood 26 beside seven 32px menu triggers
-          (validate:render R1, 2026-09-29) */}
-      <Input
-        variant="ghost"
-        size="md"
-        value={currentPresetName ?? ''}
-        onCommit={commitTitle}
-        placeholder="Untitled"
-        width="220px"
-        title="Rename"
-        aria-label="Frame name"
-        inputClassName="kol-helper-12 text-emphasis"
-      />
       {/* The mode door — first-class beside the title (it kept getting lost
           inside Settings). Label = the CURRENT chrome; picking another mode
           navigates via goMode. */}
@@ -255,14 +278,28 @@ export default function MenuTop() {
                     ))}
               </MenuDropdownNest>
             ))}
+            {/* Pattern — the four labs /optic/* generator pages; they insert loop layers, so they are
+                generative, not effects (moved from Effects › Pattern, the user's 26) */}
+            <MenuDropdownNest label="Pattern">
+              {FX_PATTERN_CATEGORIES.map((c) => (
+                <MenuDropdownNest key={c.label} label={c.label}>
+                  {presetsInSub(c.group, c.sub).map((p) => (
+                    <MenuDropdownItem key={p.id} onClick={() => addGenerative(p, c.group)}>
+                      {p.label}
+                    </MenuDropdownItem>
+                  ))}
+                </MenuDropdownNest>
+              ))}
+            </MenuDropdownNest>
           </div>
         </MenuItem>}
 
         {fx() && <MenuItem label="Effects" panelClassName="z-[var(--kol-z-tooltip)]" panelStyle={{ maxHeight: '70vh', overflowY: 'auto' }}>
           <div className="py-1 w-[260px]">
             {/* TYPE nests (Halftone · Scanline · CRT · Refraction · FX rack ·
-                Pattern); categories inside apply a filter to the selected
-                layer. Preset picking lives in the Effects panel. */}
+                Dither); categories inside apply a filter to the selected
+                layer. Preset picking lives in the Effects panel. PATTERN LEFT THIS MENU (the
+                user's 26): its generators insert layers, so they are the Generative menu's. */}
             {!fxTarget ? (
               <div className="kol-mono-10 text-subtle px-3 py-1">Select a layer to apply an effect</div>
             ) : (
@@ -271,7 +308,7 @@ export default function MenuTop() {
                   None
                 </MenuDropdownItem>
                 <MenuDropdownDivider />
-                {effectCategories(fxOptions).filter((c) => c.id !== 'other' && c.id !== 'pattern').map((c) => (
+                {effectCategories(fxOptions).filter((c) => c.id !== 'other').map((c) => (
                   <MenuDropdownNest key={c.id} label={c.label}>
                     {c.filters.map((f) => (
                       <MenuDropdownItem
@@ -286,30 +323,6 @@ export default function MenuTop() {
                 ))}
               </>
             )}
-            {/* Pattern (labs EFFECTS > Pattern) — one nest holding both its
-                filters (need an fx target) and the four generator categories
-                (insert a layer, no target needed). */}
-            <MenuDropdownDivider />
-            <MenuDropdownNest label="Pattern">
-              {fxTarget && effectCategories(fxOptions).find((c) => c.id === 'pattern')?.filters.map((f) => (
-                <MenuDropdownItem
-                  key={f.id}
-                  onClick={() => applyEffect(f)}
-                  shortcut={fxInChain(f.id) ? <Icon name="check" size={11} /> : undefined}
-                >
-                  {f.label}
-                </MenuDropdownItem>
-              ))}
-              {gen() && FX_PATTERN_CATEGORIES.map((c) => (
-                <MenuDropdownNest key={c.label} label={c.label}>
-                  {presetsInSub(c.group, c.sub).map((p) => (
-                    <MenuDropdownItem key={p.id} onClick={() => addGenerative(p, c.group)}>
-                      {p.label}
-                    </MenuDropdownItem>
-                  ))}
-                </MenuDropdownNest>
-              ))}
-            </MenuDropdownNest>
           </div>
         </MenuItem>}
 
@@ -319,12 +332,28 @@ export default function MenuTop() {
               Color
             </MenuDropdownItem>
             <MenuDropdownDivider />
-            <MenuDropdownItem onClick={flattenSelected} disabled={!canFlatten}>
-              Flatten shape
+            {Object.entries(BOOL_OP_LABELS).map(([op, label]) => (
+              <MenuDropdownItem key={op} onClick={() => booleanSelected(op)} disabled={!canBool}>
+                {label}
+              </MenuDropdownItem>
+            ))}
+            <MenuDropdownDivider />
+            <MenuDropdownItem onClick={onConvert} disabled={!canFlatten && !convertible} shortcut={comboLabel(shortcutById('convert-path').combo)}>
+              Convert to path
             </MenuDropdownItem>
             <MenuDropdownItem onClick={() => releaseBoolean()} disabled={!canRelease}>
               Release boolean
             </MenuDropdownItem>
+            <MenuDropdownDivider />
+            <MenuDropdownItem onClick={onBlend} disabled={!blendable}>
+              Blend…
+            </MenuDropdownItem>
+            <MenuDropdownDivider />
+            {maskSel?.isMask ? (
+              <MenuDropdownItem onClick={onReleaseMask}>Release mask</MenuDropdownItem>
+            ) : (
+              <MenuDropdownItem onClick={onUseAsMask} disabled={!canUseAsMask}>Use as mask</MenuDropdownItem>
+            )}
           </div>
         </MenuItem>
 
@@ -462,7 +491,7 @@ export default function MenuTop() {
         <Tooltip label="Display settings"><IconFrame
           name="settings-01"
           variant="primary"
-          size="sm"
+          size="md" /* the menu bar's rung — it stood 26 beside 32px triggers (spec R1.1) */
           onClick={() => window.dispatchEvent(new CustomEvent('kol:open-settings'))}
           aria-label="Display settings"
         /></Tooltip>

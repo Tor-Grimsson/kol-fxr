@@ -348,7 +348,7 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
                 </Button>
                 {/* what it touches — the setting's dialog (plan 18 § 3) */}
                 <Tooltip label="What Randomize all rolls"><Button tone="primary" size={cs} iconOnly="nav-settings" aria-label="What Randomize all rolls" onClick={() => setScopesOpen(true)} className="shrink-0" /></Tooltip>
-                <Tooltip label="Reset to defaults (R)"><Button tone="primary" size={cs} iconOnly="rotate-left" aria-label="Reset to defaults" onClick={resetLayer} className="shrink-0" /></Tooltip>
+                <Tooltip label="Reset to defaults" shortcut="R"><Button tone="primary" size={cs} iconOnly="rotate-left" aria-label="Reset to defaults" onClick={resetLayer} className="shrink-0" /></Tooltip>
               </div>
               {scopes.length > 0 && (
                 <ScopeStrips size={cs} cells={[

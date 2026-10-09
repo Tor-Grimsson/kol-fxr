@@ -32,6 +32,7 @@ export const SHORTCUTS = [
   { id: 'redo',        combo: 'Mod+Shift+Z', label: 'Redo',                     section: 'Edit', views: ['editor'] },
   { id: 'redo-alt',    combo: 'Mod+Y',       label: 'Redo',                     section: 'Edit', hidden: true, views: ['editor'] },
   { id: 'duplicate',   combo: 'Mod+D',       label: 'Duplicate selection',      section: 'Edit', views: ['editor'] },
+  { id: 'select-all',  combo: 'Mod+A',       label: 'Select all layers',        section: 'Edit', views: ['editor'] },
   { id: 'delete-back', combo: 'Backspace',   label: 'Delete selection',         section: 'Edit', views: ['editor'] },
   { id: 'delete-fwd',  combo: 'Delete',      label: 'Delete selection',         section: 'Edit', hidden: true, views: ['editor'] },
 
@@ -45,6 +46,8 @@ export const SHORTCUTS = [
   { id: 'toggle-visibility', combo: 'H',                  label: 'Toggle visibility',    section: 'Layer', views: ['editor'] },
   { id: 'flip-h',            combo: 'Shift+H',            label: 'Flip horizontal',      section: 'Layer', views: ['editor'] },
   { id: 'flip-v',            combo: 'Shift+V',            label: 'Flip vertical',        section: 'Layer', views: ['editor'] },
+  /* Illustrator's Create Outlines chord (the user's 6): a shape (or a boolean) becomes an editable path */
+  { id: 'convert-path',      combo: 'Mod+Shift+O',        label: 'Convert to path',      section: 'Layer', views: ['editor'] },
   { id: 'nudge-left',        combo: 'ArrowLeft',          label: 'Nudge ← 1px',          section: 'Layer', views: ['editor'] },
   { id: 'nudge-right',       combo: 'ArrowRight',         label: 'Nudge → 1px',          section: 'Layer', views: ['editor'] },
   { id: 'nudge-up',          combo: 'ArrowUp',            label: 'Nudge ↑ 1px',          section: 'Layer', views: ['editor'] },
@@ -104,9 +107,12 @@ export const SHORTCUTS = [
    * and that duplicate listener is gone. */
   /* `I` is the eyedropper (the user's 17, 2026-10-09) — it was the placeholder-text dev toggle,
      which keeps a hidden chord so nothing is lost. */
-  { id: 'eyedrop',        combo: 'I',         label: 'Eyedropper — sample a colour from the canvas', section: 'Color', views: ['editor'] },
+  { id: 'eyedrop',        combo: 'I',         label: 'Eyedropper — sample a color from the canvas', section: 'Color', views: ['editor'] },
   { id: 'toggle-hints',   combo: 'Shift+I',   label: 'Show / hide placeholder text', section: 'View', hidden: true },
   { id: 'toggle-rulers',  combo: 'Shift+R', label: 'Show / hide rulers',    section: 'View', views: ['editor'] },
+  /* Affinity / InDesign's preview mode (the user's 2): the frame edge, its ratio label, rulers,
+     guides and grid off — the composition alone */
+  { id: 'view-preview',   combo: 'W',       label: 'Preview mode — hide frame edge, label, rulers, guides', section: 'View', views: ['editor'] },
   { id: 'pan',            combo: 'Space', label: 'Play / pause · hold + drag to pan', section: 'View', passive: true },
   /* Handled inside the canvas viewport (window keydown, input-guarded) —
    * documented here for the cheat sheet only. */

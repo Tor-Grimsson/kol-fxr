@@ -1,7 +1,7 @@
 {
   "name": "Effexor FXR",
   "short_name": "FXR",
-  "description": "A DOM/SVG design compositor — frames, layers, vector tools — with generative, kinetic-type and effects layers on the same engine.",
+  "description": "A design compositor — frames, layers and vector tools, with generative, kinetic-type and effects layers on one engine.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -9,13 +9,13 @@
   "theme_color": "#121215",
   "icons": [
     {
-      "src": "/touch-icons/apple-touch-icon-light.png",
+      "src": "/touch-icons/apple-touch-icon-dark.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/touch-icons/apple-touch-icon-light.svg",
+      "src": "/touch-icons/apple-touch-icon-dark.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"

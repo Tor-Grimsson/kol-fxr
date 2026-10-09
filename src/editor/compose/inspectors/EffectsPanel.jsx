@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, LabeledControl, SegmentedToggle, ToggleSwitch, ViewToggle, Slider, Input, Tooltip } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, LabeledControl, SegmentedToggle, SettingsRow, ToggleSwitch, Slider, Input, Tooltip } from '@kolkrabbi/kol-component'
 import { PickerRow, PickerDropdown } from './TreePicker'
 import { useComposeState } from '../state'
 import { findLayerDeep } from '../helpers'
@@ -15,7 +15,7 @@ import {
 import { MAX_FILTERS, resolvedChain } from '../filterChain'
 import { categoryOf, presetParamOf, presetPatchFor, effectHost, flatCategories } from './effectCategories'
 import Hint from '../../components/Hint'
-import { useControlSize } from '../../params/controlSize'
+import { useControlSize, RAIL_LABEL_W } from '../../params/controlSize'
 
 /**
  * EffectsPanel — the Effects tab of the right rail, now hosting the labs
@@ -41,7 +41,7 @@ import { useControlSize } from '../../params/controlSize'
  */
 const FX_TABS = [
   { value: 'effect', label: 'Effect' },
-  { value: 'anim',   label: 'Motion' },
+  { value: 'anim',   label: 'Animation' },
 ]
 
 export default function EffectsPanel() {
@@ -54,15 +54,16 @@ export default function EffectsPanel() {
       <div className="kol-compose-inspector-body">
         {layer
           ? <LayerEffects key={layer.id} layer={layer} />
-          : <Hint>Select a layer to edit its effect.</Hint>}
+          : <Hint always>Select a layer to edit its effect.</Hint>}
       </div>
     </div>
   )
 }
 
 function LayerEffects({ layer }) {
+  const cs = useControlSize()
   const {
-    updateLayer, palette,
+    palette,
     addFilter, removeFilter, toggleFilter, moveFilter, replaceFilter,
   } = useComposeState()
   const edit = useLayerEdit(layer.id, { history: 'coalesce' })
@@ -74,51 +75,23 @@ function LayerEffects({ layer }) {
    * mobile Effects sheet too. */
   const { effectable, engineHost, engineLoop } = effectHost(layer)
 
-  /* Panel-local selection: the chain index whose params render below.
-   * null = add mode (the pickers append a new stage). NOT layer state. */
+  /* Panel-local selection: the slot whose parameters are open. NOT layer state. */
   const [selIdx, setSelIdx] = useState(chain.length ? 0 : null)
   const stage = selIdx != null ? chain[selIdx] ?? null : null
-
-  /* Empty state (user ruling 2026-08-12): an empty chain shows ONLY the
-   * Add-effect button — no pre-opened pickers claiming "Halftone". */
-  const [adding, setAdding] = useState(false)
-  useEffect(() => { if (chain.length > 0) setAdding(false) }, [chain.length])
-
   const [tab, setTab] = useState('effect')
 
-  /* Category is a browse control — switching it never writes the layer.
-   * Init from the selected stage so reopening lands on its bucket. */
-  const [cat, setCat] = useState(() => categoryOf(chain[0]?.id) ?? null)
-
-  /* Follow external chain writes (top-bar Effects menu adds a stage without
-   * remounting this panel): a NEW stage key appearing selects that stage and
-   * snaps the category to its bucket — the picker-flow equivalent of the old
-   * filterId sync. Removals clamp the selection. */
+  /* Follow external chain writes (the top-bar Effects menu adds a stage without remounting this
+   * panel): a NEW stage opens; removals clamp the selection. */
   const keysRef = useRef(chain.map((s) => s.key))
   useEffect(() => {
     const prev = keysRef.current
     const keys = chain.map((s) => s.key)
     keysRef.current = keys
     const addedKey = keys.find((k) => !prev.includes(k))
-    if (addedKey != null) {
-      const i = keys.indexOf(addedKey)
-      setSelIdx(i)
-      const c = categoryOf(chain[i].id)
-      if (c) setCat(c)
-      return
-    }
+    if (addedKey != null) { setSelIdx(keys.indexOf(addedKey)); return }
     if (selIdx != null && selIdx >= keys.length) setSelIdx(keys.length ? keys.length - 1 : null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chain.length])
-
-  /* Selecting a stage row syncs the category to its bucket (browse-only
-   * category changes afterwards don't snap back — keyed on the stage key). */
-  useEffect(() => {
-    if (!stage) return
-    const c = categoryOf(stage.id)
-    if (c) setCat(c)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage?.key])
 
   if (!effectable) {
     return (
@@ -130,35 +103,17 @@ function LayerEffects({ layer }) {
     )
   }
 
-  /* ── picker catalogs ──
-   * Add mode: engine options drop out while an engine stage exists (one GL
-   * stage max) or the host can't feed one. Replace mode: same, except the
-   * engine stage itself may swap to another engine. */
-  const stageIsEngine = stage?.def?.kind === 'engine'
-  const engineOk = engineHost && (stage ? (stageIsEngine || (!hasEngine && selIdx === chain.length - 1)) : !hasEngine)
-  const available = FILTERS.filter((f) => f.kind !== 'engine' || engineOk)
-  /* The nav-model rack stub expands to its granular categories here — the
-   * editor's Type dropdown lists them flat (labs' /effects/<group> set). */
-  const categories = flatCategories(available)
-  const catOptions = categories.map((c) => ({ value: c.id, label: c.label }))
-  const catId = categories.some((x) => x.id === cat) ? cat : categories[0]?.id
-  const catFilters = categories.find((c) => c.id === catId)?.filters ?? []
-  const fxOptions = [
-    { value: '', label: 'None' },
-    ...catFilters.map((f) => ({ value: f.id, label: f.label })),
-  ]
-  /* The effect dropdown reads 'None' in add mode, and while browsing a
-   * category the selected stage doesn't live in. */
-  const fxValue = stage && categoryOf(stage.id) === catId ? stage.id : ''
-
-  const onPick = (id) => {
-    if (stage) {
-      if (!id) { removeFilter(layer.id, selIdx); return }   /* 'None' removes the stage */
-      if (id !== stage.id) replaceFilter(layer.id, selIdx, id)
-      return
-    }
-    if (!id) return
-    addFilter(layer.id, id)   /* selection follows via the new-key effect */
+  /* ONE DROPDOWN PER EFFECT, its categories as headings (the user's 25 — it was Type, then
+   * Category, then the effect). Engine (GL) effects: one stage max, last in the chain, and only
+   * where the host can feed one — a slot may swap to an engine only if it is that stage. */
+  const optionsFor = (i) => {
+    const engineOk = engineHost && (i == null
+      ? !hasEngine
+      : chain[i]?.def?.kind === 'engine' || (!hasEngine && i === chain.length - 1))
+    const available = FILTERS.filter((f) => f.kind !== 'engine' || engineOk)
+    return flatCategories(available).flatMap((c) => c.filters.length
+      ? [{ heading: c.label }, ...c.filters.map((f) => ({ value: f.id, label: f.label }))]
+      : [])
   }
 
   /* ── stage param plumbing — the existing renderer over NESTED params ──
@@ -182,7 +137,7 @@ function LayerEffects({ layer }) {
 
   const renderAnimate = (p) => <BindDot layer={paramsView} param={p} setProp={setStageProp} />
   /* Hierarchy level 4 — the filter's preset param (mode/look/pattern…)
-   * surfaces as "Preset" above the tab strip and leaves the params list. */
+   * surfaces as "Preset" under its slot and leaves the params list. */
   const presetKey = stage?.def ? presetParamOf(stage.def.id) : null
   const presetParam = presetKey ? stage.def.params.find((p) => p.key === presetKey) : null
   const effectParams = stage?.def
@@ -191,91 +146,78 @@ function LayerEffects({ layer }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* ── chain list — one row per stage ── */}
-      {chain.length > 0 && (
-        <div className="flex flex-col gap-1">
-          {chain.map((s, i) => (
-            <StageRow
-              key={s.key}
-              stage={s}
-              selected={i === selIdx}
-              onSelect={() => setSelIdx(i)}
-              onToggle={() => toggleFilter(layer.id, i)}
-              onRemove={() => removeFilter(layer.id, i)}
-              onUp={() => moveFilter(layer.id, i, i - 1)}
-              onDown={() => moveFilter(layer.id, i, i + 1)}
-              canUp={i > 0 && s.def?.kind !== 'engine'}
-              canDown={i < chain.length - 1 && s.def?.kind !== 'engine' && chain[i + 1]?.def?.kind !== 'engine'}
-            />
-          ))}
-        </div>
-      )}
-      {chain.length > 0 && selIdx != null && (
-        <Tooltip label={chain.length >= MAX_FILTERS ? `Chain is full (${MAX_FILTERS} effects)` : 'Add another effect'}><Button aria-label={chain.length >= MAX_FILTERS ? `Chain is full (${MAX_FILTERS} effects)` : 'Add another effect'}
-          tone="primary" size="sm" className="w-full"
-          onClick={() => setSelIdx(null)}
-          disabled={chain.length >= MAX_FILTERS}
-        >
-          Add effect
-        </Button></Tooltip>
-      )}
-
-      {/* ── empty chain: just the button (Figma's add-first flow) ── */}
-      {chain.length === 0 && !adding && (
-        <Button tone="primary" size="sm" className="w-full" onClick={() => setAdding(true)}>
-          Add effect
-        </Button>
-      )}
-
-      {/* ── Type/Category pickers — add a stage, or show/replace the selected one ── */}
-      {(chain.length > 0 || adding) && (
-        <>
-          <PickerRow label="Type" options={catOptions} value={catId} onChange={setCat} />
-          <PickerRow label="Category" options={fxOptions} value={fxValue} onChange={onPick} />
-          {presetParam && (
-            <PickerRow
-              label="Preset"
-              options={presetParam.options}
-              value={stage.params[presetParam.key] ?? presetParam.default}
-              onChange={(v) => setStageParams(presetPatchFor(stage.def, v))}
-            />
-          )}
-        </>
-      )}
-
-      {chain.length > 0 && layer.imgW != null && (
-        <span className="kol-helper-12 text-meta">Filters don't apply to cropped photos.</span>
-      )}
-      {/* Camera drag — orbit-capable engine filters (Rutt-Etra). */}
-      {stage?.def?.orbit && (
-        <LabeledControl label="Camera drag">
-          <ViewToggle
-            options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
-            viewMode={layer.cameraDrag ? 'on' : 'off'}
-            onViewChange={(v) => setStageProp('cameraDrag', v === 'on')}
+      {/* ── THE STACK — one slot per effect, top to bottom (the user's 24: Affinity's FX list) ── */}
+      {chain.map((s, i) => (
+        <div key={s.key} className="flex flex-col gap-3">
+          <StageRow
+            stage={s}
+            selected={i === selIdx}
+            options={optionsFor(i)}
+            onSelect={() => setSelIdx(i)}
+            onPick={(id) => { if (id && id !== s.id) replaceFilter(layer.id, i, id); setSelIdx(i) }}
+            onToggle={() => toggleFilter(layer.id, i)}
+            onRemove={() => removeFilter(layer.id, i)}
+            onUp={() => moveFilter(layer.id, i, i - 1)}
+            onDown={() => moveFilter(layer.id, i, i + 1)}
+            canUp={i > 0 && s.def?.kind !== 'engine'}
+            canDown={i < chain.length - 1 && s.def?.kind !== 'engine' && chain[i + 1]?.def?.kind !== 'engine'}
           />
-        </LabeledControl>
-      )}
-
-      {stage?.def && (
-        <>
-          <SegmentedToggle variant="filled" value={tab} onChange={setTab} options={FX_TABS} />
-          {tab === 'effect' && (
-            <>
-              <AutoControls schema={effectParams} layer={paramsView} setProp={setStageProp} palette={palette} renderAnimate={renderAnimate} />
-              <StageRolls def={stage.def} view={paramsView} tab="effect" onPatch={setStageParams} />
-            </>
-          )}
-          {tab === 'anim' && (
-            <>
-              <AutoControls schema={stage.def.params} layer={paramsView} setProp={setStageProp} palette={palette} renderAnimate={renderAnimate} tab="anim" />
-              <StageRolls def={stage.def} view={paramsView} tab="anim" onPatch={setStageParams} />
-              {stage.def.sweeps && (
-                <SweepStack sweeps={Array.isArray(stage.params.sweeps) ? stage.params.sweeps : []} onChange={setSweeps} />
+          {/* the open slot's own panel: preset, camera drag, Effect · Animation, its parameters */}
+          {i === selIdx && stage?.def && (
+            <div className="flex flex-col gap-3">
+              {presetParam && (
+                <PickerRow
+                  label="Preset"
+                  options={presetParam.options}
+                  value={stage.params[presetParam.key] ?? presetParam.default}
+                  onChange={(v) => setStageParams(presetPatchFor(stage.def, v))}
+                  inline
+                />
               )}
-            </>
+              {layer.imgW != null && (
+                <span className="kol-helper-12 text-meta">Filters don't apply to cropped photos.</span>
+              )}
+              {stage.def.orbit && (
+                <SettingsRow label="Camera drag" align="fill" labelWidth={RAIL_LABEL_W}>
+                  <SegmentedToggle tone="sunken" size={cs} className="w-full"
+                    options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
+                    value={layer.cameraDrag ? 'on' : 'off'}
+                    onChange={(v) => setStageProp('cameraDrag', v === 'on')}
+                  />
+                </SettingsRow>
+              )}
+              <SegmentedToggle tone="sunken" size={cs} className="w-full" value={tab} onChange={setTab} options={FX_TABS} />
+              {tab === 'effect' && (
+                <>
+                  <AutoControls schema={effectParams} layer={paramsView} setProp={setStageProp} palette={palette} renderAnimate={renderAnimate} />
+                  <StageRolls def={stage.def} view={paramsView} tab="effect" onPatch={setStageParams} />
+                </>
+              )}
+              {tab === 'anim' && (
+                <>
+                  <AutoControls schema={stage.def.params} layer={paramsView} setProp={setStageProp} palette={palette} renderAnimate={renderAnimate} tab="anim" />
+                  <StageRolls def={stage.def} view={paramsView} tab="anim" onPatch={setStageParams} />
+                  {stage.def.sweeps && (
+                    <SweepStack sweeps={Array.isArray(stage.params.sweeps) ? stage.params.sweeps : []} onChange={setSweeps} />
+                  )}
+                </>
+              )}
+            </div>
           )}
-        </>
+        </div>
+      ))}
+
+      {/* ── the empty slot at the foot of the stack: pick an effect and it stacks ── */}
+      {chain.length < MAX_FILTERS ? (
+        <Dropdown
+          variant="subtle" size={cs} className="w-full"
+         
+          options={[{ value: '', label: 'Add effect…' }, ...optionsFor(null)]}
+          value=""
+          onChange={(id) => { if (id) addFilter(layer.id, id) }}
+        />
+      ) : (
+        <span className="kol-helper-12 text-meta">{`Chain is full (${MAX_FILTERS} effects)`}</span>
       )}
     </div>
   )
@@ -334,7 +276,7 @@ export function StageRolls({ def, view, tab, onPatch, inline = false }) {
             {motion ? 'Randomize motion' : 'Randomize all'}
           </Button>
           {/* reset, visible — it was only ⌥ on the button beside it */}
-          <Tooltip label="Reset to defaults (R)"><Button tone="primary" size={cs} iconOnly="rotate-left" aria-label="Reset to defaults" onClick={() => reset(allParams)} className="shrink-0" /></Tooltip>
+          <Tooltip label="Reset to defaults" shortcut="R"><Button tone="primary" size={cs} iconOnly="rotate-left" aria-label="Reset to defaults" onClick={() => reset(allParams)} className="shrink-0" /></Tooltip>
         </div>
       )}
       {scopes.length > 0 && (
@@ -353,32 +295,32 @@ export function StageRolls({ def, view, tab, onPatch, inline = false }) {
 }
 
 /* One chain row: enable toggle · name · up/down · remove. Click selects. */
-function StageRow({ stage, selected, onSelect, onToggle, onRemove, onUp, onDown, canUp, canDown }) {
+function StageRow({ stage, selected, options, onSelect, onPick, onToggle, onRemove, onUp, onDown, canUp, canDown }) {
+  const cs = useControlSize()
   const enabled = stage.enabled !== false
   const iconBtn = (label, onClick, disabled, icon, className = '') => (
     <Tooltip label={label}><Button
-      tone="ghost" quiet size="xs" iconOnly={icon}
+      tone="ghost" quiet size={cs} iconOnly={icon}
       aria-label={label}
       disabled={disabled}
       onClick={(e) => { e.stopPropagation(); onClick() }}
       className={`shrink-0 ${className}`}
     /></Tooltip>
   )
+  /* a slot: eye · the effect's own dropdown (pick to swap it) · reorder · delete. Its row lights
+     while its panel is open below it. */
   return (
     <div
-      role="button"
-      tabIndex={0}
       onClick={onSelect}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect() }}
-      className={`flex items-center gap-1 px-2 h-8 rounded cursor-pointer ${selected ? 'bg-oq-08' : 'hover:bg-oq-04'}`}
+      className={`flex items-center gap-1 rounded ${selected ? 'bg-oq-08' : ''}`}
     >
       {iconBtn(enabled ? 'Disable effect' : 'Enable effect', onToggle, false, enabled ? 'eye-on' : 'eye-off')}
-      <span className={`kol-helper-12 flex-1 truncate ${enabled ? 'text-emphasis' : 'text-meta'}`}>
-        {stage.def?.label ?? stage.id}
-      </span>
+      <div className={`flex-1 min-w-0 ${enabled ? '' : 'opacity-60'}`}>
+        <Dropdown variant="subtle" size={cs} className="w-full" options={options} value={stage.id} onChange={onPick} />
+      </div>
       {iconBtn('Move up', onUp, !canUp, 'chevron-down', 'rotate-180')}
       {iconBtn('Move down', onDown, !canDown, 'chevron-down')}
-      {iconBtn('Remove effect', onRemove, false, 'x')}
+      {iconBtn('Delete effect', onRemove, false, 'x')}
     </div>
   )
 }
@@ -409,7 +351,7 @@ export function SweepStack({ sweeps, onChange, inline = false }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <span className="kol-helper-10 text-meta">Motion</span>
+      <span className="kol-eyebrow text-fg-80">Motion</span>
       <PickerDropdown
         options={[{ value: '', label: 'Add motion…' }, ...SWEEP_PRESETS.map((p) => ({ value: p.name, label: p.name }))]}
         value=""
@@ -436,7 +378,7 @@ export function SweepStack({ sweeps, onChange, inline = false }) {
               ) : (
                 <>
                   <Tooltip label={enabled ? 'Disable sweep' : 'Enable sweep'}><Button
-                    tone="ghost" quiet size="xs" iconOnly={enabled ? 'eye-on' : 'eye-off'}
+                    tone="ghost" quiet size={cs} iconOnly={enabled ? 'eye-on' : 'eye-off'}
                     aria-label={enabled ? 'Disable sweep' : 'Enable sweep'}
                     onClick={() => setField(i, 'enabled', !enabled)}
                     className="shrink-0"
@@ -446,7 +388,7 @@ export function SweepStack({ sweeps, onChange, inline = false }) {
                   </span>
                 </>
               )}
-              <Tooltip label="Remove sweep"><Button tone="ghost" quiet size="xs" iconOnly="x" aria-label="Remove sweep" className="shrink-0" onClick={() => removeAt(i)} /></Tooltip>
+              <Tooltip label="Delete sweep"><Button tone="ghost" quiet size={cs} iconOnly="x" aria-label="Delete sweep" className="shrink-0" onClick={() => removeAt(i)} /></Tooltip>
             </div>
             {enabled && (
               <>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Button, Dropdown, InspectorSection, LabeledControl, MenuDropdownItem, PopoverPanel, SegmentedToggle, Slider, usePopover, ViewToggle, glyphSize, Tooltip } from '@kolkrabbi/kol-component'
+import Pane from '../../components/Pane'
+import { Button, Dropdown, LabeledControl, SettingsRow, MenuDropdownItem, PopoverPanel, SegmentedToggle, Slider, usePopover, glyphSize, Tooltip } from '@kolkrabbi/kol-component'
 import { Icon } from '@kolkrabbi/kol-icons'
 
 import BindDot from '../../params/BindDot'
@@ -15,6 +16,7 @@ import { useComposeState, resolveColor } from '../state'
 import { useLayerEdit } from '../useLayerEdit'
 import { NumberField } from './NumberField'
 import { useGeneratorLibrary } from '../../library/LibraryProvider'
+import { useControlSize, RAIL_LABEL_W } from '../../params/controlSize'
 
 /**
  * TextSurface — the text layer's full editing surface, rendered INSIDE the
@@ -83,6 +85,7 @@ function familyPatch(layer, familyId) {
 }
 
 export function TextSurface({ layer }) {
+  const cs = useControlSize()
   const { palette } = useComposeState()
   const { saveType } = useGeneratorLibrary()
   const edit = useLayerEdit(layer.id, { history: 'coalesce' })
@@ -137,17 +140,17 @@ export function TextSurface({ layer }) {
   const settingsTrigger = (
     <Tooltip label="Type settings">
       <span ref={settings.refs.setReference} {...settings.getReferenceProps()} className="inline-flex">
-        <Button tone="ghost" size="sm" iconOnly="slider-01" aria-label="Type settings" pressed={settingsOpen} />
+        <Button tone="ghost" size={cs} iconOnly="slider-01" aria-label="Type settings" pressed={settingsOpen} />
       </span>
     </Tooltip>
   )
   return (
-    <InspectorSection pane label="Typography" actions={settingsTrigger}>
+    <Pane label="Typography" actions={settingsTrigger}>
       {/* NO Content textarea and NO Family/Style/Size labels — Figma has
         * neither (user ruling 2026-08-12). Text edits happen on canvas
         * (double-click) or via the header's Edit object. */}
       <Dropdown
-        variant="subtle" size="sm" className="w-full"
+        variant="subtle" size={cs} className="w-full"
         options={FAMILY_OPTIONS}
         value={family}
         onChange={onFamily}
@@ -157,7 +160,7 @@ export function TextSurface({ layer }) {
         * (the inspector rebuild — it was an input and a detached trigger). The bind dot rides gated. */}
       <div className="grid grid-cols-[1fr_96px] gap-2">
         <Dropdown
-          variant="subtle" size="sm" className="w-full"
+          variant="subtle" size={cs} className="w-full"
           options={styles.map(({ value, label }) => ({ value, label }))}
           value={styleValueFor(layer)}
           onChange={onStyle}
@@ -189,24 +192,24 @@ export function TextSurface({ layer }) {
         * the same icons read as one control twice. Affinity's paragraph row. */}
       <div className="flex items-center gap-2">
         <SegmentedToggle
-          variant="filled" size="sm"
+          tone="sunken" size={cs}
           ariaLabel="Text alignment"
           value={layer.textAlign ?? 'center'}
           options={[
-            { value: 'left',   ariaLabel: 'Align text left',   label: <Icon name="text-align-left" size={glyphSize('sm', true)} /> },
-            { value: 'center', ariaLabel: 'Center text',       label: <Icon name="text-align-center" size={glyphSize('sm', true)} /> },
-            { value: 'right',  ariaLabel: 'Align text right',  label: <Icon name="text-align-right" size={glyphSize('sm', true)} /> },
+            { value: 'left',   ariaLabel: 'Align text left',   label: <Icon name="text-align-left" size={glyphSize(cs, true)} /> },
+            { value: 'center', ariaLabel: 'Center text',       label: <Icon name="text-align-center" size={glyphSize(cs, true)} /> },
+            { value: 'right',  ariaLabel: 'Align text right',  label: <Icon name="text-align-right" size={glyphSize(cs, true)} /> },
           ]}
           onChange={(v) => setProp('textAlign', v)}
         />
         <SegmentedToggle
-          variant="filled" size="sm"
+          tone="sunken" size={cs}
           ariaLabel="Vertical alignment"
           value={layer.verticalAlign ?? 'middle'}
           options={[
-            { value: 'top',    ariaLabel: 'Align top',    label: <Icon name="text-valign-top" size={glyphSize('sm', true)} /> },
-            { value: 'middle', ariaLabel: 'Align middle', label: <Icon name="text-valign-middle" size={glyphSize('sm', true)} /> },
-            { value: 'bottom', ariaLabel: 'Align bottom', label: <Icon name="text-valign-bottom" size={glyphSize('sm', true)} /> },
+            { value: 'top',    ariaLabel: 'Align top',    label: <Icon name="text-valign-top" size={glyphSize(cs, true)} /> },
+            { value: 'middle', ariaLabel: 'Align middle', label: <Icon name="text-valign-middle" size={glyphSize(cs, true)} /> },
+            { value: 'bottom', ariaLabel: 'Align bottom', label: <Icon name="text-valign-bottom" size={glyphSize(cs, true)} /> },
           ]}
           onChange={(v) => setProp('verticalAlign', v)}
         />
@@ -214,22 +217,22 @@ export function TextSurface({ layer }) {
 
       <PopoverPanel popover={settings} panel={false} focus={false} className="z-50 bg-surface-secondary border border-oq-08 rounded shadow-lg p-3 flex flex-col gap-3" style={{ minWidth: 240 }}>
         <LabeledControl label="Case">
-          <ViewToggle
+          <SegmentedToggle tone="sunken" size={cs} className="w-full"
             options={CASE_OPTIONS}
-            viewMode={layer.case ?? 'original'}
-            onViewChange={(v) => setProp('case', v)}
+            value={layer.case ?? 'original'}
+            onChange={(v) => setProp('case', v)}
           />
         </LabeledControl>
         <LabeledControl label="Italic">
-          <ViewToggle
+          <SegmentedToggle tone="sunken" size={cs} className="w-full"
             variant="single"
             options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
-            viewMode={layer.italic ? 'on' : 'off'}
-            onViewChange={(v) => setProp('italic', v === 'on')}
+            value={layer.italic ? 'on' : 'off'}
+            onChange={(v) => setProp('italic', v === 'on')}
           />
         </LabeledControl>
       </PopoverPanel>
-    </InspectorSection>
+    </Pane>
   )
 }
 
@@ -238,6 +241,7 @@ export function TextSurface({ layer }) {
  * read-only "animated" state when the prop is bound (the dot drives it).
  * `icon` = a DS glyph prefix; the input hugs the value so units sit tight. */
 function MetricInput({ param: p, layer, setProp, suffix, step, round = false, icon, slotRight }) {
+  const cs = useControlSize()
   const raw = layer[p.key]
   if (isBinding(raw)) {
     return <span className="kol-helper-12 text-meta italic">animated</span>
@@ -246,11 +250,11 @@ function MetricInput({ param: p, layer, setProp, suffix, step, round = false, ic
   const display = round ? Math.round(value) : value
   return (
     <NumberField
-      variant="property" size="sm" unit={suffix}
+      variant="property" size={cs} unit={suffix}
       className="w-full min-w-0"
       /* the glyph stands alone in the field's affordance slot — the SOLO rung for sm (16), off the
        * ladder (editor review #9: at a hand-picked 14 the line-height / tracking art read ~12) */
-      affordance={icon ? <Icon name={icon} size={glyphSize('sm', true)} className="text-oq-64" /> : undefined}
+      affordance={icon ? <Icon name={icon} size={glyphSize(cs, true)} className="text-oq-64" /> : undefined}
       slotRight={slotRight}
       value={display}
       onCommit={(v) => {
@@ -310,6 +314,7 @@ function SizeCombo({ layer, setProp }) {
  * the Inspector shows what's set; morph is an OPTION, and options live in
  * Parameters — same home as the kinetic layer's morph section). */
 export function VariableBlock({ layer, setProp }) {
+  const cs = useControlSize()
   const mode = layer.axisMode ?? 'morph'
   const on = !!layer.axisOn
   const blendParam = metric('axisBlend', mode === 'random' ? 'Seed' : 'Blend', (v) => `${Math.round(v * 100)}%`)
@@ -343,32 +348,32 @@ export function VariableBlock({ layer, setProp }) {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <span className="kol-eyebrow text-meta">Morph</span>
-        <ViewToggle
+        <SegmentedToggle tone="sunken" size={cs}
           options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
-          viewMode={on ? 'on' : 'off'}
-          onViewChange={(v) => setProp('axisOn', v === 'on')}
+          value={on ? 'on' : 'off'}
+          onChange={(v) => setProp('axisOn', v === 'on')}
         />
       </div>
       {on && (
         <>
-          <LabeledControl label="Mode">
-            <ViewToggle
+          <SettingsRow label="Mode" align="fill" labelWidth={RAIL_LABEL_W}>
+            <SegmentedToggle tone="sunken" size={cs} className="w-full"
               options={[
                 { value: 'morph',  label: 'Morph' },
                 { value: 'fade',   label: 'Fade' },
                 { value: 'random', label: 'Random' },
               ]}
-              viewMode={mode}
-              onViewChange={(v) => setProp('axisMode', v)}
+              value={mode}
+              onChange={(v) => setProp('axisMode', v)}
             />
-          </LabeledControl>
+          </SettingsRow>
 
           {(mode === 'morph' || mode === 'fade') && (
-            <LabeledControl label="Style B">
+            <SettingsRow label="Style B" align="fill" labelWidth={RAIL_LABEL_W}>
               {/* One Style picker (family model) — writes the width2/weight2
                 * pair the engine morphs toward. */}
               <Dropdown
-                variant="subtle" size="sm" className="w-full"
+                variant="subtle" size={cs} className="w-full"
                 options={rgStyles.map(({ value, label }) => ({ value, label }))}
                 value={`${layer.width2 ?? 'Spatial'}/${layer.weight2 ?? 900}`}
                 onChange={(v) => {
@@ -376,18 +381,18 @@ export function VariableBlock({ layer, setProp }) {
                   if (s) { setProp('width2', s.patch.width); setProp('weight2', s.patch.weight) }
                 }}
               />
-            </LabeledControl>
+            </SettingsRow>
           )}
 
           {mode === 'morph' && (
-            <LabeledControl label="Curve">
+            <SettingsRow label="Curve" align="fill" labelWidth={RAIL_LABEL_W}>
               <Dropdown
-                variant="subtle" size="sm" className="w-full"
+                variant="subtle" size={cs} className="w-full"
                 options={AXIS_CURVE_OPTIONS}
                 value={layer.axisCurve ?? 'flat'}
                 onChange={(v) => setProp('axisCurve', v)}
               />
-            </LabeledControl>
+            </SettingsRow>
           )}
 
           {mode === 'morph' && (layer.axisCurve ?? 'flat') === 'custom' && (
@@ -402,23 +407,23 @@ export function VariableBlock({ layer, setProp }) {
           <MetricRow param={blendParam} layer={layer} setProp={setProp} />
 
           {mode === 'random' && (
-            <div className="grid grid-cols-2 gap-3">
-              <LabeledControl label="Lock width">
+            <div className="flex flex-col gap-2">
+              <SettingsRow label="Lock width" align="fill" labelWidth={RAIL_LABEL_W}>
                 <Dropdown
-                  variant="subtle" size="sm" className="w-full"
+                  variant="subtle" size={cs} className="w-full"
                   options={[{ value: '', label: 'Any' }, ...WIDTH_OPTIONS]}
                   value={layer.randomWidthLock ?? ''}
                   onChange={(v) => setProp('randomWidthLock', v)}
                 />
-              </LabeledControl>
-              <LabeledControl label="Lock weight">
+              </SettingsRow>
+              <SettingsRow label="Lock weight" align="fill" labelWidth={RAIL_LABEL_W}>
                 <Dropdown
-                  variant="subtle" size="sm" className="w-full"
+                  variant="subtle" size={cs} className="w-full"
                   options={[{ value: '', label: 'Any' }, ...WEIGHT_OPTIONS.map((o) => ({ value: String(o.value), label: o.label }))]}
                   value={layer.randomWeightLock ?? ''}
                   onChange={(v) => setProp('randomWeightLock', v)}
                 />
-              </LabeledControl>
+              </SettingsRow>
             </div>
           )}
         </>

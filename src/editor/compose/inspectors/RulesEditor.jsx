@@ -2,6 +2,7 @@ import { Button, LabeledControl } from '@kolkrabbi/kol-component'
 import RuleRow from '../../modes/pattern/RuleRow'
 import { newRule, randomRule } from '../../../loops/pattern/rules.js'
 import { mulberry32 } from '../../lib/rng'
+import { useControlSize } from '../../params/controlSize'
 
 /**
  * RulesEditor — the rule-stack editor for pattern-rules LOOP layers (labs
@@ -22,6 +23,7 @@ import { mulberry32 } from '../../lib/rng'
  * weave renders bypass the rule engine entirely.
  */
 export default function RulesEditor({ layer, patch, seed }) {
+  const cs = useControlSize()
   const rules = layer.rules ?? []
   const setRules = (next, extra) => patch({ rules: next, ...extra })
 
@@ -53,10 +55,10 @@ export default function RulesEditor({ layer, patch, seed }) {
           />
         ))}
         <div className="grid grid-cols-2 gap-2">
-          <Button tone="primary" size="sm" iconLeft="plus" onClick={addRule}>
+          <Button tone="primary" size={cs} iconLeft="plus" onClick={addRule}>
             Add rule
           </Button>
-          <Button tone="primary" size="sm" onClick={randomizeRules}>
+          <Button tone="primary" size={cs} onClick={randomizeRules}>
             Randomize
           </Button>
         </div>

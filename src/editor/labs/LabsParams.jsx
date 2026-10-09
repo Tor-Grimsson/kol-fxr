@@ -193,7 +193,7 @@ function EffectSurface({ layer, showMod }) {
       <Surface title="Effects" fx tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size={cs} className={stripClamp(cs)} />}>
         {tab === 'effect' && (
           <>
-            <LabeledControlSection label="Effect Stack" divided>
+            <LabeledControlSection label="Effect stack" divided>
               {chain.length === 0 && <Hint className="kol-mono-10 text-meta">No effects yet — add one below.</Hint>}
               <StackCards {...stackProps} from={0} />
             </LabeledControlSection>
@@ -313,8 +313,8 @@ function StackCards({ chain, from = 0, layer, hostView, toggleFilter, removeFilt
             onChange={() => toggleFilter(layer.id, idx)}
             label={s.def?.label ?? s.id}
           />
-          <Tooltip asChild label="Remove effect">
-          <Button tone="ghost" quiet size="xs" iconOnly="x" aria-label="Remove effect" className="ml-auto shrink-0" onClick={() => removeFilter(layer.id, idx)} />
+          <Tooltip asChild label="Delete effect">
+          <Button tone="ghost" quiet size="xs" iconOnly="x" aria-label="Delete effect" className="ml-auto shrink-0" onClick={() => removeFilter(layer.id, idx)} />
           </Tooltip>
         </div>
         {enabled && s.def && (
@@ -335,7 +335,7 @@ function StackCards({ chain, from = 0, layer, hostView, toggleFilter, removeFilt
 function PostProcessing({ chain, layer, hostView, addFilter, removeFilter, toggleFilter, setStagePropAt, palette, showMod }) {
   const cs = useControlSize()
   const options = [
-    { value: '', label: 'Add FX...' },
+    { value: '', label: 'Add FX…' },
     ...postProcessingFilters(FILTERS).map((f) => ({ value: f.id, label: f.label ?? f.id })),
   ]
   return (

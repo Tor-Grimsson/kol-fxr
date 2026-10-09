@@ -22,25 +22,25 @@ const CATEGORIES = [
   /* glass is a refracting sheet — Refraction, not Pattern. */
   { id: 'refraction', label: 'Refraction', filterIds: ['gl-lens', 'gl-distort', 'fx-chromatic', 'glass'] },
   /* dither is reaction-diffusion — labs Pattern's 'Reaction' bucket. */
-  { id: 'pattern',    label: 'Pattern',    filterIds: ['dither'] },
+  { id: 'pattern',    label: 'Dither',     filterIds: ['dither'] },  /* 'Pattern' named six things (spec R7.3); this one is the dither filter */
 ]
 
 /* THE RACK — labs' category list, canvas + pixi mixed per bucket. A rack
  * category is the nav LEAF under FX RACK; its filters populate the rack
  * surface's "Add effect…" list. `pixiGroup` pulls that pixi tier in. */
 export const FX_RACK_GROUPS = [
-  { id: 'color-adjustments', label: 'Color Adjustments', filterIds: ['fx-hsl', 'fx-hsv', 'fx-brightness', 'fx-contrast', 'fx-rgb', 'fx-invert', 'fx-sepia', 'fx-grayscale', 'fx-enhance'], pixiGroup: 'color-adjustments' },
+  { id: 'color-adjustments', label: 'Color adjustments', filterIds: ['fx-hsl', 'fx-hsv', 'fx-brightness', 'fx-contrast', 'fx-rgb', 'fx-invert', 'fx-sepia', 'fx-grayscale', 'fx-enhance'], pixiGroup: 'color-adjustments' },
   { id: 'blur-sharpen',      label: 'Blur/Sharpen',      filterIds: ['fx-blur', 'fx-sharpen'], pixiGroup: 'blur-sharpen' },
   /* labs' lone Displacement category folds into Distortion here — the one
    * pixi displacement def carries group 'distortion' in this registry. */
   { id: 'distortion',        label: 'Distortion',        filterIds: [], pixiGroup: 'distortion' },
-  { id: 'artistic',          label: 'Artistic Effects',  filterIds: ['fx-pixelate', 'fx-posterize', 'fx-solarize', 'fx-emboss', 'fx-noise'], pixiGroup: 'artistic' },
+  { id: 'artistic',          label: 'Artistic effects',  filterIds: ['fx-pixelate', 'fx-posterize', 'fx-solarize', 'fx-emboss', 'fx-noise'], pixiGroup: 'artistic' },
   { id: 'lighting',          label: 'Lighting',          filterIds: [], pixiGroup: 'lighting' },
   { id: 'stylize',           label: 'Stylize',           filterIds: [], pixiGroup: 'stylize' },
   { id: 'utility',           label: 'Utility',           filterIds: ['fx-threshold'], pixiGroup: 'utility' },
   /* labs' CANVAS_FX_DEFS — the same list every effect page's Post-Processing
    * block adds from. */
-  { id: 'post-processing',   label: 'Post-Processing',   filterIds: ['fx-rgb', 'fx-edge', 'fx-posterize', 'fx-pixelsort', 'fx-mirror', 'fx-kaleido', 'fx-threshold'] },
+  { id: 'post-processing',   label: 'Post-processing',   filterIds: ['fx-rgb', 'fx-edge', 'fx-posterize', 'fx-pixelsort', 'fx-mirror', 'fx-kaleido', 'fx-threshold'] },
 ]
 
 const CLAIMED = new Set([

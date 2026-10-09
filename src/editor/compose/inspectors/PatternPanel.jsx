@@ -9,6 +9,7 @@ import { useComposeState, resolveColor, patternFromSpec } from '../state'
 import { findLayerDeep } from '../helpers'
 import { useLayerEdit } from '../useLayerEdit'
 import { useGeneratorLibrary } from '../../library/LibraryProvider'
+import { useControlSize } from '../../params/controlSize'
 
 /**
  * PatternPanel — the Pattern tab of the right rail (selection-driven: the
@@ -61,6 +62,7 @@ export default function PatternPanel() {
 }
 
 function PatternSurface({ layer }) {
+  const cs = useControlSize()
   const { updateLayer, palette } = useComposeState()
   const { savePattern } = useGeneratorLibrary()
   const edit = useLayerEdit(layer.id, { history: 'coalesce' })
@@ -135,7 +137,7 @@ function PatternSurface({ layer }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Button tone="primary" size="sm" className="w-full" onClick={onRollAll}>
+      <Button tone="primary" size={cs} className="w-full" onClick={onRollAll}>
         Randomize all
       </Button>
       <SeedField seed={seed} />
@@ -160,10 +162,10 @@ function PatternSurface({ layer }) {
             />
           ))}
           <div className="grid grid-cols-2 gap-2">
-            <Button tone="primary" size="sm" iconLeft="plus" onClick={addRule}>
+            <Button tone="primary" size={cs} iconLeft="plus" onClick={addRule}>
               Add rule
             </Button>
-            <Button tone="primary" size="sm" onClick={randomizeRules}>
+            <Button tone="primary" size={cs} onClick={randomizeRules}>
               Randomize
             </Button>
           </div>
@@ -180,7 +182,7 @@ function PatternSurface({ layer }) {
       </LabeledControl>
 
       <Tooltip label="Save current pattern params to the shared library"><Button aria-label="Save current pattern params to the shared library"
-        tone="primary" size="sm" className="w-full"
+        tone="primary" size={cs} className="w-full"
         onClick={onSave}
       >
         Save pattern to library
