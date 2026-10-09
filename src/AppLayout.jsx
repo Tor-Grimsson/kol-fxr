@@ -87,10 +87,10 @@ export const NAV_ITEMS = [
   { icon: 'nav-library', path: '/library', label: 'Library' },
   { icon: 'desktop', path: '/editor', label: 'Editor' },
   { icon: 'globe', path: '/labs', label: 'Labs' },
+  { icon: 'refresh', path: '/randomiser', label: 'Randomiser' },
   /* MORPH is a destination (plan 10, user 2026-10-08: "how the fuck is MORPH NOT IN THE SIDERAIL") — the labs
      chrome with the Morph rail open, not a row labs contributes only while you are on it */
   { icon: 'swap', path: '/morph', label: 'Morph' },
-  { icon: 'refresh', path: '/randomiser', label: 'Randomiser' },
 ]
 
 const SETTINGS_PATH = '/settings'
@@ -141,7 +141,11 @@ const CHROME_PICKS = [
    (`public/previews/chromes/<id>.png`). SAVED = the library's presets — no load
    path outside the editor (LibraryPage's ruling), so their cards are static and
    the library page is where they are managed. */
-const CHROMES = MODES.map((m) => ({ name: m.id, title: m.label, detail: m.blurb }))
+const CHROMES = [
+  ...MODES.map((m) => ({ name: m.id, title: m.label, detail: m.blurb })),
+  /* Morph is the labs chrome with the Morph rail open — a card, not a MODE (the user, 2026-10-09) */
+  { name: 'morph', title: 'Morph', detail: 'Step into step — shape, blend or crossfade between generators.', path: '/morph', mode: 'labs' },
+]
 
 const fmtDate = (ms) =>
   new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -376,7 +380,7 @@ export default function AppLayout() {
           title: c.title,
           detail: c.detail,
           media: <img src={`/previews/chromes/${c.name}.png`} alt={c.title} />,
-          onClick: () => enter(c.name),
+          onClick: () => (c.path ? (setMode(c.mode), navigate(c.path)) : enter(c.name)),
         }),
         /* New File → the four doors (plan 09) */
         actions: <Button tone="grey" size="md" onClick={openNewFile}>New File</Button>,

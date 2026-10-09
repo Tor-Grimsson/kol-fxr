@@ -482,7 +482,9 @@ function LabsBody() {
     if (!layer?.presetId) return
     const params = new URLSearchParams(window.location.search)
     if (params.get('preset') === layer.presetId) return
-    params.set('view', 'labs')
+    /* the PATH is the view since the router (2026-08-15) — a `view=labs` here sent a refreshed
+       `/morph` to `/labs` through App's legacy redirect (the user, 2026-10-09) */
+    params.delete('view')
     params.set('preset', layer.presetId)
     if (layer.loopGroup) params.set('cat', layer.loopGroup)
     else params.delete('cat')

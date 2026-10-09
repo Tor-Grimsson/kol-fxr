@@ -207,6 +207,9 @@ function RangeField({ param: p, layer, setProp }) {
 /* the labs rail's label column — `RAIL_LABEL_W`, shared with the picker stack
    and LoopFields' rows so every control in the rail starts on one x */
 const INLINE_LABEL_W = RAIL_LABEL_W
+/* a switch row's height = the rung's control height, so it stands as tall as a dropdown row.
+   Written out per rung: Tailwind only emits a class it can read whole. */
+const ROW_H = { xs: 'h-[var(--kol-ctl-xs)]', sm: 'h-[var(--kol-ctl-sm)]', md: 'h-[var(--kol-ctl-md)]', lg: 'h-[var(--kol-ctl-lg)]' }
 
 function ParamControl({ param: p, layer, setProp, palette, bound, animate, inline }) {
   const cs = useControlSize()
@@ -256,7 +259,7 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
      * bare tiles beside it were two answers to one question. The editor
      * keeps ViewToggle with the rest of its inspector. */
     control = inline ? (
-      <SegmentedToggle
+      <SegmentedToggle tone="sunken"
         size={cs} className={`w-full ${stripClamp(cs) ?? ''}`}
         options={p.options ?? []}
         value={value}
@@ -285,7 +288,7 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
       /* labelled pair in the labs skin: the same SegmentedToggle as
        * `segmented`, spanning the control column like a dropdown */
       control = (
-        <SegmentedToggle
+        <SegmentedToggle tone="sunken"
           size={cs} className={`w-full ${stripClamp(cs) ?? ''}`}
           options={[{ value: 'off', label: offLabel }, { value: 'on', label: onLabel }]}
           value={value ? 'on' : 'off'}
@@ -331,6 +334,13 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
    * uppercases too, instead of reading as the odd sentence-case line out. */
   /* a plain bool in the editor skin: label left, switch right, the row's own sentence-case voice */
   const plainBool = p.type === 'toggle' && !p.labels && !inline
+  /* …and the row stands as tall as a dropdown's (the user: "same height as dropdown row items") */
+  /* a bare switch: SettingsRow wraps it in an inline-flex span that sits on the text baseline, so the
+     12px switch rode 6px below the label's middle (the user, 2026-10-09: "align this properly — middle").
+     Same LabeledControl the row draws, with a block flex that centres. */
+  if (rowInline && align === 'end' && !hint) {
+    return <LabeledControl inline label={String(p.label).toUpperCase()} labelWidth={INLINE_LABEL_W}><div className={`flex w-full items-center justify-end ${ROW_H[cs] ?? ''}`}>{body}</div></LabeledControl>
+  }
   return rowInline
     ? <SettingsRow label={p.label} hint={hint} align={align} labelWidth={INLINE_LABEL_W}>{body}</SettingsRow>
     : <LabeledControl inline={plainBool} label={inline ? String(p.label).toUpperCase() : p.label} hint={hint} labelWidth={plainBool ? 'auto' : INLINE_LABEL_W}>{body}</LabeledControl>

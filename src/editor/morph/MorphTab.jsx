@@ -42,8 +42,11 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 /* the morph's settings as a schema, so the rail's own renderer draws them — the labs rows, one
    label column, full-width dropdowns, a slider for Resolution (points per outline pair, 0 = auto) */
 const SETTINGS = [
-  { key: 'curve', label: 'Curve', type: 'select', options: CURVES },
-  { key: 'cycle', label: 'Cycle', type: 'select', options: CYCLES },
+  /* one section for the three, so Sync loop sits with Cycle — without it the leading-selects break
+     put it across the hairline with Resolution. Named after its first row, so no heading draws. */
+  { key: 'curve', label: 'Curve', type: 'select', options: CURVES, section: 'Curve' },
+  { key: 'cycle', label: 'Cycle', type: 'select', options: CYCLES, section: 'Curve' },
+  { key: 'syncLoop', label: 'Sync loop', type: 'toggle', section: 'Curve' },
   { key: 'resolution', label: 'Resolution', type: 'range', min: 0, max: 1024, step: 1, default: 0, format: (v) => (v ? v : 'Auto'), when: (m) => m.mode === 'shape' },
 ]
 
@@ -51,7 +54,7 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
   const cs = useControlSize()
   const morph = useMorph()
   const { steps, curve, cycle, mode, resolution, editing, fileId, editRequest } = morph
-  const { updateLayer, setCurrentPresetId, setCurrentPresetName, palette } = useComposeState()
+  const { updateLayer, removeLayer, setCurrentPresetId, setCurrentPresetName, palette } = useComposeState()
   const { setOnly } = useLabsLayer()
   const { buildSavedSpec } = useComposeFile()
   const { addItem, updateItem } = useGeneratorLibrary()
@@ -91,10 +94,25 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* rebuild the stage from the steps — the one write the morph makes */
+  const prevCount = useRef(steps.length)
   const rebuild = () => {
-    if (steps.length < 2) return
+    /* UNDER TWO STEPS THE MORPH COMES OFF THE STAGE (the user, 2026-10-09: "I removed items from slots, but
+       nothing changed" — then "it cleared the second slot, but not the first"): one step left → that
+       step's generator, plain; none → the stage empties. Only when a step was REMOVED — a fresh mount with
+       empty slots must not wipe what labs had on the stage. */
+    const removed = steps.length < prevCount.current
+    prevCount.current = steps.length
+    if (steps.length < 2) {
+      if (!layer || !removed) return
+      if (steps.length === 0) { removeLayer(layer.id); return }
+      const flat = {}
+      for (const k in layer) if (layer[k]?.bind === 'track') flat[k] = layer[k].keys?.[0]?.v
+      const one = steps[0]
+      updateLayer(layer.id, { ...flat, loopGroup: one.loopGroup, presetId: one.presetId, presetLabel: one.presetLabel, loopId: one.loopId, ...one.params, morph: null, morphT: null })
+      return
+    }
     const identity = { loopGroup: first.loopGroup, presetId: first.presetId, presetLabel: first.presetLabel, loopId: first.loopId }
-    const carried = { mode, steps: steps.map((s, i) => ({ loopId: s.loopId, params: s.params, label: stepLabel(s, i) })), cycle, curve, resolution, name: morph.fileName }
+    const carried = { mode, steps: steps.map((s, i) => ({ loopId: s.loopId, params: s.params, label: stepLabel(s, i) })), cycle, curve, resolution, syncLoop: morph.syncLoop, name: morph.fileName }
     const patch = mode === 'blend'
       ? { ...identity, ...buildMorph({ snapshots: steps.map((s) => s.params), schema: loopById(first.loopId)?.params ?? [], curve, cycle }).patch, morph: carried, morphT: null }
       : { ...identity, ...first.params, morph: carried, morphT: { bind: 'track', keys: morphKeys(steps.length, cycle, curve) } }
@@ -105,13 +123,13 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
 
   /* steps or settings changed while not editing → the stage plays the new morph; a fresh mount
      (the MORPH row pressed again) rebuilds too, since the stage may have been swapped meanwhile */
-  const sig = JSON.stringify([mode, steps.map((s) => [s.loopId, s.params]), curve, cycle, resolution])
+  const sig = JSON.stringify([mode, steps.map((s) => [s.loopId, s.params]), curve, cycle, resolution, morph.syncLoop])
   const lastSig = useRef(null)
   useEffect(() => {
-    if (readOnly || editing != null || steps.length < 2 || sig === lastSig.current || blocked[mode]) return
+    if (readOnly || editing != null || sig === lastSig.current || (steps.length >= 2 && blocked[mode])) return
     lastSig.current = sig
     rebuildRef.current()
-    if (!transport.isPlaying()) transport.play()
+    if (steps.length >= 2 && !transport.isPlaying()) transport.play()
   }, [sig, editing, steps.length, readOnly]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* the editing rule, half one: the fields write to the step on the stage */
@@ -148,7 +166,7 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
     let name = morph.fileName
     if (!fileId) { name = await modal.prompt('Name this morph:', ''); if (name === null) return }
     if (editing != null) { setMorph({ editing: null }); rebuildRef.current() }
-    const spec = { ...(await buildSavedSpec(name || null)), mode: 'morph', morph: { mode, loopId: morph.loopId, steps, curve, cycle, resolution, seconds: transport.getLoopSeconds() } }
+    const spec = { ...(await buildSavedSpec(name || null)), mode: 'morph', morph: { mode, loopId: morph.loopId, steps, curve, cycle, resolution, syncLoop: morph.syncLoop, seconds: transport.getLoopSeconds() } }
     if (fileId) { updateItem('preset', fileId, spec); return }
     const id = addItem('preset', spec)
     if (id) { setMorph({ fileId: id, fileName: name || null }); setCurrentPresetId(id); setCurrentPresetName(name || null) }
@@ -160,7 +178,7 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
   return (
     <div className="flex flex-col gap-5">
       {/* the mode is the rail's strip, where labs puts Generate · Style · Animation */}
-      <SegmentedToggle value={mode} onChange={(v) => !readOnly && setMorph({ mode: v })} options={modeOptions} size={cs} className={stripClamp(cs)} />
+      <SegmentedToggle tone="sunken" value={mode} onChange={(v) => !readOnly && setMorph({ mode: v })} options={modeOptions} size={cs} className={stripClamp(cs)} />
 
       <LabeledControlSection divided>
         {/* the DS list (kol-component 0.245.0, `StepList` — filed from here 2026-10-09); the local copy
@@ -183,7 +201,7 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
 
       {editing != null && !readOnly && layer && editTabs && (
         <LabeledControlSection label={`Step ${editing + 1}`} divided>
-          <SegmentedToggle value={editTab} onChange={setEditTab} options={editTabs} size={cs} className={stripClamp(cs)} />
+          <SegmentedToggle tone="sunken" value={editTab} onChange={setEditTab} options={editTabs} size={cs} className={stripClamp(cs)} />
           <LoopFields layer={layer} setProp={edit.setProp} patch={edit.patch} updateLayer={updateLayer} palette={palette} tab={editTab} tabStrip={null} inline picker={false} />
           <p className="kol-mono-12 text-emphasis">Editing step {editing + 1} — press Play to run the morph.</p>
         </LabeledControlSection>

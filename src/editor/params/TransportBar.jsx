@@ -76,7 +76,7 @@ export default function TransportBar({ size = 'sm' }) {
    * second strip. Glyph cells take their tooltips from `ariaLabel` (SegmentedToggle). */
   return (
     <div className="flex items-center gap-2">
-      <SegmentedToggle
+      <SegmentedToggle tone="sunken"
         size={size} ariaLabel="Playback" value={playing ? 'play' : 'pause'} className={SQUARE[size]}
         onChange={(v) => (v === 'play' ? play() : pause())}
         options={[
@@ -87,7 +87,7 @@ export default function TransportBar({ size = 'sm' }) {
       <div className="flex-1 min-w-0">
         <LoopField seconds={loopSeconds} onCommit={setLoopSeconds} size={size} />
       </div>
-      <SegmentedToggle
+      <SegmentedToggle tone="sunken"
         size={size} ariaLabel="Reset" value={null} className={SQUARE[size]}
         onChange={(v) => (v === 'stop' ? stop() : rewind())}
         options={[

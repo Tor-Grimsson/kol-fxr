@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Dropdown, LabeledControlSection, SegmentedToggle, FullscreenOverlay, TabsRow, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, LabeledControlSection, SegmentedToggle, FullscreenOverlay, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
 import { proxied, isVideoType } from '../../library/mediaLibrary'
 import { useTransport } from '../../params/transport'
 import { pack } from '../../packs'
@@ -243,7 +243,7 @@ export default function EditorFooter() {
     .map((a) => ({ value: a.id, label: a.label }))
 
   /* Figma-style @Nx resolution multiplier (labs SCALE_OPTIONS shape). */
-  const scaleOptions = [1, 2, 3].map((k) => ({ value: k, label: `@${k}x · ${canvasW * k}` }))
+  const scaleOptions = [1, 2, 3].map((k) => ({ value: k, label: `@${k}x · ${canvasW * k} × ${canvasH * k}` }))
 
   const selectedLayer = selectedId && selectedId !== 'canvas' ? findLayerDeep(layers, selectedId) : null
   const photoLayer = selectedLayer?.type === 'photo' ? selectedLayer : null
@@ -276,22 +276,15 @@ export default function EditorFooter() {
           * the ▶ cell lit while the transport sheet is up. */}
         {/* ON TOUCH THE TRANSPORT LEFT THE STRIP (plan 15 § 2): it is the floating play button over the
           * canvas (`TransportFab`, the motion pack's `canvas.overlay`), so the row is Output · File. */}
-        {/* A PANE'S TABS ARE THE UNDERLINE ROW on the desk (spec R3.1): Layers · Assets and
-          * Inspector · Parameters · Effects are TabsRows, so this pane's Transport · Output · File
-          * is one too. Touch keeps the strip — a second tap on a cell closes its sheet. */}
-        {touch ? (
-          <SegmentedToggle
-            value={tab}
-            onChange={(v) => setTab((t) => (t === v ? null : v))}
-            options={tabs}
-            size={cs}
-            className={`flex-1 min-w-0 ${stripClamp(cs) ?? ''}`.trim()}
-          />
-        ) : (
-          <div className="flex-1 min-w-0">
-            <TabsRow tabs={tabs.map((t) => ({ id: t.value, label: t.label }))} value={tab} onChange={setTab} />
-          </div>
-        )}
+        {/* THE STRIP STAYS A SEGMENTEDTOGGLE on the desk too (the user, 2026-10-09 — plan 23's
+          * underline TabsRow, spec R3.1, reverted). On touch a second tap on a cell closes its sheet. */}
+        <SegmentedToggle tone="sunken"
+          value={tab}
+          onChange={(v) => (touch ? setTab((t) => (t === v ? null : v)) : setTab(v))}
+          options={tabs}
+          size={cs}
+          className={`flex-1 min-w-0 ${stripClamp(cs) ?? ''}`.trim()}
+        />
       </div>
       {/* stays mounted hidden on desktop so playback chrome never re-inits on a
           tab switch; on touch the bar lives in the sheet below */}
@@ -309,12 +302,7 @@ export default function EditorFooter() {
             <Dropdown size={cs} variant="subtle" className="w-full" options={aspectOptions} value={aspect} onChange={setAspect} />
           </LabeledControlSection>
           <LabeledControlSection label="Export">
-            <div className="flex items-center gap-3">
-              {/* 'w-full' in className opts out of Dropdown's fixed inline width
-                  so flex-1 can actually size the control. */}
-              <Dropdown size={cs} variant="subtle" className="flex-1 w-full" options={scaleOptions} value={pngScale} onChange={setPngScale} />
-              <span className="kol-helper-10 text-meta whitespace-nowrap">{canvasW * pngScale} × {canvasH * pngScale} px</span>
-            </div>
+            <Dropdown size={cs} variant="subtle" className="w-full" options={scaleOptions} value={pngScale} onChange={setPngScale} />
             <Button tone="primary" size={cs} className="w-full" iconLeft="download" iconSize={12} onClick={() => onExportPng(pngScale)}>
               Export PNG
             </Button>

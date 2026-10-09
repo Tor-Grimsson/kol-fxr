@@ -19,6 +19,7 @@ const INITIAL = {
   steps: [],
   curve: 'in-out',
   cycle: 'loop',
+  syncLoop: false,    /* the end takes the start's values, every track on the layer — a seamless wrap (resolve.js) */
   seconds: 4,
   editing: null,      /* index of the step on the stage, static, while its sliders are being moved */
   fileId: null,       /* the saved morph file this came from, so Save overwrites */

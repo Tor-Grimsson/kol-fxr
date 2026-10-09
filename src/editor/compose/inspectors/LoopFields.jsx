@@ -65,7 +65,7 @@ function Row({ inline, label, align = 'fill', children }) {
 const ONOFF = [{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]
 function OnOff({ inline, cs, on, onChange }) {
   return inline
-    ? <SegmentedToggle size={cs} className={`w-full ${stripClamp(cs) ?? ''}`} options={ONOFF} value={on ? 'on' : 'off'} onChange={(v) => onChange(v === 'on')} />
+    ? <SegmentedToggle tone="sunken" size={cs} className={`w-full ${stripClamp(cs) ?? ''}`} options={ONOFF} value={on ? 'on' : 'off'} onChange={(v) => onChange(v === 'on')} />
     : <ViewToggle size={cs} options={ONOFF} viewMode={on ? 'on' : 'off'} onViewChange={(v) => onChange(v === 'on')} />
 }
 

@@ -3,7 +3,7 @@ import { Button, Dropdown, Input, Tooltip, useGrabEdge } from '@kolkrabbi/kol-co
 import { useComposeState } from '../compose/state'
 import { labelForLayer } from '../compose/labels'
 import { keysFor } from '../morph/buildMorph'
-import { setMorph } from '../morph/morphStore'
+import { setMorph, useMorph } from '../morph/morphStore'
 import { EASINGS, EASING_OPTIONS } from './easing'
 import { isBinding } from './resolve'
 import { useTransport } from './transport'
@@ -76,22 +76,10 @@ function collectTracks(layers, out = []) {
   return out
 }
 
-/* SYNC LOOP (the user, 2026-10-09: "a button to sync the loops in and out points so it's a seamless
- * transition"): the out point takes the in point's value — a key at t 0 if there was none, every key
- * at or past the end replaced by one at t 1 holding the start value — so the wrap does not jump. */
-export function syncLoopKeys(keys) {
-  if (!keys.length) return keys
-  const v0 = sampleTrack(keys, 0)
-  const body = keys.filter((k) => k.t > 0 && k.t < 1)
-  const first = keys.find((k) => k.t <= 0) ?? { ...keys[0], t: 0, v: v0 }
-  /* the end key carries no easing — the segment INTO it is the previous key's */
-  return [{ ...first, t: 0, v: v0 }, ...body, { t: 1, v: v0 }]
-}
-
 const secs = (frac, len) => `${(frac * len).toFixed(2)}`
 
 /* Click/drag to seek. */
-function ScrubRuler({ t, len, onSeek, onSyncLoop }) {
+function ScrubRuler({ t, len, onSeek }) {
   const ref = useRef(null)
   const fracFromEvent = (e) => {
     const r = ref.current.getBoundingClientRect()
@@ -118,11 +106,6 @@ function ScrubRuler({ t, len, onSeek, onSyncLoop }) {
       >
         <Playhead t={t} />
       </div>
-      {onSyncLoop && (
-        <Tooltip label="Sync loop — the end takes the start's values, so the loop is seamless" asChild>
-          <Button tone="ghost" quiet size="xs" iconOnly="repeat" aria-label="Sync loop" className="shrink-0" onClick={onSyncLoop} />
-        </Tooltip>
-      )}
     </div>
   )
 }
@@ -442,9 +425,15 @@ function DockGrab({ onDrag, onEnd, onReset }) {
 }
 
 export default function TimelineDock() {
-  const { layers, updateLayer, beginTransaction, commitTransaction } = useComposeState()
+  const { layers, updateLayer } = useComposeState()
   const { t, seek, loopSeconds } = useTransport()
-  const tracks = useMemo(() => collectTracks(layers), [layers])
+  const morph = useMorph()
+  const collected = useMemo(() => collectTracks(layers), [layers])
+  /* ON THE MORPH RAIL THE DOCK IS ALWAYS UP (the user, 2026-10-09: "show timeline when you enter morph
+     regardless of slot empty or not") — until a morph is built (two steps) its lane is an empty header */
+  const tracks = useMemo(() => (morph.active && !collected.some((tr) => tr.header)
+    ? [{ id: 'morph:empty', layerId: null, key: 'morphT', label: morph.fileName || 'Morph', keys: [], header: true, readOnly: true, names: [], steps: 0 }, ...collected]
+    : collected), [collected, morph.active, morph.fileName])
   const [selected, setSelected] = useState(null)   /* { trackId, index } */
   const [folded, setFolded] = useState(() => new Set())
   const [dockH, setDockH] = useState(readDockH)   /* null = as tall as its lanes */
@@ -457,13 +446,6 @@ export default function TimelineDock() {
     const sorted = [...nextKeys].sort((a, b) => a.t - b.t)
     updateLayer(track.layerId, { [track.key]: { bind: 'track', keys: sorted } })
   }
-  /* every editable lane at once, one undo entry */
-  const syncLoop = () => {
-    beginTransaction()
-    /* not a morph's header: its keys are step indices and its cycle already wraps (Loop ends on N ≡ 0) */
-    for (const tr of tracks) if (!tr.readOnly && !tr.header && tr.keys.length > 1) writeKeys(tr, syncLoopKeys(tr.keys))
-    commitTransaction()
-  }
   const toggleFold = (id) => setFolded((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const shown = tracks.filter((tr) => !(tr.under && folded.has(tr.under)))
 
@@ -474,7 +456,7 @@ export default function TimelineDock() {
         onEnd={() => { base.current = null }}
         onReset={() => setDockH(null)}
       />
-      <ScrubRuler t={t} len={loopSeconds} onSeek={seek} onSyncLoop={syncLoop} />
+      <ScrubRuler t={t} len={loopSeconds} onSeek={seek} />
       <div className="flex flex-col gap-1 min-h-0 overflow-y-auto">
         {shown.map((track) => (
           <Fragment key={track.id}>

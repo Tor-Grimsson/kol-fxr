@@ -37,9 +37,23 @@ export function hasBindings(layer) {
   return false
 }
 
+/* SYNC LOOP (the user, 2026-10-09: "a button to sync the loops in and out points so it's a seamless
+ * transition" — then: a toggle, under the Morph rail's Cycle): the out point takes the in point's value —
+ * a key at t 0 if there was none, every key at or past the end replaced by one at t 1 holding the start
+ * value — so the wrap does not jump. Applied at read time from `morph.syncLoop`, so Off is the keys as
+ * they were. ponytail: a new array per track per frame; memo on `keys` identity if it ever profiles hot. */
+export function syncLoopKeys(keys) {
+  if (!keys?.length) return keys
+  const v0 = resolveTrack(keys, 0)
+  const body = keys.filter((k) => k.t > 0 && k.t < 1)
+  const first = keys.find((k) => k.t <= 0) ?? { ...keys[0], t: 0, v: v0 }
+  /* the end key carries no easing — the segment INTO it is the previous key's */
+  return [{ ...first, t: 0, v: v0 }, ...body, { t: 1, v: v0 }]
+}
+
 export function resolveValue(value, ctx, layer) {
   if (!isBinding(value)) return value
-  if (value.bind === 'track') return resolveTrack(value.keys, ctx?.t ?? 0)
+  if (value.bind === 'track') return resolveTrack(layer?.morph?.syncLoop ? syncLoopKeys(value.keys) : value.keys, ctx?.t ?? 0)
   if (value.bind === 'mod')   return resolveMod(value, ctx, layer)
   return undefined
 }

@@ -251,19 +251,3 @@
   display: block;
 }
 
-/* THE SEGMENTED STRIP WEARS THE SUNKEN TONE (user, 2026-09-01: "sunken on one
- * side and primary on the other … rounded as a group with dividers"). The DS's
- * default SegmentedToggle already has the anatomy — one group radius, 1px
- * dividers, rest cells on surface-secondary (the primary button's fill) — but
- * a 1px shell and a transparent selected cell. ControlToneSunken, which
- * Dropdown · Input · Button · IconFrame · ThemeToggle · ViewToggle(icon) take as
- * `tone="sunken"`, is "the dark well + fg-96 ink + transparent border"; the
- * SegmentedToggle alone has no `tone`, so the same three lines land here,
- * scoped to the labs rail. Both go the day it grows the prop in kol-component. */
-.kol-editor-labs .kol-seg {
-  border-color: transparent;
-}
-.kol-editor-labs .kol-seg-cell.is-active {
-  background: var(--kol-surface-sunken);
-  color: var(--kol-fg-96);
-}
