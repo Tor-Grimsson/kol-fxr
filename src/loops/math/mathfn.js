@@ -1,3 +1,4 @@
+import { SHADOWED_GLOBALS } from '../lib/sandbox'
 /**
  * mathfn — safe GEOMETRY expression compiler for the math loops (port of
  * kol-labs-single math/lib/mathfn.js compileVars + the identifier gate from
@@ -69,17 +70,7 @@ function isSafeExpr(expr, args) {
   return ids.every((id) => PRELUDE_IDENTS.has(id) || args.includes(id))
 }
 
-/* Dangerous globals shadowed as never-passed parameters (bound to
- * undefined) — same list as editor expr.js. `eval` and `import` are
- * reserved words in strict code and cannot be shadowed; the Math scope
- * the PRELUDE exposes stays intact. */
-// ponytail: scope-shadowing, not a real sandbox (constructor chains still escape); upgrade path = SES/worker isolation.
-const SHADOWED_GLOBALS = [
-  'globalThis', 'window', 'self', 'document', 'fetch', 'XMLHttpRequest',
-  'localStorage', 'sessionStorage', 'indexedDB', 'navigator', 'location',
-  'top', 'parent', 'frames', 'opener', 'Function', 'WebSocket', 'Worker',
-  'importScripts',
-]
+/* the shadowed-globals list lives in ONE place — loops/lib/sandbox.js (audit G3) */
 
 const cache = new Map() // `${args}|${expr}` -> fn | null
 const CACHE_MAX = 64

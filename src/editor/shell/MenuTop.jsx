@@ -264,7 +264,7 @@ export default function MenuTop() {
                 Pattern); categories inside apply a filter to the selected
                 layer. Preset picking lives in the Effects panel. */}
             {!fxTarget ? (
-              <div className="kol-helper-10 text-subtle px-3 py-1">Select a layer to apply an effect</div>
+              <div className="kol-mono-10 text-subtle px-3 py-1">Select a layer to apply an effect</div>
             ) : (
               <>
                 <MenuDropdownItem onClick={clearEffect} disabled={fxChain.length === 0}>
@@ -356,7 +356,7 @@ export default function MenuTop() {
               onClick={toggleSnap}
               shortcut={snapEnabled ? <Icon name="check" size={11} /> : undefined}
             >
-              Snap to guides
+              Snap to objects, guides and canvas
             </MenuDropdownItem>
             <MenuDropdownDivider />
             <MenuDropdownItem onClick={onExportSvg}>

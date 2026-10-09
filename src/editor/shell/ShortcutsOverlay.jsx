@@ -38,11 +38,17 @@ export default function ShortcutsOverlay() {
     /* S TOGGLES (user ruling 2026-08-12): pressing it again closes. */
     const onShow = () => setOpen((o) => !o)
     const onClose = () => setOpen(false)
+    /* Escape closes (audit A9, 2026-10-09): the DS panel's own Escape only fires with focus inside
+       it, and the sheet opens from a key with focus on the canvas — so it never did. A window
+       listener; a second `setOpen(false)` when the panel also fires is harmless. */
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
     window.addEventListener('kol:show-shortcuts', onShow)
     window.addEventListener('kol:close-shortcuts', onClose)
+    window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('kol:show-shortcuts', onShow)
       window.removeEventListener('kol:close-shortcuts', onClose)
+      window.removeEventListener('keydown', onKey)
     }
   }, [])
 

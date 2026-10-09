@@ -54,7 +54,7 @@ export default function EffectsPanel() {
       <div className="kol-compose-inspector-body">
         {layer
           ? <LayerEffects key={layer.id} layer={layer} />
-          : <Hint className="kol-helper-12 text-meta">Select a layer to edit its effect.</Hint>}
+          : <Hint>Select a layer to edit its effect.</Hint>}
       </div>
     </div>
   )

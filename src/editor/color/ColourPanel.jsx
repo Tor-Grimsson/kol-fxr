@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { colord } from 'colord'
 import { Slider } from '@kolkrabbi/kol-component'
 import { Dropdown } from '@kolkrabbi/kol-component'
@@ -89,6 +89,14 @@ function TopRow({ mode, setMode, target }) {
       }
     }
   }
+  /* `I` (keymap `eyedrop`, 2026-10-09 — the user's 17): the same pick the pipette button makes.
+     A ref so the listener always calls the latest closure (layers · palette · focused paint). */
+  const pickRef = useRef(onPickEyedrop); pickRef.current = onPickEyedrop
+  useEffect(() => {
+    const on = () => pickRef.current()
+    window.addEventListener('kol:eyedrop', on)
+    return () => window.removeEventListener('kol:eyedrop', on)
+  }, [])
   const fillColor   = fillHex   ?? '#FFFFFF'
   const strokeColor = strokeHex ?? '#000000'
   const sampleColor = activePaint === 'stroke' ? strokeColor : fillColor

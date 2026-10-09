@@ -18,7 +18,7 @@ import { randomiseComp } from '../../kinetic/knobs'
 import { GENERATIVE_TREE, MISC_TREE } from '../../loops/taxonomy'
 import { groupById, loopById, presetsInGroup, presetsInSub, presetLayerPatch } from '../../loops/registry'
 import { computeRoll, allScopeParams } from '../params/rolls'
-import { useAppSettings, getAppSettings, setAppSetting } from '../lib/appSettings'
+import { useBindDots, toggleDots } from '../params/dotVisibility'
 import { useLabsLayer } from './useLabsLayer'
 import MorphTab from '../morph/MorphTab'
 import { useMorph } from '../morph/morphStore'
@@ -462,9 +462,10 @@ export default function LabsParams() {
   const { layer } = useLabsLayer()
   const morph = useMorph()
   const cs = useControlSize()
-  /* Modulation dots hide by default (labs has none) — M or Settings →
-   * Modulation dots brings them back. */
-  const showMod = !!useAppSettings().labsModDots
+  /* Modulation dots hide by default (the 2026-08-12 ruling: chrome noise at rest) — M or Settings →
+   * Modulation dots brings them back. ONE switch for every chrome since 2026-10-09 (audit C4/F3):
+   * `dotVisibility`, the editor's store, not a second key in appSettings. */
+  const showMod = useBindDots()
 
   useEffect(() => {
     const onKey = (e) => {
@@ -472,7 +473,7 @@ export default function LabsParams() {
       if (e.metaKey || e.ctrlKey || e.altKey) return
       const t = e.target
       if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
-      setAppSetting('labsModDots', !getAppSettings().labsModDots)
+      toggleDots()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

@@ -16,7 +16,7 @@ import { DEFAULT_CURVE } from '../../../loops/pattern/fields/organicField.js'
  * waveProfile === 'custom'.
  */
 const W = 240, H = 120, PAD = 12
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
+import { clamp } from '../../../loops/lib/util'
 const px = (nx) => nx * W
 const py = (ny) => H / 2 - ny * (H / 2 - PAD)
 

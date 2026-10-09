@@ -10,6 +10,7 @@ import {
 import { ASPECTS } from '../editor/shell/aspects'
 import { pack } from '../editor/packs'
 import { useAppSettings, setAppSetting } from '../editor/lib/appSettings'
+import { useBindDots, toggleDots } from '../editor/params/dotVisibility'
 import { transport } from '../editor/params/transport'
 
 /**
@@ -110,13 +111,7 @@ const sectionsFor = (s) => [
       },
       {
         label: 'Modulation dots',
-        render: () => (
-          <SettingsSwitch
-            label="Modulation dots"
-            on={s.labsModDots}
-            onChange={(v) => setAppSetting('labsModDots', v)}
-          />
-        ),
+        render: () => <DotsSwitch />,
       },
     ],
   },
@@ -206,8 +201,15 @@ const DEFAULTS = {
   defaultTheme: 'kol',
   autoplay: false,
   clipToFrame: true,
-  labsModDots: false,
   defaultLoopSeconds: 4,
+}
+
+/* ONE dots switch for every chrome (audit C4/F3, 2026-10-09): the editor's `dotVisibility` store
+   (the `M` key, `kol-editor-show-dots`) is the setting; `labsModDots` was a second key for the
+   same thing that only labs read. Off by default — the 2026-08-12 ruling: chrome noise at rest. */
+function DotsSwitch() {
+  const on = useBindDots()
+  return <SettingsSwitch label="Modulation dots" on={on} onChange={(v) => { if (v !== on) toggleDots() }} />
 }
 
 export function DisplaySettingsDrawer({ open, onClose, children }) {

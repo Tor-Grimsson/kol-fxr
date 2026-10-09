@@ -331,7 +331,7 @@ export function VariableBlock({ layer, setProp }) {
   if (!isOutlineFamily(layerFamily(layer))) {
     return (
       <div className="flex flex-col gap-2">
-        <span className="kol-helper-10 uppercase text-meta">Morph</span>
+        <span className="kol-eyebrow text-meta">Morph</span>
         <p className="kol-mono-12 text-meta">
           Morph needs an outline font — switch the Family to Right Grotesk.
         </p>
@@ -342,7 +342,7 @@ export function VariableBlock({ layer, setProp }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="kol-helper-10 uppercase text-meta">Morph</span>
+        <span className="kol-eyebrow text-meta">Morph</span>
         <ViewToggle
           options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
           viewMode={on ? 'on' : 'off'}
@@ -440,7 +440,7 @@ function MetricRow({ param: p, layer, setProp }) {
         {bound
           ? (
             <div className="flex items-center justify-between">
-              <span className="kol-helper-10 uppercase text-meta">{p.label}</span>
+              <span className="kol-eyebrow text-meta">{p.label}</span>
               <span className="kol-helper-12 text-meta italic">animated</span>
             </div>
           )

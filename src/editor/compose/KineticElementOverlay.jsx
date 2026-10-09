@@ -217,7 +217,7 @@ export default function KineticElementOverlay({
         width: layer.w, height: layer.h,
         transform: rot ? `rotate(${rot}deg)` : undefined,
         pointerEvents: 'none',
-        zIndex: 120,
+        zIndex: 'var(--kol-z-overlay)', /* the DS ladder, not a loose number (audit E4) */
       }}
     >
       {/* mode outline + hit-test/move surface */}

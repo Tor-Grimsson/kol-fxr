@@ -128,7 +128,7 @@ function patchLayerDeep(list, id, partial) {
  * free those clips when the subtree is deleted. */
 function collectVideoClipIds(layer, out = []) {
   if (!layer) return out
-  if (layer.srcType === 'video') out.push(layer.id)
+  if (layer.srcType === 'video' || layer.srcType === 'image') out.push(layer.id) /* images are clips too since 2026-10-09 (audit F1); deleteClip is a no-op for an id with no clip */
   if (Array.isArray(layer.children)) for (const c of layer.children) collectVideoClipIds(c, out)
   return out
 }
@@ -1151,18 +1151,24 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
 
   /* Duplicate resolves DEEP — a nested child clones in place, inserted
    * right above the original within its parent (bool ancestors refit). */
-  const duplicateLayer = useCallback((id) => {
+  /* Returns the clone's id (⌥-drag duplicates and then drags the COPY — audit B6, the user's 28).
+   * `offset: 0` lands the clone on the original, for that drag; the default 24px step is ⌘D's. */
+  const duplicateLayer = useCallback((id, { offset = 24 } = {}) => {
+    const found0 = locateLayer(layersRef.current, id)
+    const nid = found0 ? newId(found0.layer.type) : null
+    if (!nid) return null
     setLayersTracked((prev) => {
       const found = locateLayer(prev, id)
       if (!found) return prev
       const src = found.layer
-      const clone = { ...src, id: newId(src.type) }
+      const clone = { ...src, id: nid }
       /* Group/bool children get fresh ids too — duplicated child ids would
        * make panel-side child edits write into both copies at once. */
       if (Array.isArray(clone.children)) clone.children = reidLayers(clone.children)
-      if (clone.x != null) { clone.x += 24; clone.y += 24 }
+      if (clone.x != null) { clone.x += offset; clone.y += offset }
       return insertLayerDeep(prev, found.parent?.id ?? null, found.index + 1, clone)
     })
+    return nid
   }, [setLayersTracked])
 
   /* Clear the canvas — drop all layers, clear selection, and reset the

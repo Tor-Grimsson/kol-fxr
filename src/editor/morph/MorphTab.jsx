@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Dropdown, LabeledControlSection, SegmentedToggle, SettingsRow, useModal } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, LabeledControlSection, SegmentedToggle, SettingsRow, StepList, useModal } from '@kolkrabbi/kol-component'
 import { Icon } from '@kolkrabbi/kol-icons'
 import { loopById } from '../../loops/registry'
 import { useComposeState } from '../compose/state'
@@ -38,11 +38,6 @@ import { useMorph, setMorph, updateStep, removeStep, reorderStep, pickParams, st
  */
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 
-/* ponytail: `SegmentedToggle` has no per-option `disabled` (kol-component 0.244.0) — a greyed cell
- * is a dimmed label with the reason as its tooltip, and `onChange` refuses it. A DS seam for a
- * local session (plan 14 § 4). */
-const dim = (text) => <span className="opacity-40">{text}</span>
-
 export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
   const cs = useControlSize()
   const morph = useMorph()
@@ -67,9 +62,11 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
     crossfade: allDraw ? null : `Cannot fade: ${engines.map((s) => stepLabel(s, steps.indexOf(s))).join(', ')} (GL)`,
   }
   const modeOptions = [
-    { value: 'shape', label: blocked.shape ? dim('Shape') : 'Shape', ariaLabel: 'Shape', tooltip: blocked.shape ?? undefined },
-    { value: 'blend', label: blocked.blend ? dim('Blend') : 'Blend', ariaLabel: 'Blend', tooltip: blocked.blend ?? undefined },
-    { value: 'crossfade', label: blocked.crossfade ? dim('Crossfade') : 'Crossfade', ariaLabel: 'Crossfade', tooltip: blocked.crossfade ?? undefined },
+    /* a blocked mode is a DISABLED cell (kol-component 0.245.0, `SegmentedToggleOptionDisabled`) — the
+       tooltip still gives the reason, ←/→ skip it, the cell refuses the press */
+    { value: 'shape', label: 'Shape', disabled: !!blocked.shape, tooltip: blocked.shape ?? undefined },
+    { value: 'blend', label: 'Blend', disabled: !!blocked.blend, tooltip: blocked.blend ?? undefined },
+    { value: 'crossfade', label: 'Crossfade', disabled: !!blocked.crossfade, tooltip: blocked.crossfade ?? undefined },
   ]
   /* a mode the steps cannot take falls to the first one they can */
   useEffect(() => {
@@ -146,7 +143,20 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <StepList steps={steps} editing={editing} readOnly={readOnly} onEdit={editStep} onAdd={() => setMorph({ active: true, picker: 'preset' })} cs={cs} />
+      {/* the DS list (kol-component 0.245.0, `StepList` — filed from here 2026-10-09); the local copy
+          is in _tmp/2026-10-09-morph-steplist/. `grab` is a pointer sort, so it works under a finger. */}
+      <StepList
+        items={steps.map((s, i) => ({ id: i, label: stepLabel(s, i) }))}
+        activeIndex={editing}
+        reorder="grab"
+        readOnly={readOnly}
+        size={cs}
+        onSelect={editStep}
+        onRemove={removeStep}
+        onMove={reorderStep}
+        onAdd={() => setMorph({ active: true, picker: 'preset' })}
+        addLabel="Add a step"
+      />
       {steps.length < 2 && !readOnly && <p className="kol-mono-12 text-meta">Two steps or more and the stage plays the morph.</p>}
 
       {editing != null && !readOnly && layer && editTabs && (
@@ -159,7 +169,7 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
 
       <LabeledControlSection label="Mode" divided>
         {/* the three cells on their own row, full width — labelled, Crossfade fell off the rail's edge */}
-        <SegmentedToggle value={mode} onChange={(v) => !readOnly && !blocked[v] && setMorph({ mode: v })} options={modeOptions} size={cs} className={stripClamp(cs)} />
+        <SegmentedToggle value={mode} onChange={(v) => !readOnly && setMorph({ mode: v })} options={modeOptions} size={cs} className={stripClamp(cs)} />
         <SettingsRow label="Curve" labelWidth={RAIL_LABEL_W}>
           <Dropdown size={ctl} options={CURVES} value={curve} onChange={(v) => setMorph({ curve: v })} aria-label="Curve" disabled={readOnly} />
         </SettingsRow>
@@ -181,67 +191,3 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
   )
 }
 
-/**
- * StepList — the numbered slots. Reorder by the grab handle (`drag-handle`, HTML drag the way the
- * DS `LayerStack` does it), × removes, the empty slot adds. One local component, kept whole so it
- * lifts to kol-component as a list item + group in two variants (arrows · grab) — a local-session
- * ticket (plan 14 § 4).
- */
-function StepList({ steps, editing, readOnly, onEdit, onAdd, cs }) {
-  const [dragged, setDragged] = useState(null)
-  const [over, setOver] = useState(null)   /* { index, pos: 'above' | 'below' } */
-  const clear = () => { setDragged(null); setOver(null) }
-  const onDragStart = (i) => (e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); setDragged(i) }
-  const onDragOver = (i) => (e) => {
-    e.preventDefault(); e.dataTransfer.dropEffect = 'move'
-    if (dragged == null || dragged === i) { setOver(null); return }
-    const r = e.currentTarget.getBoundingClientRect()
-    setOver({ index: i, pos: e.clientY - r.top < r.height / 2 ? 'above' : 'below' })
-  }
-  const onDrop = (i) => (e) => {
-    e.preventDefault()
-    if (dragged == null || dragged === i || !over) { clear(); return }
-    let to = over.pos === 'above' ? i : i + 1
-    if (dragged < to) to -= 1
-    reorderStep(dragged, to)
-    clear()
-  }
-  return (
-    <ul className="flex flex-col gap-1">
-      {steps.map((s, i) => {
-        const mark = over?.index === i ? over.pos : null
-        return (
-          <li
-            key={i}
-            draggable={!readOnly}
-            onDragStart={onDragStart(i)} onDragOver={onDragOver(i)} onDragLeave={() => setOver((o) => (o?.index === i ? null : o))} onDrop={onDrop(i)} onDragEnd={clear}
-            className={`relative flex items-center gap-2 rounded px-2 py-1 ${editing === i ? 'bg-fg-08' : ''} ${dragged === i ? 'opacity-40' : ''}`}
-          >
-            {mark && <span aria-hidden="true" className={`absolute left-2 right-2 h-px bg-accent-primary ${mark === 'above' ? 'top-0' : 'bottom-0'}`} />}
-            {!readOnly && <span className="text-meta cursor-grab shrink-0 touch-none" aria-label="Drag to reorder"><Icon name="drag-handle" size={12} /></span>}
-            <button type="button" className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer" onClick={() => !readOnly && onEdit(i)} aria-label={`Edit step ${i + 1}`}>
-              <span className="kol-helper-10 text-meta tabular-nums w-4 shrink-0">{i + 1}</span>
-              <span className="kol-mono-12 text-emphasis truncate">{stepLabel(s, i)}</span>
-            </button>
-            {!readOnly && <Button tone="ghost" quiet size={cs} iconOnly="x" aria-label="Remove step" onClick={() => removeStep(i)} />}
-          </li>
-        )
-      })}
-      {!readOnly && (
-        <li>
-          {/* THE EMPTY SLOT — the next step's row, dashed, with the plus; pressing it opens the picker */}
-          <button
-            type="button"
-            aria-label="Add a step"
-            onClick={onAdd}
-            className="flex items-center gap-2 w-full rounded px-2 py-1 border border-dashed border-oq-16 text-meta hover:text-body hover:border-oq-24 cursor-pointer"
-          >
-            <span className="kol-helper-10 tabular-nums w-4 shrink-0">{steps.length + 1}</span>
-            <Icon name="plus" size={12} />
-            <span className="kol-mono-12">Add a step</span>
-          </button>
-        </li>
-      )}
-    </ul>
-  )
-}

@@ -1929,7 +1929,8 @@ function TextLayer({ layer, palette, layerStyle }) {
         <TypeBlock
           value={{ ...layer, familyCss, color, strokeColor: sw > 0 ? strokeColor : null, strokeWidth: sw }}
           selected={selectedId === layer.id}
-          onChange={(patch) => updateLayer(layer.id, patch)}
+          editOnMount={!!layer.editOnMount}
+          onChange={(patch) => updateLayer(layer.id, { ...patch, editOnMount: undefined })} /* the flag is one-shot: cleared on the first commit */
           className="w-full"
         />
       )}

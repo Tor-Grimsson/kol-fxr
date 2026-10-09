@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Input, Dropdown, ViewToggle, ToggleSwitch, SegmentedToggle, LabeledControl, SettingsRow, LabeledControlSection, Textarea } from '@kolkrabbi/kol-component'
+import { Input, Slider, Dropdown, ViewToggle, ToggleSwitch, SegmentedToggle, LabeledControl, SettingsRow, LabeledControlSection, Textarea } from '@kolkrabbi/kol-component'
 import Hint from '../components/Hint'
 import { visibleParams, isAnimatable, paramTab, paramSection } from './schema'
 import { isBinding, resolveValue } from './resolve'
@@ -170,14 +170,15 @@ function RangeField({ param: p, layer, setProp }) {
 
   return (
     <div className="flex items-center gap-3">
-      <input
-        type="range"
+      {/* the DS slider, readout off — the value field beside it is the readout (audit E1; this was
+          the one native range input left in src/) */}
+      <Slider
         min={p.min} max={p.max} step={p.step ?? 1}
         value={numVal}
         disabled={bound}
-        onChange={(e) => setProp(p.key, Number(e.target.value))}
-        className="slider-black flex-1 w-full cursor-pointer"
-        style={bound ? { opacity: 0.7 } : undefined}
+        onChange={(v) => setProp(p.key, Number(v))}
+        readout="none"
+        className="flex-1"
       />
       <Input
         /* 5 chars holds "0.025" and a 4-digit value; 6 was a third of a touch

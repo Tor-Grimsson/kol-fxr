@@ -62,7 +62,7 @@ export default function ParametersPanel() {
       <div className="kol-compose-inspector-body">
         {layer
           ? <LayerParameters key={layer.id} layer={layer} />
-          : <Hint className="kol-helper-12 text-meta">Select a layer to edit its parameters.</Hint>}
+          : <Hint>Select a layer to edit its parameters.</Hint>}
       </div>
     </div>
   )
@@ -127,24 +127,24 @@ function LayerParameters({ layer }) {
     /* loop/misc are the generators pack's, kinetic the motion pack's (editor/packs.js) — a layer
      * whose pack is absent has no parameters here */
     const LoopFields = pack('generators')?.LoopFields
-    if (!LoopFields) return <Hint className="kol-helper-12 text-meta">This layer has no parameters.</Hint>
+    if (!LoopFields) return <Hint>This layer has no parameters.</Hint>
     body = <LoopFields {...shared} tabStrip={tabStrip} />
     stripInBody = true
   } else if (layer.type === 'misc') {
     const g = pack('generators')
-    if (!g) return <Hint className="kol-helper-12 text-meta">This layer has no parameters.</Hint>
+    if (!g) return <Hint>This layer has no parameters.</Hint>
     body = <g.LoopFields {...shared} tabStrip={tabStrip} tree={g.MISC_TREE} />
     stripInBody = true
   } else if (layer.type === 'kinetic') {
     /* Kinetic places the strip itself — picker + Elements stay above it. */
     const KineticPanel = pack('motion')?.KineticPanel
-    if (!KineticPanel) return <Hint className="kol-helper-12 text-meta">This layer has no parameters.</Hint>
+    if (!KineticPanel) return <Hint>This layer has no parameters.</Hint>
     body = <KineticPanel {...shared} tabStrip={tabStrip} />
     stripInBody = true
   } else if (layer.type === 'path') {
     body = null
   } else {
-    return <Hint className="kol-helper-12 text-meta">This layer has no parameters.</Hint>
+    return <Hint>This layer has no parameters.</Hint>
   }
 
   return (
@@ -220,7 +220,7 @@ function PatternFields({ layer, setProp, updateLayer, palette, renderAnimate, ta
       )}
 
       {tab === 'style' && (
-        <Hint className="kol-helper-12 text-meta">Pattern styling lives in the Pattern tab.</Hint>
+        <Hint>Pattern styling lives in the Pattern tab.</Hint>
       )}
 
       {tab === 'anim' && (

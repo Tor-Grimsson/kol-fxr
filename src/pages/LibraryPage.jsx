@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '@kolkrabbi/kol-component'
+import { Button, EmptyState, usePlaceholders } from '@kolkrabbi/kol-component'
 import { CatalogPage } from '@kolkrabbi/kol-shell'
 import { openNewFile } from '../components/NewFileDialog'
 import {
@@ -96,9 +96,13 @@ function LibraryBody() {
   /* placeholders only while the library holds NOTHING real (plan 08) — once anything is saved, an
      empty slot is just empty, not 16 fake cards burying the real ones */
   const anyReal = SLOT_ORDER.some((slot) => (library[slot] ?? []).length > 0)
+  /* …and only while the DS's placeholder switch is ON (`I`-era `toggle-hints`, now ⇧I): off — the
+     default — an empty library is an empty state, not seventy stand-ins a signed-out user reads as
+     real (audit A6, 2026-10-09). The stand-ins keep the 2026-08-27 shape for whoever switches them on. */
+  const { shown: placeholdersOn } = usePlaceholders()
   const pooled = SLOT_ORDER.flatMap((slot) => {
     const saved = library[slot] ?? []
-    return (saved.length ? saved.map((item) => ({ ...item, slot })) : anyReal ? [] : placeholdersFor(slot))
+    return (saved.length ? saved.map((item) => ({ ...item, slot })) : (anyReal || !placeholdersOn) ? [] : placeholdersFor(slot))
       .map((item) => ({ ...item, [slot]: tagOf(slot, item) }))
   })
   /* RECENT = newest first; SAVED = store order */
@@ -114,6 +118,7 @@ function LibraryBody() {
   }))
 
   return (
+    <>
     <CatalogPage
       header={{ title: 'Library', subtitle: 'Everything saved on this device.', size: 'sm', voice: 'mono' }}
       items={items}
@@ -141,6 +146,11 @@ function LibraryBody() {
         <Button tone="grey" size="md" onClick={openNewFile}>New File</Button>
       }
     />
+    {/* the empty state the page had none of (audit A6) — the header and its strip stay above it */}
+    {items.length === 0 && (
+      <EmptyState className="px-6" eyebrow="Library" title="Nothing saved yet" body="Save… in any chrome keeps a file here. Signed in, it syncs to the cloud library." />
+    )}
+    </>
   )
 }
 

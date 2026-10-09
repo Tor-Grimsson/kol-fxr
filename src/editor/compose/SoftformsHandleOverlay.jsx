@@ -25,8 +25,7 @@ import { CanvasZoomContext } from '../shell/Canvas'
  * authored transform, not the live animated offset).
  */
 
-const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
-const lerp = (a, b, t) => a + (b - a) * t
+import { clamp, lerp } from '../../loops/lib/util'
 
 /* JS port of the engine's shader formDist — signed-ish distance (negative
  * inside) for a form-local point q. Mirrors SoftFormsEngine.formDist. */
@@ -177,7 +176,7 @@ export default function SoftformsHandleOverlay({
         left: layer.x, top: layer.y, width: w, height: h,
         transform: rot ? `rotate(${rot}deg)` : undefined,
         pointerEvents: 'none',
-        zIndex: 120,
+        zIndex: 'var(--kol-z-overlay)', /* the DS ladder, not a loose number (audit E4) */
       }}
     >
       <svg

@@ -161,10 +161,12 @@ const recentFiles = () => savedCards().sort((a, b) => stampOf(b.file) - stampOf(
    files from before carry none and keep the guess — a single generator layer is a labs file */
 const chromeOf = (p) => (p.mode === 'morph' ? 'morph' : p.mode === 'labs' ? 'labs' : p.mode === 'editor' ? 'editor' : (Array.isArray(p.layers) && p.layers.length === 1 && p.layers[0]?.type === 'loop' ? 'labs' : 'editor'))
 
-/* ponytail: placeholder steps — monitor's five-step tour has no fxr copy yet.
+/* The tour's copy is the chromes' own one-liners (the New File doors, the Home cards) — one
+   source, nothing invented here (audit A3 replaced the "Placeholder." steps, 2026-10-09).
    The last step's `actions` is a FUNCTION so HubHome can hand it `close`. */
 const WALKTHROUGH = (enter) => [
-  { title: '1. Pick a chrome', text: ['Placeholder.'] },
+  { title: '1. Pick a chrome', text: ['All three run the same engine.', 'Editor — the full compositor: layers, generators, effects, export.', 'Labs — one generator or source on a standardized output.', 'Randomiser — roll the dice: pick a category and randomize.'] },
+  { title: '2. Save, and find it again', text: ['Save… in any chrome keeps the file on this device; signed in, it syncs to the cloud library.', 'Home lists your recent files; Library lists everything saved.'] },
   { title: 'Get Started', actions: (close) => <Button tone="grey" size="md" onClick={() => { close(); enter('editor') }}>Open Editor</Button> },
 ]
 
@@ -382,8 +384,9 @@ export default function AppLayout() {
       settings={{
         sections,
         /* the gear opens the SAME sections as a drawer — one definition, two
-           frames, so they cannot drift (the editor's own drawer renders them too) */
-        drawer: true,
+           frames, so they cannot drift (the editor's own drawer renders them too).
+           Not on /settings itself: a drawer of the page over the page (audit A7). */
+        drawer: location.pathname !== '/settings',
         picker: (
           <Dropdown
             className="w-48"

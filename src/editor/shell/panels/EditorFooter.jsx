@@ -94,9 +94,11 @@ function PhotoFileTab({ layer }) {
     const file = e.target.files?.[0]
     e.target.value = '' /* allow re-picking the same file */
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => patch({ src: reader.result, srcType: 'image' })
-    reader.readAsDataURL(file)
+    /* The same side-channel as video since 2026-10-09 (audit F1): the blob keyed by the layer id in
+     * the clip store, an objectURL on the layer. The data: URL this used to write put the whole
+     * image into the localStorage draft — a 5 MB photo blew the quota. */
+    saveClip(layer.id, file)
+    patch({ src: URL.createObjectURL(file), srcType: 'image' })
   }
   const onPickVideo = (e) => {
     const file = e.target.files?.[0]
@@ -175,23 +177,10 @@ function SettingsFileTab({ onSaveSettings, onLoadSettings, onSave, currentPreset
         Load from file
       </Button>
       <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onPick} />
-      {err && <span className="kol-helper-10 text-ui-error">{err}</span>}
-      {/* kol Divider's h-px never generates (Tailwind skips node_modules) —
-          use the footer's own border-t divider idiom instead. */}
-      <div className="border-t border-oq-08 my-1" />
-      <Button tone="primary" size={cs} className="w-full" onClick={onSave}>
-        {currentPresetId ? 'Save' : 'Save…'}
-      </Button>
-      {/* Save as… opens the dialog — see MenuTop */}
-      <Button tone="primary" size={cs} className="w-full" onClick={() => openFiles({ focusName: true })}>
-        Save as…
-      </Button>
-      {/* Import and export live in the dialog too — these two buttons stay
-          because they are one click and the dialog is the place you go when
-          one click is not what you wanted. */}
-      <Button tone="primary" size={cs} className="w-full" onClick={() => openFiles()}>
-        Files…
-      </Button>
+      {err && <span className="kol-mono-10 text-ui-error">{err}</span>}
+      {/* Save… · Save as… · Files… left this tab 2026-10-09 (audit C2): they are the File MENU's
+          verbs, and two homes for one verb set drift. The tab keeps what the menu does not have —
+          the on-disk import/export above and the audio source below. */}
     </div>
   )
 }

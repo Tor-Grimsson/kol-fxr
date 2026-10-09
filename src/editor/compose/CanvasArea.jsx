@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Canvas, { CANVAS_VIRTUAL_W } from '../shell/Canvas'
 import { useComposeState, resolveColor, COVER_TYPES, CANVAS_W } from './state'
 import LayerRenderer from './LayerRenderer'
-import { SelectionOverlay, PathNodeOverlay, CropOverlay, MenuDropdownItem, MenuDropdownDivider } from '@kolkrabbi/kol-component'
+import { SelectionOverlay, PathNodeOverlay, CropOverlay, MenuDropdownItem, MenuDropdownDivider, ContextMenu, useContextMenu } from '@kolkrabbi/kol-component'
 import { pathD, normalizePath, normalizePathRings, rotatePathNodes, scalePathNodes, dist } from './path-math'
 import { scaleBoolChildren } from './boolean-ops'
 import { findLayerDeep } from './helpers'
@@ -214,7 +214,9 @@ export default function CanvasArea() {
 
   /* Right-click context menu — { x, y, layerId } in client coords, or null.
    * Closed by any action, click-away, Escape, or a new right-click. */
-  const [ctxMenu, setCtxMenu] = useState(null)
+  /* the DS context menu (audit E5): a popover anchored at the pointer — flip, shift, portal,
+     Escape and click-away are the DS's; `payload` carries the layer id under the cursor */
+  const ctxMenu = useContextMenu()
 
   /* Enter crop on a photo. First entry initializes the crop window
    * {imgX,imgY,imgW,imgH} (frame-local px) from the layer's current fit —
@@ -288,9 +290,10 @@ export default function CanvasArea() {
   /* OS file drop → a new photo layer at the drop point. Reuses the File-tab
    * upload semantics: an objectURL blob src + srcType (image | video), created
    * through the shared addLayer('photo') path (not a bespoke insert). Video
-   * clips are persisted via clipStore (keyed by the returned layer id) so a
-   * dropped clip survives reload, exactly like the "Upload video" button; a
-   * dropped image's objectURL is session-only (no image side-channel). The
+   * clips AND images are persisted via clipStore (keyed by the returned layer
+   * id) so a dropped file survives reload, exactly like the footer's upload
+   * buttons (images joined 2026-10-09, audit F1 — before that a dropped image
+   * died with the window). The
    * layer box is sized to the media's intrinsic aspect (probed off the same
    * objectURL), fit within ~60% of the frame, centered on the drop and clamped
    * inside it. */
@@ -310,7 +313,7 @@ export default function CanvasArea() {
       const x = Math.max(0, Math.min(CANVAS_W - w, at.vx - w / 2))
       const y = Math.max(0, Math.min(viewH - h, at.vy - h / 2))
       const id = addLayer('photo', { src: url, srcType: isVideo ? 'video' : 'image', fit: 'cover', x, y, w, h })
-      if (isVideo && id) saveClip(id, file)
+      if (id) saveClip(id, file)
     }
     if (isVideo) {
       const v = document.createElement('video')
@@ -500,16 +503,21 @@ export default function CanvasArea() {
           })
           return
         }
-        select(id)
         if (!COVER_TYPES.includes(layer.type)) {
           e.preventDefault()
           beginTransaction()
+          /* ⌥-drag = duplicate, then drag the COPY from the original's spot (audit B6, the
+             user's 28). The clone sits in the same transaction as its move → one undo. */
+          const moveId = (e.altKey && duplicateLayer(id, { offset: 0 })) || id
+          select(moveId)
           setDrag({
             mode: 'move',
-            layerId: id,
+            layerId: moveId,
             startX: e.clientX, startY: e.clientY,
             startBox: { x: layer.x, y: layer.y, w: layer.w, h: layer.h },
           })
+        } else {
+          select(id)
         }
         return
       }
@@ -876,6 +884,71 @@ export default function CanvasArea() {
     return () => window.removeEventListener('kol:enter-crop', onCropEvent)
   }, [layers, enterCrop])
 
+  /* A file dropped ANYWHERE but the stage used to navigate the tab to the file — the browser's
+   * default for an unhandled drop — which is how an uploaded image got lost (audit B7 → F1, the
+   * user's 25 → 24). While the editor is mounted the window takes every file drag: dragover
+   * prevented so the pointer says copy, and a drop off the stage lands the file at the frame's
+   * centre. The stage's own onDrop runs first (React's root) and has already prevented, so this
+   * is a no-op there. */
+  useEffect(() => {
+    const over = (e) => { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault() }
+    const drop = (e) => {
+      if (e.defaultPrevented) return
+      const file = e.dataTransfer?.files && [...e.dataTransfer.files].find((f) => f.type.startsWith('image/') || f.type.startsWith('video/'))
+      e.preventDefault()
+      if (!file) return
+      const r = stageRef.current?.getBoundingClientRect()
+      if (r) addDroppedFile(file, r.left + r.width / 2, r.top + r.height / 2)
+    }
+    window.addEventListener('dragover', over)
+    window.addEventListener('drop', drop)
+    return () => { window.removeEventListener('dragover', over); window.removeEventListener('drop', drop) }
+  }, [addDroppedFile])
+
+  /* A press on the grey viewport AROUND the frame deselects, the same as a press on empty canvas
+   * inside it (audit B1, the user's 22: the only way to clear a selection was the Layers panel).
+   * The stage's own mousedown owns everything inside the frame; this catches the rest of the
+   * viewport pane and nothing else — not the rails, not a context menu, not an overlay. */
+  useEffect(() => {
+    const down = (e) => {
+      if (e.button !== 0 || tool !== 'select') return
+      const pane = e.target.closest?.('main.kol-editor-canvas')
+      if (!pane || stageRef.current?.contains(e.target)) return
+      if (e.target.closest('[data-kol-ctxmenu], .kol-popover, .kol-overlay-scrim, button, input')) return
+      select(null)
+    }
+    document.addEventListener('pointerdown', down)
+    return () => document.removeEventListener('pointerdown', down)
+  }, [tool, select])
+
+  /* CROP MODE HAS TO LOOK LIKE A MODE (audit B4, the user's 27 "crop image tool doesn't do
+   * anything"): a cover-fit photo fills its frame exactly, so the crop window coincides with the
+   * selection box, dragging inside has nowhere to pan, and nothing visibly happens. Two things fix
+   * that: the wheel over the frame scales the image about the pointer (never below cover fit, so
+   * the frame is always full), and a chip names the mode and its gestures (rendered beside the
+   * overlay below). Native listener because React's wheel is passive. */
+  useEffect(() => {
+    if (!cropId) return undefined
+    const el = stageRef.current
+    if (!el) return undefined
+    const wheel = (e) => {
+      const layer = layers.find((l) => l.id === cropId)
+      if (!layer || layer.imgW == null) return
+      e.preventDefault(); e.stopPropagation()
+      const k = Math.exp(-e.deltaY * 0.002)
+      const minK = Math.max(layer.w / layer.imgW, layer.h / layer.imgH) /* cover fit floor */
+      const kk = Math.max(minK, k)
+      const { vx, vy } = clientToVirtual(e.clientX, e.clientY)
+      const px = vx - layer.x - layer.imgX, py = vy - layer.y - layer.imgY  /* pointer in image px */
+      const imgW = layer.imgW * kk, imgH = layer.imgH * kk
+      let imgX = layer.imgX - px * (kk - 1), imgY = layer.imgY - py * (kk - 1)
+      imgX = Math.min(0, Math.max(layer.w - imgW, imgX)); imgY = Math.min(0, Math.max(layer.h - imgH, imgY))
+      updateLayer(cropId, { imgW, imgH, imgX, imgY })
+    }
+    el.addEventListener('wheel', wheel, { passive: false })
+    return () => el.removeEventListener('wheel', wheel)
+  }, [cropId, layers, clientToVirtual, updateLayer])
+
   /* Enter node-edit on a path. Live `rotation` is BAKED into the node
    * geometry first (rotate about the box center, renormalize, zero the
    * prop) — node editing always operates on rotation-free geometry, same
@@ -998,7 +1071,7 @@ export default function CanvasArea() {
 
     const extras = { x, y, w, h }
     switch (d.tool) {
-      case 'text':     addLayer('text',    extras); break
+      case 'text':     addLayer('text',    { ...extras, editOnMount: true }); break /* opens editing with the caret in it (audit B3) */
       case 'rect':     addLayer('shape',   { ...extras, kind: 'rect',     color: 'palette:dark' }); break
       case 'ellipse':  addLayer('shape',   { ...extras, kind: 'ellipse',  color: 'palette:dark' }); break
       case 'triangle': addLayer('shape',   { ...extras, kind: 'triangle', color: 'palette:dark' }); break
@@ -1163,6 +1236,11 @@ export default function CanvasArea() {
           window.dispatchEvent(new CustomEvent('kol:show-shortcuts'))
           return
 
+        case 'eyedrop': /* `I` — the Colour panel samples the canvas into the focused paint (ColourPanel listens) */
+          e.preventDefault()
+          window.dispatchEvent(new CustomEvent('kol:eyedrop'))
+          return
+
         case 'toggle-dots':
           e.preventDefault()
           toggleDots()
@@ -1283,7 +1361,7 @@ export default function CanvasArea() {
         const hit = e.target.closest?.('[data-layer-id]')
         const layerId = hit?.dataset?.layerId ?? null
         if (layerId && !selectedIds.includes(layerId)) select(layerId)
-        setCtxMenu({ x: e.clientX, y: e.clientY, layerId })
+        ctxMenu.openAt(e, layerId)
       }}
     >
       <Canvas
@@ -1354,14 +1432,20 @@ export default function CanvasArea() {
             )
           ))}
           {cropLayer && (
-            <CropOverlay
-              layer={cropLayer}
-              toVirtual={clientToVirtual}
-              updateLayer={updateLayer}
-              beginTransaction={beginTransaction}
-              commitTransaction={commitTransaction}
-              onExit={() => setCropId(null)}
-            />
+            <>
+              <CropOverlay
+                layer={cropLayer}
+                toVirtual={clientToVirtual}
+                updateLayer={updateLayer}
+                beginTransaction={beginTransaction}
+                commitTransaction={commitTransaction}
+                onExit={() => setCropId(null)}
+              />
+              {/* the mode chip — crop is invisible otherwise on a cover-fit photo (audit B4) */}
+              <div className="kol-helper-10 text-emphasis bg-surface-secondary border border-oq-08 rounded px-2 py-1 pointer-events-none select-none" style={{ position: 'absolute', left: cropLayer.x, top: Math.max(0, cropLayer.y - 28), transform: `scale(${1 / getScale()})`, transformOrigin: 'left bottom', whiteSpace: 'nowrap' }}>
+                Crop · drag to pan · scroll to zoom · handles crop · ⏎ done · esc
+              </div>
+            </>
           )}
           {kineticEditLayer && (
             <KineticElementOverlay
@@ -1401,7 +1485,7 @@ export default function CanvasArea() {
               width="100%" height="100%"
               viewBox={`0 0 ${CANVAS_VIRTUAL_W} ${viewH}`}
               preserveAspectRatio="none"
-              style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 130 }}
+              style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 'calc(var(--kol-z-overlay) + 1)' }} /* one above the edit overlays (audit E4) */
             >
               <path
                 d={penPreviewD}
@@ -1491,41 +1575,27 @@ export default function CanvasArea() {
           )}
         </div>
       </Canvas>
-      {ctxMenu && (
-        <CanvasContextMenu
-          menu={ctxMenu}
-          layer={ctxMenu.layerId ? findLayerDeep(layers, ctxMenu.layerId) : null}
-          onClose={() => setCtxMenu(null)}
-          ops={{
-            select, duplicateLayer, removeLayer, toggleLayer, toggleLayerLock,
-            flattenSelected, releaseBoolean, flattenText, enterCrop,
-            undo, redo, canUndo, canRedo,
-          }}
-        />
-      )}
+      <ContextMenu menu={ctxMenu}>
+        {(layerId) => (
+          <CanvasMenuItems
+            layer={layerId ? findLayerDeep(layers, layerId) : null}
+            onClose={ctxMenu.close}
+            ops={{
+              select, duplicateLayer, removeLayer, toggleLayer, toggleLayerLock,
+              flattenSelected, releaseBoolean, flattenText, enterCrop,
+              undo, redo, canUndo, canRedo,
+            }}
+          />
+        )}
+      </ContextMenu>
     </div>
   )
 }
 
-/* ── right-click context menu (T7 2026-08-12) ────────────────────────────
- * Selection-aware ops for the layer under the cursor; global undo/redo on
- * empty canvas. Fixed at the pointer, clamped to the viewport; closes on
- * any action, click-away (mousedown capture), Escape, scroll. Row idiom =
- * the menubar's (kol-helper-12 + leading-normal so descenders survive). */
-function CanvasContextMenu({ menu, layer, onClose, ops }) {
-  useEffect(() => {
-    const away = (e) => { if (!e.target.closest?.('[data-kol-ctxmenu]')) onClose() }
-    const key = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('mousedown', away, true)
-    window.addEventListener('keydown', key)
-    window.addEventListener('wheel', onClose, { passive: true })
-    return () => {
-      window.removeEventListener('mousedown', away, true)
-      window.removeEventListener('keydown', key)
-      window.removeEventListener('wheel', onClose)
-    }
-  }, [onClose])
-
+/* ── right-click context menu (T7 2026-08-12; onto the DS `ContextMenu` 2026-10-09, audit E5) ──
+ * Selection-aware ops for the layer under the cursor; global undo/redo on empty canvas. The
+ * positioning, the click-away, Escape and the chrome are the DS popover's — this is the ROWS. */
+function CanvasMenuItems({ layer, onClose, ops }) {
   const run = (fn) => () => { onClose(); fn() }
   const open = (event, detail) => () => { onClose(); window.dispatchEvent(new CustomEvent(event, detail !== undefined ? { detail } : undefined)) }
 
@@ -1565,18 +1635,8 @@ function CanvasContextMenu({ menu, layer, onClose, ops }) {
     items.push({ label: 'Redo', act: run(() => ops.redo()), disabled: !ops.canRedo })
   }
 
-  /* Clamp so the panel never leaves the viewport (estimate row height). */
-  const H = items.length * 32 + 8
-  const x = Math.min(menu.x, (window.innerWidth ?? 0) - 200)
-  const y = Math.min(menu.y, (window.innerHeight ?? 0) - H)
-
   return (
-    <div
-      data-kol-ctxmenu
-      className="bg-surface-secondary border border-oq-08 rounded shadow-lg py-1"
-      style={{ position: 'fixed', left: x, top: y, zIndex: 1200, width: 192 }}
-      onContextMenu={(e) => e.preventDefault()}
-    >
+    <div style={{ width: 192 }} onContextMenu={(e) => e.preventDefault()}>
       {items.map((it, i) => it.divider
         ? <MenuDropdownDivider key={`d${i}`} />
         : <MenuDropdownItem key={it.label} disabled={it.disabled} onClick={it.act}>{it.label}</MenuDropdownItem>)}

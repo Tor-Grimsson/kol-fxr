@@ -555,7 +555,7 @@ function OpenTypeMenu({ value = {}, onToggle }) {
         popover={popover}
         panel={false}
         focus={false}
-        style={{ backgroundColor: 'var(--kol-surface-secondary)', color: 'var(--kol-surface-on-primary)', borderRadius: '0 0 4px 4px', zIndex: 200 }}
+        style={{ backgroundColor: 'var(--kol-surface-secondary)', color: 'var(--kol-surface-on-primary)', borderRadius: '0 0 4px 4px', zIndex: 'var(--kol-z-dropdown)' }}
       >
         <div className="flex max-h-[300px] flex-col items-stretch overflow-y-auto" role="listbox">
           {OPENTYPE_FEATURES.map((f) => (

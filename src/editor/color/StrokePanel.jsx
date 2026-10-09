@@ -104,6 +104,7 @@ export function StrokeBody() {
           size="sm"
           suffix="pt"
           chars={4}
+          className="w-24 shrink-0" /* the row's control slot is flex-1 and the filled control filled it — 153px for "0" (audit C1, the user's 18); 96px holds "100 pt" */
           value={weight}
           onCommit={onWeight}
         />

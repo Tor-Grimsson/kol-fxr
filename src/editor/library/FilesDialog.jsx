@@ -3,6 +3,7 @@ import { Button, FullscreenOverlay, Input, useModal } from '@kolkrabbi/kol-compo
 import MediaLibrary from '@kolkrabbi/kol-component/organisms/MediaLibrary'
 import { SETTINGS_BASE } from '@kolkrabbi/kol-component/organisms/MediaLibraryPages'
 import { useGeneratorLibrary } from './LibraryProvider'
+import { getLibraryApi } from './libraryApi'
 
 /**
  * FilesDialog — the editor's files: open · rename · duplicate · delete · export · import · save
@@ -38,7 +39,9 @@ import { useGeneratorLibrary } from './LibraryProvider'
  */
 
 const ALL_KINDS = ['preset', 'palette', 'pattern', 'type']
-const BUCKET = [{ id: 'files', label: 'Files', writable: true }]
+/* the bucket is the crumb's second step, after the dialog's title — named for WHAT it holds, so the
+   crumb reads FILES / LIBRARY / PRESET and not FILES / FILES / PRESET (audit A10) */
+const BUCKET = [{ id: 'files', label: 'Library', writable: true }]
 /* ponytail: hand-measured header + count line + footer, as picker A; tune if the chrome changes */
 const CHROME = 300
 
@@ -120,7 +123,7 @@ export default function FilesDialog({
         <MediaLibrary
           variant="browse"
           client={client}
-          title="FILES"
+          title="Files"
           searchPlaceholder="Search files"
           refreshKey={refreshKey}
           prefix={prefix}
@@ -133,6 +136,8 @@ export default function FilesDialog({
           onPickFile={setPicked}
         />
         {error && <p className="kol-mono-12 text-ui-error">{error}</p>}
+        {/* a build without VITE_FXR_API has no cloud and used to say nothing (audit F2) */}
+        {!getLibraryApi() && <p className="kol-mono-12 text-meta">Cloud sync is not configured — files stay on this device.</p>}
         <div className="mt-auto flex items-center gap-2 flex-wrap pt-3 border-t border-oq-08">
           <Button tone="grey" size="sm" iconLeft="upload" onClick={() => fileRef.current?.click()}>Import</Button>
           <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={pickImport} />

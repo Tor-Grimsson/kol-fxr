@@ -173,7 +173,7 @@ export default function RuleRow({ rule, onChange, onRemove, onReroll }) {
             onChange={(e) => set({ expression: e.target.value })}
             placeholder="sin(col * 0.6) + cos(row * 0.6)"
           />
-          <span className="kol-helper-10 text-subtle mt-1">vars: i, col, row, cols, rows · Math.* in scope</span>
+          <span className="kol-mono-10 text-subtle mt-1">vars: i, col, row, cols, rows · Math.* in scope</span>
         </Section>
       )}
 

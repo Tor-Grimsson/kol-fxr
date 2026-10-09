@@ -75,8 +75,10 @@ export default function ToolPalette() {
     tool('zoom'),
     tool('orbit'),
     DIVIDER,
-    { kind: 'action', id: 'flip-horizontal', icon: 'flip-horizontal', label: 'Flip horizontal', shortcut: '⇧H', disabled: !hasSel },
-    { kind: 'action', id: 'flip-vertical', icon: 'flip-vertical', label: 'Flip vertical', shortcut: '⇧V', disabled: !hasSel },
+    /* ONE lock rule (audit B2/B8, 2026-10-09): a locked layer refuses every transform — flip,
+       rotate, nudge, delete, duplicate — not half of them. `canXform` carries it. */
+    { kind: 'action', id: 'flip-horizontal', icon: 'flip-horizontal', label: 'Flip horizontal', shortcut: '⇧H', disabled: !canXform },
+    { kind: 'action', id: 'flip-vertical', icon: 'flip-vertical', label: 'Flip vertical', shortcut: '⇧V', disabled: !canXform },
     { kind: 'action', id: 'rotate-left', icon: 'rotate-left', label: 'Rotate 90° left', disabled: !canXform },
     { kind: 'action', id: 'rotate-right', icon: 'rotate-right', label: 'Rotate 90° right', disabled: !canXform },
     DIVIDER,
@@ -84,7 +86,7 @@ export default function ToolPalette() {
     DIVIDER,
     { kind: 'action', id: 'image', icon: 'image', label: 'Insert image' },
     { kind: 'action', id: 'crop', icon: 'crop', label: 'Crop image', disabled: selectedLayer?.type !== 'photo' || selectedLayer?.locked },
-    { kind: 'action', id: 'duplicate', icon: 'copy', label: 'Duplicate', shortcut: '⌘D', disabled: !selectedLayer },
+    { kind: 'action', id: 'duplicate', icon: 'copy', label: 'Duplicate', shortcut: '⌘D', disabled: !selectedLayer || selectedLayer.locked },
   ]
 
   const onAction = (id) => {

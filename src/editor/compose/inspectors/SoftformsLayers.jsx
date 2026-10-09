@@ -64,7 +64,7 @@ const CTRL_3D = [
 ]
 
 const TAU = Math.PI * 2
-const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
+import { clamp } from '../../../loops/lib/util'
 const round2 = (v) => Math.round(v * 100) / 100
 const rnd = (rng, a, b) => a + rng() * (b - a)
 /* Uniform point in a disk (2D) / ball (3D) — labs inBall (z squashed ×0.8). */

@@ -1,3 +1,4 @@
+import { SHADOWED_GLOBALS } from '../../loops/lib/sandbox'
 /**
  * expr — expression evaluator for the 'expr' modulation source (Phase 9+).
  * Port of labs' foundational lib (kol-labs-single/src/lib/exprParam.js): a
@@ -65,18 +66,7 @@ const PRELUDE = `
 const cache = new Map()
 const LIVE_RE = /\b(level|bass|mid|high|rand)\b/
 
-/* Dangerous globals shadowed as never-passed parameters (bound to
- * undefined) so an expression string — possibly arriving in a loaded/
- * shared settings .json — can't reach the network, DOM, or storage.
- * `eval` and `import` are reserved words in strict code and cannot be
- * shadowed; the Math scope PRELUDE exposes stays intact. */
-// ponytail: scope-shadowing, not a real sandbox (constructor chains still escape); upgrade path = SES/worker isolation.
-const SHADOWED_GLOBALS = [
-  'globalThis', 'window', 'self', 'document', 'fetch', 'XMLHttpRequest',
-  'localStorage', 'sessionStorage', 'indexedDB', 'navigator', 'location',
-  'top', 'parent', 'frames', 'opener', 'Function', 'WebSocket', 'Worker',
-  'importScripts',
-]
+/* the shadowed-globals list lives in ONE place — loops/lib/sandbox.js (audit G3) */
 
 /**
  * Compile an expression string. Cached by string. Returns

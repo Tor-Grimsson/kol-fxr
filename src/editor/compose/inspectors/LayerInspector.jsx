@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MediaLibrary } from '@kolkrabbi/kol-component'
 import { proxied, isVideoType, getMediaClient } from '../../library/mediaLibrary'
-import { Button, Dropdown, InspectorSection, MenuDropdownItem, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
+import { Button, ColorSwatch, Dropdown, InspectorSection, MenuDropdownItem, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
 import { LabeledControl } from '@kolkrabbi/kol-component'
 import { PopoverPanel, usePopover } from '@kolkrabbi/kol-component'
 import { ViewToggle } from '@kolkrabbi/kol-component'
@@ -9,7 +9,7 @@ import AlignmentPanel from '../AlignmentPanel'
 import { SegmentedToggle } from '@kolkrabbi/kol-component'
 import StrokePanel from '../../color/StrokePanel'
 import { Icon } from '@kolkrabbi/kol-icons'
-import { useComposeState, COVER_TYPES } from '../state'
+import { useComposeState, COVER_TYPES, resolveColor } from '../state'
 import { scalePathNodes } from '../path-math'
 import { useLayerEdit } from '../useLayerEdit'
 import { ColorField } from './ColorField'
@@ -85,7 +85,6 @@ export default function LayerInspector({ layer }) {
                 { value: 'rot', ariaLabel: 'Rotate 90° left', label: <Icon name="rotate-left" size={glyphSize('sm', true)} /> },
                 { value: 'fh', ariaLabel: 'Flip horizontal', label: <span style={{ color: layer.flipX ? 'var(--kol-accent-primary)' : undefined, display: 'inline-flex' }}><Icon name="flip-horizontal" size={glyphSize('sm', true)} /></span> },
                 { value: 'fv', ariaLabel: 'Flip vertical', label: <span style={{ color: layer.flipY ? 'var(--kol-accent-primary)' : undefined, display: 'inline-flex' }}><Icon name="flip-vertical" size={glyphSize('sm', true)} /></span> },
-                ...(layer.type === 'photo' ? [{ value: 'crop', ariaLabel: 'Crop image', label: <Icon name="crop" size={glyphSize('sm', true)} /> }] : []),
               ]}
               onChange={(op) => {
                 if (op === 'rot') setProp('rotation', (((Math.round(layer.rotation ?? 0) - 90) % 360) + 360) % 360)
@@ -186,7 +185,7 @@ function SectionIconBtn({ label, icon, onClick, active = false, refProps = {} })
  * for one-shot values — user ruling 2026-08-12). Radius only where the
  * renderer honors it (rect shapes). */
 function AppearanceSection({ layer, setProp, first }) {
-  const { toggleLayer } = useComposeState()
+  const { toggleLayer, palette } = useComposeState()
   const [blendOpen, setBlendOpen] = useState(false)
   const blendPop = usePopover({ open: blendOpen, onOpenChange: setBlendOpen, placement: 'bottom-end', offset: 4 })
   /* Corner radius follows Figma: present for text too (clips the frame),
@@ -244,6 +243,19 @@ function AppearanceSection({ layer, setProp, first }) {
           </Tooltip>
         )}
       </div>
+      {/* WHERE THE COLOUR IS (the user's 20, 2026-10-09: "shapes have no color parameters"). Paint
+          left the inspector by the 2026-09-27 ruling — it is the left rail's Colour and Stroke
+          panels — and nothing here said so. The layer's own fill and stroke, read-only, and the
+          door to the panel that edits them. */}
+      {'color' in layer && (
+        <div className="flex items-center gap-2 pt-1">
+          <ColorSwatch hex={resolveColor(layer.color, palette) ?? '#FFFFFF'} size={14} hoverable={false} />
+          <span className="kol-helper-10 text-meta">Fill</span>
+          <ColorSwatch hex={resolveColor(layer.stroke, palette) ?? '#FFFFFF'} size={14} showTransparent={!layer.stroke} hoverable={false} />
+          <span className="kol-helper-10 text-meta">Stroke</span>
+          <Button tone="ghost" quiet size="xs" className="ms-auto" onClick={() => window.dispatchEvent(new CustomEvent('kol:open-color-modal'))}>Colour…</Button>
+        </div>
+      )}
     </InspectorSection>
   )
 }
@@ -384,30 +396,6 @@ function ImageSource({ layer, patch }) {
   )
 }
 
-/* Flip action button — mirrors the selected layer about its own center.
- * Paths bake the mirror into node geometry; other layers toggle flipX/Y
- * (state.flipLayer decides). Flag layers show an active tint when flipped. */
-function FlipButton({ axis, layer, flipLayer, segmented = false }) {
-  const active = axis === 'h' ? !!layer.flipX : !!layer.flipY
-  return (
-    <Tooltip label={axis === 'h' ? 'Flip horizontal (⇧H)' : 'Flip vertical (⇧V)'}><button aria-label={axis === 'h' ? 'Flip horizontal (⇧H)' : 'Flip vertical (⇧V)'}
-      type="button"
-      onClick={() => flipLayer(layer.id, axis)}
-      className={segmented
-        ? 'kol-btn-quiet flex-1 inline-flex items-center justify-center'
-        : 'inline-flex items-center justify-center w-6 h-6 rounded shrink-0'}
-      style={{
-        border: 'none',
-        background: 'transparent',
-        cursor: 'pointer',
-        color: active ? 'var(--kol-accent-primary)' : 'var(--kol-oq-48)',
-        ...(segmented ? { height: 26, padding: 5 } : {}),
-      }}
-    >
-      <Icon name={axis === 'h' ? 'flip-horizontal' : 'flip-vertical'} size={segmented ? 13 : 14} />
-    </button></Tooltip>
-  )
-}
 
 /* AxisField — one axis value on the DS property field (PropertyField ticket,
  * adopted): affordance inside the shell, the value hugs its own length, the

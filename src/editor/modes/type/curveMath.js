@@ -11,7 +11,8 @@
 const TAU = Math.PI * 2
 
 // generalized (lo, hi) clamp — deliberately not lib/util's fixed clamp01
-export const clamp = (v, lo = 0, hi = 1) => v < lo ? lo : v > hi ? hi : v
+import { clamp } from '../../../loops/lib/util'
+export { clamp }
 
 /**
  * CSS-style cubic-bezier easing. Given control points (x1, y1) and (x2, y2)

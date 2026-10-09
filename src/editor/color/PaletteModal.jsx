@@ -170,9 +170,9 @@ function PaletteModalBody({ onClose, layoutId, setLayoutId, harmonyId, setHarmon
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="kol-helper-10 uppercase text-meta">Swatches</span>
+                <span className="kol-eyebrow text-meta">Swatches</span>
                 <div className="flex items-center gap-2">
-                  <span className="kol-helper-10 uppercase text-meta">BG</span>
+                  <span className="kol-eyebrow text-meta">BG</span>
                   <ViewToggle
                     variant="single"
                     options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}

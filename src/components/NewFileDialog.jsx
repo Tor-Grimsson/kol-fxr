@@ -28,15 +28,15 @@ export default function NewFileDialog() {
   if (!isOpen) return null
   return (
     <FullscreenOverlay open scrim onClose={close}>
-      <div className="kol-new-file flex flex-col gap-4" style={{ minWidth: 'min(520px, 90vw)' }}>
+      {/* a SURFACE under the rows (audit A1 — they drew straight over the cards behind the scrim),
+          and the mono voice on the titles (A2 — the row ramp is the sans heading) */}
+      <div className="kol-new-file flex flex-col gap-4 bg-surface-primary border border-oq-08 rounded shadow-lg p-6" style={{ minWidth: 'min(520px, 90vw)' }}>
         <span className="kol-eyebrow text-meta">New file</span>
-        <ul className="flex flex-col">
+        <div className="flex flex-col">
           {DOORS.map((d) => (
-            <li key={d.id}>
-              <ContentRow variant="default" media={false} title={d.label} detail={d.detail} onClick={() => { close(); navigate(d.to) }} />
-            </li>
+            <ContentRow key={d.id} variant="default" media={false} title={d.label} titleClass="kol-mono-12 text-emphasis" detail={d.detail} onClick={() => { close(); navigate(d.to) }} />
           ))}
-        </ul>
+        </div>
       </div>
     </FullscreenOverlay>
   )

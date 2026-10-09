@@ -37,9 +37,13 @@ export default function TypeBlock({
   onMouseDown,
   onChange,
   className = '',
+  /* editOnMount — the block opens in edit mode with the caret in it (the text tool's placement,
+     audit B3 2026-10-09: a placed text took no focus, so the first word typed went to the keymap). */
+  editOnMount = false,
 }) {
   const textRef = useRef(null)
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(() => !!editOnMount)
+  const wasSelected = useRef(selected)
 
   useEffect(() => {
     if (editing && textRef.current) {
@@ -53,10 +57,13 @@ export default function TypeBlock({
   }, [editing])
 
   useEffect(() => {
-    if (!selected && editing) {
+    /* a selected → unselected TRANSITION commits; a block mounted editing before its selection
+       lands (editOnMount) must not be closed by the first render's `selected: false` */
+    if (wasSelected.current && !selected && editing) {
       commitText()
       setEditing(false)
     }
+    wasSelected.current = selected
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected])
 

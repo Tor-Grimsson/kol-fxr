@@ -111,7 +111,7 @@ export function ColorField({ value, onChange, palette, label = 'Color', hideLabe
       {/* the labs row: uppercase like every SettingsRow beside it (the
           editor's paint bar hides the label; its inspector is label-above) */}
       {!hideLabel && (
-        <span className="kol-helper-10 tracking-widest text-meta whitespace-nowrap">{String(label).toUpperCase()}</span>
+        <span className="kol-eyebrow text-meta whitespace-nowrap">{label}</span>
       )}
       {!hideLabel && <div className="flex-1" />}
       {hexInput}

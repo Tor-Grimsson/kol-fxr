@@ -101,9 +101,13 @@ export async function gcClips(layers) {
 /* Deep-collect ids of video layers whose src is a DEAD objectURL (blob:…) —
  * the only ones that need restoring; library/CDN (http) videos are skipped so
  * a stale clip under a reused id can never override a live source. */
+/* Images ride the same store since 2026-10-09 (audit F1): a dropped or uploaded image was an
+ * objectURL in the draft and nothing else, so it died with the window — the one data-loss bug the
+ * user hit. Same guard, same key: a blob: src on a photo layer, video or image. */
+const storable = (l) => (l?.srcType === 'video' || l?.srcType === 'image') && typeof l?.src === 'string' && l.src.startsWith('blob:')
 function deadClipIds(layers, out = []) {
   for (const l of layers) {
-    if (l?.srcType === 'video' && l?.id && typeof l.src === 'string' && l.src.startsWith('blob:')) out.push(l.id)
+    if (storable(l) && l?.id) out.push(l.id)
     if (Array.isArray(l?.children)) deadClipIds(l.children, out)
   }
   return out
@@ -115,7 +119,7 @@ function swapClipSrc(layers, urls) {
   let changed = false
   const next = layers.map((l) => {
     let nl = l
-    if (l?.srcType === 'video' && urls[l.id] && typeof l.src === 'string' && l.src.startsWith('blob:')) {
+    if (storable(l) && urls[l.id]) {
       nl = { ...l, src: urls[l.id] }
       changed = true
     }

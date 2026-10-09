@@ -4,6 +4,7 @@
 export const TAU = Math.PI * 2
 
 export const clamp01 = (x) => Math.max(0, Math.min(1, x))
+export const clamp = (v, lo = 0, hi = 1) => (v < lo ? lo : v > hi ? hi : v) /* the one clamp (audit G2 — five files carried their own) */
 export const lerp = (a, b, t) => a + (b - a) * t
 
 const hx = (s) => parseInt(s, 16)

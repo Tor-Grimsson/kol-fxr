@@ -38,7 +38,7 @@ function ImageThumbs() {
   if (state.status === 'error' || (state.status === 'ready' && !state.items.length)) return null
   return (
     <div className="flex flex-col gap-3">
-      <p className="kol-helper-10 uppercase tracking-widest text-meta">Images</p>
+      <p className="kol-eyebrow text-meta">Images</p>
       {state.status === 'loading' ? (
         <p className="kol-helper-12 text-meta">Loading…</p>
       ) : (
@@ -73,7 +73,7 @@ export default function AssetsBody() {
   return (
     <div className="px-4 py-3 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <p className="kol-helper-10 uppercase tracking-widest text-meta">Logos</p>
+        <p className="kol-eyebrow text-meta">Logos</p>
         <ViewToggle
           variant="icon"
           viewMode={view}

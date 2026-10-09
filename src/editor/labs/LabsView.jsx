@@ -138,7 +138,7 @@ function LabsStage() {
 
       {/* the fps readout (F); the zoom chips that stood beside it are keys now */}
       {showFps && (
-        <div className="absolute bottom-3 right-3 z-[3] flex items-center gap-2 [@media(pointer:coarse)]:bottom-1">
+        <div className="absolute bottom-3 right-3 z-[var(--kol-z-base)] flex items-center gap-2 [@media(pointer:coarse)]:bottom-1">
           <Tooltip label="Framerate — press F to hide"><span className={chipCls}>{fps} fps</span></Tooltip>
         </div>
       )}

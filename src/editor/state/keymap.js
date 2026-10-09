@@ -85,6 +85,7 @@ export const SHORTCUTS = [
 
   /* View */
   { id: 'show-shortcuts', combo: 'S',     label: 'Show / hide shortcuts',   section: 'View' },
+  { id: 'show-shortcuts', combo: '?',     label: 'Show / hide shortcuts',   section: 'View', hidden: true }, /* the convention everywhere else (audit A12) */
   /* Bound in FilesDialogHost, where the dialog lives (passive here, like `,`). Mod+O, not O: O is the Ellipse tool. */
   { id: 'open-files',     combo: 'Mod+O', label: 'Files',                   section: 'View', passive: true },
   { id: 'save-patch',     combo: 'Mod+S', label: 'Save patch',              section: 'View', passive: true, views: ['labs', 'randomiser'] },
@@ -101,7 +102,10 @@ export const SHORTCUTS = [
    * (`usePlaceholders().toggle`, kol-component 0.46.0). No longer `passive`:
    * it was passive because components/Hint.jsx bound its own window listener,
    * and that duplicate listener is gone. */
-  { id: 'toggle-hints',   combo: 'I',     label: 'Show / hide placeholder text', section: 'View' },
+  /* `I` is the eyedropper (the user's 17, 2026-10-09) — it was the placeholder-text dev toggle,
+     which keeps a hidden chord so nothing is lost. */
+  { id: 'eyedrop',        combo: 'I',         label: 'Eyedropper — sample a colour from the canvas', section: 'Color', views: ['editor'] },
+  { id: 'toggle-hints',   combo: 'Shift+I',   label: 'Show / hide placeholder text', section: 'View', hidden: true },
   { id: 'toggle-rulers',  combo: 'Shift+R', label: 'Show / hide rulers',    section: 'View', views: ['editor'] },
   { id: 'pan',            combo: 'Space', label: 'Play / pause · hold + drag to pan', section: 'View', passive: true },
   /* Handled inside the canvas viewport (window keydown, input-guarded) —
@@ -174,6 +178,8 @@ export function matchCombo(event, combo) {
   const { needsMod, needsShift, needsAlt, key } = parseCombo(combo)
   const modPressed = isMac() ? event.metaKey : event.ctrlKey
 
+  /* `?` is a shifted glyph on every layout — match the glyph itself, not the shift state */
+  if (key === '?') return event.key === '?' && !modPressed && !event.altKey
   if (needsMod !== modPressed) return false
   if (needsShift !== event.shiftKey) return false
   if (needsAlt !== event.altKey) return false
