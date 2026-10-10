@@ -142,7 +142,13 @@ export default function LayerRenderer({ layer: rawLayer, palette }) {
     case 'loop': {
       if (!gen()) return null
       const def = defFor(layer)
-      if (def?.kind === 'engine') return <EngineLoopLayer layer={layer} def={def} layerStyle={layerStyle} />
+      if (def?.kind === 'engine') {
+        /* a GL loop CARRIES a chain now (plan 26 § 15) — ASCII on a spinning model, live: the engine's
+           canvas is the chain's source, the same way a webcam's live element is */
+        const gs = layer.w != null ? chainFor(layer) : []
+        const gp = layer.w != null ? pixiFor(layer) : []
+        return <EngineLoopLayer layer={layer} def={def} layerStyle={layerStyle} stages={gs} pxStages={gp} />
+      }
       /* Engine filter on a 2d loop (labs relief-over-generated-pattern,
        * HalftonePage): the loop's live canvas feeds the GL engine, canvas
        * stages run in between. */
@@ -430,8 +436,14 @@ function EffectedLayer({ layer, stages, pxStages = [], palette, layerStyle }) {
  * is tied to loopId (family swap = rebuild); params re-apply and one frame
  * drives on every render. drive:'dt' engines advance only while the
  * transport plays (dt=0 repaints the held frame). */
-function EngineLoopLayer({ layer, def, layerStyle }) {
+function EngineLoopLayer({ layer, def, layerStyle, stages = [], pxStages = [] }) {
   const canvasRef = useRef(null)
+  /* the chain's output + its reused source (the GL frame copied per tick — the stages key their
+     pixel caches on source identity, so it is invalidated after every copy) */
+  const outRef = useRef(null)
+  const srcRef = useRef(null)
+  const pixiRef = useRef(null)
+  const chained = stages.length > 0 || pxStages.length > 0
   const rig = useRef(null)          /* { host, engine, w, h } */
   const lastTs = useRef(null)
   const [, forceDraw] = useState(0)
@@ -470,12 +482,42 @@ function EngineLoopLayer({ layer, def, layerStyle }) {
     const dt = transport.isPlaying() && lastTs.current != null ? (now - lastTs.current) / 1000 : 0
     lastTs.current = now
     r.host.driveEngine(def, r.engine, { u: warpTime(tctx.t, layer), dt })
+    const out = outRef.current
+    if (chained && out && canvasRef.current) {
+      const gl = canvasRef.current
+      const dpr = Math.min(2, window.devicePixelRatio || 1)
+      const bw = Math.round(w * dpr), bh = Math.round(h * dpr)
+      if (!srcRef.current) srcRef.current = document.createElement('canvas')
+      const sc = srcRef.current
+      if (sc.width !== bw) sc.width = bw
+      if (sc.height !== bh) sc.height = bh
+      /* read back every frame by the stages (getImageData) — the browser's hint for that */
+      const sg = sc.getContext('2d', { willReadFrequently: true })
+      sg.setTransform(1, 0, 0, 1, 0, 0)
+      sg.clearRect(0, 0, bw, bh)
+      sg.drawImage(gl, 0, 0, bw, bh)
+      invalidateSource(sc)
+      if (out.width !== bw) out.width = bw
+      if (out.height !== bh) out.height = bh
+      const g = out.getContext('2d')
+      g.setTransform(dpr, 0, 0, dpr, 0, 0)
+      g.clearRect(0, 0, w, h)
+      runChain(g, sc, w, h, chainArgs(layer, stages), tctx.t)
+      if (pxStages.length) runPixiPass(out, g, w, h, pxStages, pixiSig(`gl:${tctx.t}`, stages, pxStages, w, h, dpr), pixiRef, forceDraw)
+    }
   })
 
   /* Orbit mode on: the engine's OrbitControls own the pointer — swallow
    * events so CanvasArea's move-drag router never sees them. */
   const camDrag = def.orbit && orbitMode
+  /* chained: the 2d output draws UNDER the GL canvas, which stays on top at opacity 0 so the orbit
+     drag still lands on it; the output comes FIRST in the DOM so export's `canvas[data-layer-id]`
+     snapshot is the chained frame */
+  const box = { position: 'absolute', left: layer.x, top: layer.y, width: layer.w, height: layer.h }
+  const output = chained ? <canvas ref={outRef} data-layer-id={layer.id} style={{ ...box, pointerEvents: 'none', ...layerStyle }} /> : null
   return (
+    <>
+    {output}
     <canvas
       /* Fresh node per loop — destroyEngine force-loses the old canvas's GL
          context, and getContext on a lost canvas hands three a dead context
@@ -490,8 +532,10 @@ function EngineLoopLayer({ layer, def, layerStyle }) {
         left: layer.x, top: layer.y, width: layer.w, height: layer.h,
         cursor: camDrag || camKeys ? 'grab' : 'move',
         ...layerStyle,
+        ...(chained ? { opacity: 0 } : null),
       }}
     />
+    </>
   )
 }
 

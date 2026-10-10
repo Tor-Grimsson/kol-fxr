@@ -59,6 +59,22 @@ export function deriveScopes(schema, layer) {
   return scopes
 }
 
+/* A SCOPE THAT IS THE WHOLE ROLL IS NOT A SCOPE (plan 26 § 3; the user: "do both buttons do the same
+ * thing? … shouldnt it be 2 buttons pulse and sweep?"). Scanline's Motion tab had `Randomize motion` and
+ * a `Motion` button over the same two params. A scope whose params ARE the tab's roll set is dropped;
+ * if that leaves none and the roll is small (2–6 params), the subsets are the params themselves. */
+export function tidyScopes(scopes, rollParams) {
+  const all = new Set(rollParams.map((p) => p.key))
+  const same = (sc) => sc.params.length === all.size && sc.params.every((p) => all.has(p.key))
+  const kept = scopes.filter((sc) => !same(sc))
+  if (kept.length || rollParams.length < 2 || rollParams.length > 6) return kept
+  return rollParams.map((p) => ({ id: p.key, label: p.label, motion: MOTION_SECTIONS.has(p.section), params: [p] }))
+}
+
+/* THE SEED ONLY WHERE IT EARNS ITS ROW (plan 26 § 6): it replays a roll — worth a row when the roll
+ * moves more params than you could set back by hand. */
+export const SEED_MIN_PARAMS = 5
+
 /* WHAT RANDOMIZE ALL TOUCHES IS A SETTING (plan 18 § 3; the user: "often I'd just want not to
  * change color or geometry, but others could randomise"). `rollScopes` holds one switch per scope
  * id; a scope not named rolls by the old rule — the look on, the motion sections and Camera off. */

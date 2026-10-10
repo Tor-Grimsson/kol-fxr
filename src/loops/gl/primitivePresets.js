@@ -19,6 +19,8 @@ export const PRIMITIVES = [
   { id: 'icosahedron', label: 'Icosahedron' },
   { id: 'octahedron', label: 'Octahedron' },
   { id: 'dodecahedron', label: 'Dodecahedron' },
+  /* a model file — OBJ · GLB · STL from the media library (plan 26 § 15) */
+  { id: 'mesh', label: 'Model' },
 ]
 
 export const PRESETS = [

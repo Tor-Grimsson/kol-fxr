@@ -188,7 +188,9 @@ function RangeField({ param: p, layer, setProp }) {
         /* 5 chars holds "0.025" and a 4-digit value; 6 was a third of a touch
            row (user, 2026-09-01: "unnecessarily wide"). An expression still
            types in — the field scrolls. */
-        type="text" variant="filled" size={cs} chars={chars}
+        /* the shell sized in `ch`, not the HTML `size` attribute — `size` pads past N characters, so
+           "0.70" sat in a 72px box and the slider got ~42px (plan 26 § 7) */
+        type="text" variant="filled" size={cs} width={`calc(${chars}ch + 24px)`}
         value={draft}
         title="Number sets a constant · an expression like sin(t) binds it"
         onFocus={(e) => { setEditing(true); e.target.select() }}

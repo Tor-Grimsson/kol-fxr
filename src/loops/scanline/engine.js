@@ -251,8 +251,11 @@ function renderScanlines(ctx, u, W, H, p) {
   // Frame's whole-field drift). Multiplier 1±sweep; 0 ⇒ off. 2·ph ⇒ two waves per
   // loop, still integer ⇒ seamless.
   const sweepAmt = p.sweep ?? 0
-  const sweepK = sweepAmt
-    ? (mx, my) => 1 - sweepAmt * 0.5 + sweepAmt * 0.5 * Math.sin(2 * ph - (mx + my) * 0.012)
+  /* …and the sweep rig on top (plan 26 § 5): the filter hands `sweepMul(nx, ny)` — the stacked
+     sweeps' packet at that point as a size multiplier — and it composes with Form › Sweep */
+  const ext = typeof p.sweepMul === 'function' ? p.sweepMul : null
+  const sweepK = sweepAmt || ext
+    ? (mx, my) => (sweepAmt ? 1 - sweepAmt * 0.5 + sweepAmt * 0.5 * Math.sin(2 * ph - (mx + my) * 0.012) : 1) * (ext ? ext(mx / W, my / H) : 1)
     : null
 
   const fieldAt = (x, y) => {

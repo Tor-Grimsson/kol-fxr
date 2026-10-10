@@ -2,7 +2,7 @@
 title: Camera & Motion
 type: reference
 status: active
-updated: 2026-07-08
+updated: 2026-10-10
 description: The viewport-camera motion layer that wraps every 2D loop, the Orbit tool and per-layer camera rig that drive 3D and 2D loops alike, per-layer duration/phase quantization, keyframe + camera-pose authoring, and the transport reset-epoch that governs sims and video.
 aliases:
   - camera-motion
@@ -203,3 +203,8 @@ Pause must hold every sim exactly where it is, so it leaves the epoch alone; sto
 | Video layers | Snap `currentTime` to `trimIn` | `LayerRenderer` `syncVideoTransport` |
 
 `getCtx()` returns `{ t, mouse, stage, epoch }` — the same context the binding resolver reads each frame — so epoch flows to every subscriber through the normal tick.
+
+## 2026-10-10 additions (plan 26)
+
+- **The camera reaches every 2d generator.** `loops/registry.js` folds the viewport params (Spin · Zoom · Pulse · Wobble · Rate) onto `field`, `penrose`, `distress`, `paratype` and `modulator` too — contract.js's fold still covers shape + pattern-rules. Engines keep their own cameras; the Penrose sims stay off the time warp.
+- **The 3D scene takes a model and has lights.** `scene3d`'s **Model** primitive loads an OBJ · GLB · STL (`meshSrc` / `meshType`), merged, centred and scaled into the default camera; the default is the Stanford Bunny in R2 (`kol-media/meshes/stanford-bunny.obj`, Stanford 3D Scanning Repository, Turk & Levoy 1994). A **Lighting** section drives the engine's key · fill · rim · ambient rig (key angle and height), and **Light orbit** turns the key around the subject in whole turns per loop.

@@ -2,7 +2,7 @@
 title: Binding & Sources
 type: reference
 status: active
-updated: 2026-07-08
+updated: 2026-10-10
 description: The bind dot (a pure source picker) and the binding union, direct number/expression input on the value, the modulation-source registry, every source family (time, pointer, layer-local, LFO, audio, MIDI, gamepad, expression) with learn, and the audio/MIDI/gamepad input backends + their external-connection gates.
 aliases:
   - binding-and-sources
@@ -147,3 +147,7 @@ Web MIDI CC values. One `requestMIDIAccess`, all inputs listened, hot-plug aware
 
 Covered above. `readPad()` returns the first connected pad; `padConnected()` gates the live re-sample; `isGamepadSource(id)` recognizes both `pad-*` ids and the `padX`/`padY` aliases.
 </content>
+
+## Modulate — one-press motion (2026-10-10, plan 26)
+
+The labs Motion / Animation tabs carry a **Modulate** section (`src/editor/params/QuickMotion.jsx`): one row per numeric param, **Off · Breathe · Sweep · Jitter**. A pick writes an ordinary `mod` binding — LFO sine at 1 cycle, triangle at 1, square at 8 — over ±20% of the param's span around its current value; whole cycles, so seamless. The bind dot's Modulation editor opens it like any other binding; Off freezes the value back to the range's midpoint. Seeds are never offered (a seed picks a picture, it does not move one).

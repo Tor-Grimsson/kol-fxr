@@ -16,6 +16,7 @@ import BatchExportModal from './BatchExportModal'
 import { useControlSize, stripClamp } from '../../params/controlSize'
 import { Icon } from '@kolkrabbi/kol-icons'
 import MediaPickerDialog from '../../library/MediaPickerDialog'
+import { stillToDataUrl } from '../../lib/stillUpload'
 
 /**
  * EditorFooter — the tabbed rail footer, ported from the labs standard
@@ -95,11 +96,10 @@ function PhotoFileTab({ layer }) {
     const file = e.target.files?.[0]
     e.target.value = '' /* allow re-picking the same file */
     if (!file) return
-    /* The same side-channel as video since 2026-10-09 (audit F1): the blob keyed by the layer id in
-     * the clip store, an objectURL on the layer. The data: URL this used to write put the whole
-     * image into the localStorage draft — a 5 MB photo blew the quota. */
-    saveClip(layer.id, file)
-    patch({ src: URL.createObjectURL(file), srcType: 'image' })
+    /* IN THE FILE, DOWNSCALED (plan 26 § 13): audit F1 moved this to the clip store because a raw
+     * 5 MB data URL blew the localStorage quota — but a clip-store blob never reaches the saved file.
+     * `stillToDataUrl` is the middle: ~2048px webp, a few hundred KB, carried by the file. */
+    stillToDataUrl(file).then((src) => patch({ src, srcType: 'image' }))
   }
   const onPickVideo = (e) => {
     const file = e.target.files?.[0]

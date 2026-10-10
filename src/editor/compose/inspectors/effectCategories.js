@@ -40,7 +40,7 @@ export const FX_RACK_GROUPS = [
   { id: 'utility',           label: 'Utility',           filterIds: ['fx-threshold'], pixiGroup: 'utility' },
   /* labs' CANVAS_FX_DEFS — the same list every effect page's Post-Processing
    * block adds from. */
-  { id: 'post-processing',   label: 'Post-processing',   filterIds: ['fx-rgb', 'fx-edge', 'fx-posterize', 'fx-pixelsort', 'fx-mirror', 'fx-kaleido', 'fx-threshold'] },
+  { id: 'post-processing',   label: 'Post-processing',   filterIds: ['fx-rgb', 'fx-edge', 'fx-posterize', 'fx-pixelsort', 'fx-mirror', 'fx-kaleido', 'fx-threshold', 'fx-blocks', 'fx-media'] },
 ]
 
 const CLAIMED = new Set([

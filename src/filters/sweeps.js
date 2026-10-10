@@ -43,11 +43,20 @@ export const SWEEP_TARGET_OPTIONS = [
 /* Angle only steers shapes with a travel direction (labs SweepControls). */
 export const ANGLED_SHAPES = new Set(['linear', 'wave', 'angular'])
 
-const SWEEP_KEYS = ['shape', 'target', 'enabled', 'amount', 'speed', 'width', 'angle']
+const SWEEP_KEYS = ['shape', 'target', 'enabled', 'amount', 'speed', 'width', 'angle', 'cx', 'cy', 'travel']
+
+/* TRAVEL (plan 26 § 5; the user: "it seems to origin from top left or left, and only one direction") —
+ * forward · reverse · ping-pong, all whole cycles per loop, so every one closes at u = 1. */
+export const SWEEP_TRAVEL_OPTIONS = [
+  { value: 'forward', label: 'Forward' },
+  { value: 'reverse', label: 'Reverse' },
+  { value: 'pingpong', label: 'Ping-pong' },
+]
 
 /* A fresh sweep with sane defaults (brightness band drifting left→right) —
- * labs makeSweep, minus centerX/centerY (the labs panel never exposed them;
- * the field samplers pin 0.5, 0.5). `speed` is integer cycles per loop. */
+ * labs makeSweep. `cx/cy` is the ORIGIN (labs' centerX/centerY, which the port
+ * had pinned at 0.5, 0.5 — plan 26 § 5): where a radial / radar sweep centres
+ * and where a linear band starts. `speed` is integer cycles per loop. */
 export function makeSweep(shape = 'linear', overrides = {}) {
   const sw = {
     shape,
@@ -57,6 +66,9 @@ export function makeSweep(shape = 'linear', overrides = {}) {
     speed: 1,      // wavefront cycles per LOOP (integer); negative reverses
     width: 0.35,   // band thickness (0..1) / wavelength for the wave shape
     angle: 0,      // travel direction in degrees (linear/wave/angular)
+    cx: 0.5,       // origin, normalized frame coords (0,0 = top-left)
+    cy: 0.5,
+    travel: 'forward',
   }
   for (const k of SWEEP_KEYS) if (overrides[k] !== undefined) sw[k] = overrides[k]
   return sw
@@ -103,14 +115,21 @@ function sweepStateOne(sw, u) {
   const cycles = Math.round(sw.speed ?? 1)
   const a = ((sw.angle ?? 0) * Math.PI) / 180
   const width = sw.width ?? 0.35
+  /* the band's place on its cycle: forward wraps 0→1, reverse 1→0, ping-pong 0→1→0 — each returns
+     to its start at u = 1, so the loop stays seamless */
+  const travel = sw.travel ?? 'forward'
+  const raw = wrap01(u * cycles)
+  const pos = travel === 'reverse' ? wrap01(-u * cycles) : travel === 'pingpong' ? 1 - Math.abs(1 - 2 * raw) : raw
   return {
+    cx: sw.cx ?? 0.5,
+    cy: sw.cy ?? 0.5,
     shape: sw.shape ?? 'linear',
     target: sw.target ?? 'brightness',
     amount: sw.amount ?? 0.6,
     cos: Math.cos(a),
     sin: Math.sin(a),
-    pos: wrap01(u * cycles), // band centre for linear/radial/angular
-    ph: TAU * u * cycles, // phase for wave / noise-orbit
+    pos, // band centre for linear/radial/angular
+    ph: travel === 'reverse' ? -TAU * u * cycles : travel === 'pingpong' ? TAU * pos : TAU * u * cycles, // phase for wave / noise-orbit
     halfW: Math.max(0.01, width * 0.5),
     freq: 1 + (1 - width) * 8, // wave: narrower → more stripes (labs)
     nScale: 2 + (1 - width) * 8, // noise lattice scale (labs)
@@ -182,22 +201,21 @@ export function evalSweeps(states, nx, ny) {
 }
 
 /* One sweep's wavefront value at a normalized cell (nx,ny ∈ 0..1) — the labs
- * sampleSweep() over the precomputed state (centre fixed at 0.5,0.5, as the
- * labs panel never exposed it). */
+ * sampleSweep() over the precomputed state, centred on the sweep's origin. */
 function sample(st, nx, ny) {
   switch (st.shape) {
     case 'radial': {
-      const dx = nx - 0.5, dy = ny - 0.5
+      const dx = nx - st.cx, dy = ny - st.cy
       const u = wrap01(Math.sqrt(dx * dx + dy * dy) / 0.7071)
       const d = Math.abs(u - st.pos)
       return band(Math.min(d, 1 - d), st.halfW)
     }
     case 'wave': {
-      const u = (nx - 0.5) * st.cos + (ny - 0.5) * st.sin
+      const u = (nx - st.cx) * st.cos + (ny - st.cy) * st.sin
       return 0.5 + 0.5 * Math.sin(u * st.freq * TAU - st.ph)
     }
     case 'angular': {
-      const ang = wrap01(Math.atan2(ny - 0.5, nx - 0.5) / TAU)
+      const ang = wrap01(Math.atan2(ny - st.cy, nx - st.cx) / TAU)
       const d = Math.abs(ang - st.pos)
       return band(Math.min(d, 1 - d), st.halfW)
     }
@@ -206,7 +224,7 @@ function sample(st, nx, ny) {
       return vnoise(nx * st.nScale + 0.75 * Math.cos(st.ph), ny * st.nScale + 0.75 * Math.sin(st.ph))
     case 'linear':
     default: {
-      const u = wrap01(0.5 + (nx - 0.5) * st.cos + (ny - 0.5) * st.sin)
+      const u = wrap01(0.5 + (nx - st.cx) * st.cos + (ny - st.cy) * st.sin)
       const d = Math.abs(u - st.pos)
       return band(Math.min(d, 1 - d), st.halfW)
     }

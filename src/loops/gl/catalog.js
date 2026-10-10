@@ -22,6 +22,9 @@ import { FORMS } from './formsShapes.js'
 import { ENVIRONMENTS } from './envScenes.js'
 import { SHAPES as MESH_SHAPES, DRIVERS as MESH_DRIVERS, BG_STYLES as MESH_BG_STYLES, PALETTES as MESH_PALETTES } from './meshPalettes.js'
 
+/* the Model primitive's default file — in the app's R2 bucket (kol-media), CORS-open */
+export const MESH_DEFAULT = 'https://r2.kolkrabbi.io/meshes/stanford-bunny.obj'
+
 export const GL_GROUPS = [
   { id: 'drift',       label: 'Drift' },
   { id: 'gradients',   label: 'Gradients' },
@@ -246,6 +249,11 @@ const SCENE_LOOP = {
   drive: 'seek', duration: 8,
   params: [
     { key: 'primitive', label: 'Primitive', type: 'select', default: 'torusKnot', options: opts(PRIMITIVES), section: 'Primitive' },
+    /* the Model's file (plan 26 § 15) — picked in the rail's Model section, never a schema row:
+       `meshSrc` is a URL (the R2 media library) or a data URL (a local upload), `meshType` its format.
+       Default: the Stanford Bunny (Stanford 3D Scanning Repository, Turk & Levoy 1994), in R2. */
+    { key: 'meshSrc', type: 'hidden', default: MESH_DEFAULT, noRandom: true },
+    { key: 'meshType', type: 'hidden', default: 'obj', noRandom: true },
     /* Per-primitive shape knobs (labs SHAPE_PARAM gating; engine
      * buildGeometry reads tube/p/q/detail via params, rounding via globals —
      * pWinds/qWinds are the host-contract names for the knot's p/q). */
@@ -277,6 +285,16 @@ const SCENE_LOOP = {
     { key: 'wireframe', label: 'Wireframe', type: 'toggle', default: false, section: 'Material' },
     { ...range('strokeWidth', 'Stroke width', 1, 10, 0.5, 3, { section: 'Material' }), when: (l) => !!l.wireframe },
     { key: 'environment', label: 'Environment', type: 'toggle', default: false, section: 'Material', when: (l) => ['standard', 'glass', 'dispersion'].includes(l.materialType ?? 'standard') },
+    /* LIGHTING (plan 26 § 15; the user: "rotated on a loop with some lighting controls") — the engine's
+       fixed key / fill / ambient rig made controllable, plus a rim; Light orbit = whole turns of the key
+       around the subject per loop, so a still statue can be the thing the light moves over. */
+    range('lightKey', 'Key light', 0, 4, 0.05, 1.5, { section: 'Lighting' }),
+    range('lightAngle', 'Key angle', 0, 360, 1, 37, { section: 'Lighting' }),
+    range('lightElevation', 'Key height', -10, 85, 1, 42, { section: 'Lighting' }),
+    range('lightFill', 'Fill light', 0, 2, 0.05, 0.5, { section: 'Lighting' }),
+    range('lightRim', 'Rim light', 0, 4, 0.05, 0, { section: 'Lighting' }),
+    range('lightAmbient', 'Ambient', 0, 1.5, 0.05, 0.35, { section: 'Lighting' }),
+    range('lightOrbit', 'Light orbit', -4, 4, 1, 0, { tab: 'anim', section: 'Lighting' }),
     range('fov', 'FOV', 15, 90, 1, 38, { section: 'Camera' }),
     { key: 'cameraMotion', label: 'Camera orbit', type: 'toggle', default: false, tab: 'anim', section: 'Camera' },
     { ...range('orbitSpeed', 'Orbit speed', 0, 3, 0.05, 1, CAM_ANIM), when: (l) => !!l.cameraMotion },
@@ -293,6 +311,7 @@ const SCENE_PRESETS = [
   SP('tumble', 'Cube tumble', { primitive: 'box', pose: 'tumble', materialType: 'phong' }),
   SP('ring', 'Sphere ring', { primitive: 'sphere', pose: 'bob', count: 6, arrangement: 'ring', spread: 2.4, stagger: 1, objectSize: 0.5 }),
   SP('glass', 'Glass icosa', { primitive: 'icosahedron', pose: 'spin', materialType: 'glass', environment: true }),
+  SP('statue', 'Model statue', { primitive: 'mesh', pose: 'spin', materialType: 'standard', sceneColor: '#d8d2c4', roughness: 0.6, metalness: 0, lightRim: 1.4, lightAmbient: 0.2 }),
   SP('wire', 'Wire grid', { primitive: 'octahedron', pose: 'tumble', count: 9, arrangement: 'grid', spread: 2.8, wireframe: true, objectSize: 0.45, stagger: 0.5 }),
 ]
 

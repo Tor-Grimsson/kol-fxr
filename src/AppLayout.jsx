@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AppHub, useNavHidden } from '@kolkrabbi/kol-shell'
-import { Button, Dropdown, ModalProvider, useModal } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, MenuItem, MenuDropdownItem, ModalProvider, useModal } from '@kolkrabbi/kol-component'
+import { Icon } from '@kolkrabbi/kol-icons'
 import { ThemeToggle } from '@kolkrabbi/kol-framework'
 import logomarkUrl from '@kolkrabbi/kol-brand/svg/favicon-01.svg?url'
 import NewFileDialog, { openNewFile } from './components/NewFileDialog'
@@ -40,9 +41,9 @@ import MediaPickerDialog from './editor/library/MediaPickerDialog'
  * SAVED = the library's presets read through `loadLibrary()` (design-editor
  * 0.22.0, `library-reader-for-a-hub-home`) on every render, so the shell tier
  * mounts no library provider: one above `AppHub` would go stale beside the
- * editor's own in the same tab. A saved card has no cover BY NATURE, so it is
- * `media: false` (kol-component 0.210.0: no cover, no slot) rather than the
- * dashed MISSING plate an absent asset gets.
+ * editor's own in the same tab. A saved card's cover is the file's own `thumb`
+ * (captured at save since 2026-10-09); a file without one is `media: false`
+ * (kol-component 0.210.0: no cover, no slot), never the dashed MISSING plate.
  *
  * EVERYTHING SITS UNDER THE RAIL (user ruling 2026-08-27). `\` hides it
  * (H is the editor's layer-visibility key) and the rail comes back on every
@@ -210,7 +211,7 @@ function RailSignIn({ handlerRef }) {
 
 /* A file card's three verbs (plan 08) — the Files dialog's, on Home. Under the shell's ModalProvider,
    so the rename prompt and the delete confirm are the KOL dialogs. */
-function FileActions({ file, onChange }) {
+function FileActions({ file, onChange, menu = false }) {
   const modal = useModal()
   const stop = (fn) => (e) => { e.stopPropagation(); fn() }
   const rename = async () => {
@@ -224,6 +225,17 @@ function FileActions({ file, onChange }) {
     if (!ok) return
     removeStored('preset', file.id); onChange()
   }
+  /* THE GRID CARD TAKES ONE `···` (plan 26 § 12): three glyphs drawn over the title made a click on the
+     name hit Rename — which is why Home opened as a list. One trigger, the three verbs in its menu. */
+  if (menu) return (
+    <span onClick={(e) => e.stopPropagation()}>
+      <MenuItem label={<Icon name="more" size={16} />} caret={false} size="sm" align="end" buttonClassName="px-1" panelClassName="z-[var(--kol-z-tooltip)]">
+        <MenuDropdownItem iconLeft="edit" onClick={rename}>Rename</MenuDropdownItem>
+        <MenuDropdownItem iconLeft="copy" onClick={duplicate}>Duplicate</MenuDropdownItem>
+        <MenuDropdownItem iconLeft="trash" onClick={remove}>Delete</MenuDropdownItem>
+      </MenuItem>
+    </span>
+  )
   return (
     <span className="flex items-center gap-1">
       <Button tone="ghost" quiet size="sm" iconOnly="edit" aria-label="Rename" onClick={stop(rename)} />
@@ -364,17 +376,17 @@ export default function AppLayout() {
           ? (view === 'recent' ? recentFiles() : savedCards())
           : (view === 'recent' ? CHROMES : savedCards())),
         filtersTitle: session ? 'All Files' : 'All Chromes',
-        /* files read best as rows — the row has an actions column; the grid card draws its actions
-           over the title, so a click on a name hit Rename. List is the default once signed in (read
-           on Home's mount), and the verbs ride the list only. */
-        defaultLayout: session ? 'list' : 'grid',
+        /* GRID, signed in or not (the user, 2026-10-09: "it should always default to grid mode") — the
+           verbs ride the grid as one `···` menu, the list keeps its three glyphs */
+        defaultLayout: 'grid',
         toCard: (c, { layout }) => (c.file ? {
           key: c.name,
           title: c.title,
           detail: c.detail,
-          media: false,
+          /* the save's own thumbnail (plan 26 § 9) — a file saved before thumbs (2026-10-09) has none */
+          media: c.file.thumb ? <img src={c.file.thumb} alt={c.title} className="size-full object-cover" /> : false,
           onClick: () => openFile(c.file),
-          actions: layout === 'list' ? <FileActions file={c.file} onChange={bump} /> : undefined,
+          actions: <FileActions file={c.file} onChange={bump} menu={layout !== 'list'} />,
         } : {
           key: c.name,
           title: c.title,

@@ -2,7 +2,7 @@
 title: Saved library (presets)
 type: reference
 status: active
-updated: 2026-10-08
+updated: 2026-10-10
 description: LibraryProvider — the localStorage-backed store of user-saved generator assets (palette / pattern / type / preset), its versioned item envelope, v1→v3 migrations, cross-tab sync, and how it differs from the CDN media library.
 tags:
   - project/kol-fxr
@@ -73,3 +73,7 @@ Since 2026-10-08 the library can sync to D1 `kol-fxr` through the Worker `kol-fx
 
 Signed in, Home's RECENT lists the last 12 saved files and SAVED all of them, as rows; signed out, Home shows the three chromes as before. **New File** (Home and Library) offers four doors — Editor · Labs · Randomiser · Morph — opening an empty frame (`?new=1`), the randomiser, or labs with the Morph tab's first-step picker (`?new=morph`). A row's Rename · Duplicate · Delete write the stored library directly (`libraryOps.js`, no provider on the shell tier) and push when signed in. Every file saved since 2026-10-08 carries `mode` — `editor` · `labs` · `morph` — written by `buildSpec` from the chrome that saved it; older files keep the guess (a single generator layer → labs). Clicking a row opens the file in its mode's chrome, `/labs?open=<id>` or `/editor?open=<id>`. `UrlIntents` loads it through `loadPreset` after the chrome's boot (so the file's aspect wins), adopts its id and name so a plain Save overwrites it, skips the draft-restore prompt, and clears the param on the next tick (after the provider's own checks have read it). A morph file also loads its steps into the morph store, so labs opens on the Morph tab. **`⌘O`** opens the Files dialog from any chrome.
 </content>
+
+## 2026-10-10 changes (plan 26)
+
+Home opens in **grid** signed in or not; a grid card shows the file's `thumb` and carries the verbs (Rename · Duplicate · Delete) in one `···` menu. A file saved before thumbs existed gets one on its next save. Saved photos are data URLs in the spec now (see [[../09-media/INDEX|media]]).

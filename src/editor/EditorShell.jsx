@@ -6,6 +6,7 @@ import { useComposeState } from './compose/state'
 import { DisplaySettingsDrawer } from '../settings/AppSettings'
 import MenuTop from './shell/MenuTop'
 import ShortcutsOverlay from './shell/ShortcutsOverlay'
+import { useLabelColumns } from './params/controlSize'
 
 /**
  * The settings drawer lives HERE, not in MenuTop — every chrome renders
@@ -94,6 +95,7 @@ function Rail({ side, panels, resizable }) {
 }
 
 export default function EditorShell({ registry }) {
+  useLabelColumns()
   const Canvas = registry?.canvas ?? null
   /* The topbar is registry-driven like the rails, defaulting to MenuTop so
    * the compose registry (which declares no topbar) is untouched. Labs mode

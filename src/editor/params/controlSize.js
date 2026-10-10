@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useEffect } from 'react'
 
 /**
  * The size group a rail renders at — 'sm' | 'md' | 'lg', the DS button ladder
@@ -41,4 +41,43 @@ export const stripClamp = (cs) => (cs === 'sm' ? undefined : STRIP_CLAMP)
 /* The labs rail's inline label column — wide enough for "ORIGINAL COLOR".
    Shared by every row shape in the rail (AutoControls' schema rows, the
    picker stack, LoopFields' theme rows) so their controls start on one x. */
-export const RAIL_LABEL_W = 112 /* 96 wrapped ORIGINAL COLOR onto two lines (2026-10-06) */
+export const RAIL_LABEL_MAX = 112 /* 96 wrapped ORIGINAL COLOR onto two lines (2026-10-06) */
+export const RAIL_LABEL_W = `var(--fxr-label-w, ${RAIL_LABEL_MAX}px)`
+
+/* THE LABEL COLUMN FITS ITS PANEL (plan 26 § 7; the user, 2026-10-09: "shouldnt the sliders use more
+ * space? they are so narrow"). 112 was sized for the rail's longest label anywhere — ORIGINAL COLOR —
+ * so a panel whose longest label is PULSE gave its slider 42px of a 231px row. Each panel
+ * (`.kol-compose-inspector-body`, `.kol-inspector-rail-body`) now carries `--fxr-label-w` = its own
+ * longest label, measured from the DOM whenever its rows change; every row in the panel still starts
+ * its control on one x. Never wider than 112 (the old fixed column), never narrower than 40. One
+ * observer for the whole document, mounted once by EditorShell. */
+const PANEL_SEL = '.kol-compose-inspector-body, .kol-inspector-rail-body'
+const LABEL_SEL = '[style*="--fxr-label-w"]'
+const textWidth = (el) => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().width }
+export function measureLabelColumns(root = document) {
+  for (const panel of root.querySelectorAll(PANEL_SEL)) {
+    /* measure at the full 112 — a label already squeezed into a narrower column wraps, and a wrapped
+       label measures as its widest LINE, so the column could only ever shrink. Same frame, no flicker. */
+    const was = panel.style.getPropertyValue('--fxr-label-w')
+    panel.style.removeProperty('--fxr-label-w')
+    let w = 0
+    for (const label of panel.querySelectorAll(LABEL_SEL)) if (label.closest(PANEL_SEL) === panel) w = Math.max(w, textWidth(label))
+    const px = w ? `${Math.min(RAIL_LABEL_MAX, Math.max(40, Math.ceil(w) + 4))}px` : ''
+    if (px) panel.style.setProperty('--fxr-label-w', px)
+    else if (was) panel.style.removeProperty('--fxr-label-w')
+  }
+}
+export function useLabelColumns() {
+  useEffect(() => {
+    /* COALESCED, NOT DEBOUNCED: while the transport plays the DOM mutates every frame (readouts,
+       animated values), and a cancel-and-requeue measure never ran at all. One pending measure at a
+       time, at most every 200ms, and only for mutations inside a panel. */
+    let timer = 0
+    const run = () => { if (!timer) timer = setTimeout(() => { timer = 0; measureLabelColumns() }, 200) }
+    const mo = new MutationObserver((records) => { if (records.some((r) => r.target.closest?.(PANEL_SEL))) run() })
+    mo.observe(document.body, { childList: true, subtree: true })
+    document.fonts?.ready?.then(run)
+    run()
+    return () => { mo.disconnect(); clearTimeout(timer) }
+  }, [])
+}

@@ -187,18 +187,24 @@ export function ModulationEditor({ layer, param, setProp }) {
   return (
     <div className="flex flex-col gap-3">
       <LabeledControl label="Range">
-        <div className="flex items-center gap-2">
-          <Input
-            variant="filled" size={cs} type="number" chars={5}
-            value={range[0]}
-            onChange={(e) => patchTransform({ range: [num(e.target.value, range[0]), range[1]] })}
-          />
-          <span className="kol-helper-10 text-meta">to</span>
-          <Input
-            variant="filled" size={cs} type="number" chars={5}
-            value={range[1]}
-            onChange={(e) => patchTransform({ range: [range[0], num(e.target.value, range[1])] })}
-          />
+        {/* the two fields SHARE the row (plan 26 § 16): at `chars={5}` each, the HTML `size` attribute
+            padded both past the rail — the second read "20,6", cut off at the edge */}
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="flex-1 min-w-0">
+            <Input
+              variant="filled" size={cs} type="number" width="100%"
+              value={range[0]}
+              onChange={(e) => patchTransform({ range: [num(e.target.value, range[0]), range[1]] })}
+            />
+          </div>
+          <span className="kol-helper-10 text-meta shrink-0">to</span>
+          <div className="flex-1 min-w-0">
+            <Input
+              variant="filled" size={cs} type="number" width="100%"
+              value={range[1]}
+              onChange={(e) => patchTransform({ range: [range[0], num(e.target.value, range[1])] })}
+            />
+          </div>
         </div>
       </LabeledControl>
       <div className="grid grid-cols-2 gap-2">

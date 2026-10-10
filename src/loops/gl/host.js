@@ -167,6 +167,12 @@ function applyEngineParams(def, engine, params) {
           roughness: params.roughness, metalness: params.metalness,
           color: params.sceneColor, flatShading: !!params.flatShading, rounding: params.rounding,
           showAxis: !!params.showAxis, axisLength: params.axisLength, axisOpacity: params.axisOpacity,
+          /* plan 26 § 15 — the Model's file and the Lighting section */
+          meshSrc: params.primitive === 'mesh' ? params.meshSrc : null, meshType: params.meshType,
+          light: {
+            key: params.lightKey, keyAngle: params.lightAngle, keyElevation: params.lightElevation,
+            fill: params.lightFill, rim: params.lightRim, ambient: params.lightAmbient, orbit: params.lightOrbit,
+          },
         },
       })
       return

@@ -3,7 +3,7 @@ import { useModal } from '@kolkrabbi/kol-component'
 import { currentView } from '../mode'
 import { useComposeState } from './state'
 import { useGeneratorLibrary } from '../library/LibraryProvider'
-import { buildLayersSvg, downloadComposeSvg, downloadComposePng, svgToPngBlob } from './build'
+import { buildLayersSvg as buildLayersSvgRaw, downloadComposeSvg, downloadComposePng, svgToPngBlob } from './build'
 import { warmTextFonts } from '../modes/type/textOutline'
 import { pack } from '../packs'
 import { resolveLayersDeep, makeSmoothingState } from '../params/resolve'
@@ -55,6 +55,30 @@ function drawSvgToCanvas(g, svgString, w, h) {
 const THUMB_PX = 240
 
 const nextFrame = () => new Promise((r) => requestAnimationFrame(r))
+
+/* PHOTOS GO INTO THE SVG AS DATA (plan 26 § 9): every raster export draws the frame as an SVG
+ * inside an <img>, and an SVG loaded as an image fetches NOTHING — a `blob:` upload, a `/media/`
+ * library pick, any URL — so an unfiltered photo came out blank in thumbnails, PNG, batch and
+ * webm alike (a filtered one snapshots its live canvas and was fine). Warm once per export
+ * (`warmImageSrcs`, async), then swap every photo's src for its data URL on the sync build.
+ * Video stays out: build.js draws the live <video> frame itself. */
+const srcData = new Map()   /* src → data URL; ponytail: unbounded, one entry per distinct photo in a session */
+const isStillPhoto = (l) => l.type === 'photo' && l.srcType !== 'video' && l.srcType !== 'webcam' && typeof l.src === 'string' && !l.src.startsWith('data:')
+const toDataUrl = (blob) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob) })
+async function warmImageSrcs(layers) {
+  const jobs = []
+  const walk = (ls) => { for (const l of ls ?? []) { if (isStillPhoto(l) && !srcData.has(l.src)) jobs.push(l.src); if (Array.isArray(l.children)) walk(l.children) } }
+  walk(layers)
+  await Promise.all([...new Set(jobs)].map(async (src) => {
+    try { const r = await fetch(src); if (r.ok) srcData.set(src, await toDataUrl(await r.blob())) } catch { /* unreachable — exports as before */ }
+  }))
+}
+const inlineSrcs = (layers) => layers.map((l) => {
+  const kids = Array.isArray(l.children) ? inlineSrcs(l.children) : l.children
+  const data = isStillPhoto(l) ? srcData.get(l.src) : null
+  return data || kids !== l.children ? { ...l, ...(data ? { src: data } : {}), ...(kids !== l.children ? { children: kids } : {}) } : l
+})
+const buildLayersSvg = (args) => buildLayersSvgRaw({ ...args, layers: inlineSrcs(args.layers) })
 
 /* Deep scan (groups walked) for kinetic layers — gates the kinetic font-css
  * warm: no kinetic layer, no font fetch. */
@@ -151,6 +175,7 @@ export function useComposeFile() {
   const warmExportFonts = async (resolvedLayers) => {
     await warmTextFonts(resolvedLayers)
     if (hasKineticLayer(resolvedLayers)) await pack('motion')?.warmFontCss()
+    await warmImageSrcs(resolvedLayers)
   }
   const onExportSvg = async () => {
     const args = buildArgs()

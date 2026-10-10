@@ -2,7 +2,7 @@
 title: Media & Library
 type: reference
 status: active
-updated: 2026-07-08
+updated: 2026-10-10
 description: The four media sources (photo, video, webcam) as first-class photo layers through the plain / canvas-filtered / GL-filtered render paths, plus OS drag-drop, IndexedDB clip persistence, and the CDN media library behind the same-origin /media proxy.
 aliases:
   - media
@@ -199,3 +199,10 @@ The editor's **other** library — `LibraryProvider.jsx`, a localStorage store o
 | `src/index.jsx` | `<DesignEditor mediaProxyBase />` — the embedder's proxy-path prop. |
 </content>
 </invoke>
+
+## 2026-10-10 changes (plan 26)
+
+- **An uploaded still lives in the file.** Every image upload — editor footer, drag-drop, labs — goes through `src/editor/lib/stillUpload.js`: decoded, downscaled to 2048 on the long side, re-encoded webp, stored as a data URL in `src`. It survives reload, sync and other devices; video stays on the clip store. GIF and SVG pass through untouched.
+- **Opening a saved file re-links its clip-store uploads** (files saved before the change): `loadPreset` re-keys each clip to the layer's new id and swaps a live objectURL in.
+- **Export inlines photos.** Every raster export draws the frame as an SVG inside an `<img>`, which fetches nothing — so an unfiltered photo came out blank in thumbnails, PNG, batch and webm. `useComposeFile` now warms each photo's data URL before the build.
+- **Model files** for the 3D scene live in R2 (`meshes/…`, uploaded with `bucket-r2 up`), picked from the media library with a `.obj/.glb/.gltf/.stl` filter.

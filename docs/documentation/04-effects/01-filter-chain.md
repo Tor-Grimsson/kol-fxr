@@ -2,7 +2,7 @@
 title: The filter chain
 type: reference
 status: active
-updated: 2026-07-08
+updated: 2026-10-10
 description: The per-layer post-FX chain data model — layer.filters[], MAX_FILTERS, makeStage, the normalizer, the tier-ordering helpers, tier-aware addFilter, and legacy single-filterId back-compat.
 tags:
   - project/kol-fxr
@@ -83,3 +83,8 @@ Supporting resolvers: `bareChain(layer)` (normalized stage array, legacy-safe), 
 It is **identity-preserving**: an already-normalized layer (or one with no filter at all) returns the *same* object, so render caches keyed on layer identity don't churn at load. `normalizeLayersDeep(list)` walks a layer list (group/bool children included) with the same identity discipline — it's the load-path entry point for drafts, presets, and settings.
 
 > The legacy stage's `key` is **deterministic** (`legacy-<filterId>`), not a fresh uid: `bareChain()` may re-synthesize it every call for a layer that slipped load-normalization, and a churning key would remint React rows and sim-pool identities each render.
+
+## Pinned-first stages and GL loops (2026-10-10, plan 26)
+
+- A def with **`first: true`** (`fx-media`) is inserted at index 0 by `addFilter`, once per chain. Labs reads its page effect as the first stage that is *not* pinned first.
+- **GL (engine) loops carry a chain.** The engine's canvas is copied each tick into a read-back source; the canvas tier and the pixi batch run on it into an output canvas placed first in the DOM (export snapshots it), with the GL canvas on top at opacity 0 so the orbit drag still lands. A GL loop never takes a GL engine stage — there is no GL→GL path. Labs generators expose this as **Post-processing** on the Style tab (the canvas tier).

@@ -7,6 +7,7 @@ import { saveClip } from '../lib/clipStore'
 import { ensureWebcam } from '../lib/webcam'
 import { useControlSize, stripClamp } from '../params/controlSize'
 import MediaPickerDialog from '../library/MediaPickerDialog'
+import { stillToDataUrl } from '../lib/stillUpload'
 
 /* SVG is `image` by kind in the DS library, so a vector-only door reads the object itself. */
 const isSvgObject = (o) => /\.svg$/i.test(o.key) || /svg/i.test(o.contentType || '')
@@ -57,9 +58,8 @@ function useSourceInput(layer) {
       patch({ src: URL.createObjectURL(file), srcType: 'video' })
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => patch({ src: reader.result, srcType: 'image' })
-    reader.readAsDataURL(file)
+    /* downscaled before it goes in the file (plan 26 § 13) — this read the raw photo, uncapped */
+    stillToDataUrl(file).then((src) => patch({ src, srcType: 'image' }))
   }
 
   const onLibraryPick = (url, { contentType } = {}) => {

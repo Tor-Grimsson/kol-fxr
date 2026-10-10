@@ -2,7 +2,7 @@
 title: Sweep stacks
 type: reference
 status: active
-updated: 2026-07-08
+updated: 2026-10-10
 description: The stackable motion rig for cell-grid filters — makeSweep, the five one-click presets, the shape/target grammar, evalSweeps compounding, and how sweeps are woven loop-safe on integer cycles.
 tags:
   - project/kol-fxr
@@ -84,3 +84,9 @@ Sweeps are woven so `frame(0) === frame(1)` exactly — the editor's loop-safe t
 ## Evaluation
 
 `sweepStates(p, u)` precomputes the frame's enabled sweep states (falling back to the legacy flat keys — `animate`/`sweepShape`/… — for any un-normalized layer; returns `null` when nothing is enabled, so engines take the `NO_SWEEP` fast path). `evalSweeps(states, nx, ny)` combines every sweep's modulation at one cell into a single reused packet — allocation-free in the per-cell hot loop. `anyReveal(states)` tells the engine to draw the raw photo underneath first so gated-off cells show it.
+
+## Origin and travel (2026-10-10, plan 26)
+
+The port had pinned every sweep's centre at 0.5, 0.5 and run bands one way. Each sweep now carries **`cx` / `cy`** — the origin, normalized frame coords — where a radial / radar sweep centres and a linear band starts (an XY pad in the sweep card), and **`travel`**: `forward` · `reverse` · `pingpong`. Ping-pong runs the band out and back on whole cycles, so every travel still closes at u = 1. `src/filters/sweeps.check.mjs` asserts that for every shape × travel.
+
+**Scanline** declares `sweeps: true`: the stack feeds the engine a per-mark size multiplier (`sweepMul`) that composes with Scanline's own Form › Sweep and Pulse, which stay.

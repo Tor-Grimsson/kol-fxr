@@ -361,6 +361,14 @@ function LabsBody() {
   const morph = useMorph()
   const [catalog, setCatalog] = useState(() => !layer)
   useEffect(() => { setCatalog(!layer) }, [layer?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  /* MEDIA FIRST (plan 26 § 2; the user: "if I select effects, shouldnt the image or media be selected
+     before you select effect type?"). The Effects door on an empty stage makes an empty photo layer —
+     the source card asks for the media — and remembers the door; the media landing reopens the entry
+     card ON that door, so the effect is picked over the picture it works on. */
+  const [door, setDoor] = useState(null)
+  const hasMedia = layer?.type === 'photo' && (!!layer.src || layer.srcType === 'webcam')
+  useEffect(() => { if (door && hasMedia) setCatalog(true) }, [door, hasMedia])
+  useEffect(() => { if (!layer) setDoor(null) }, [layer])
   /* …and at a desk a pick OPENS the params rail: it folds with the shell rail (the 2026-08-30
      pairing), which opens closed, so a pick landed on a 48px strip and nothing to turn. Dropping
      the collapsed stamp here lets the pairing bring the shell rail out with it. */
@@ -519,7 +527,14 @@ function LabsBody() {
       {/* labs' own shortcuts card retired 2026-10-06 (the user: "dont we have a standardized
           shortcuts look?") — S opens the editor's sheet, which EditorShell mounts for every chrome */}
       {/* the entry card yields to the Morph tab's own doors (plan 09) */}
-      {catalog && !morph.picker && !(morph.active && !layer) && <LabsCatalogCard onPicked={() => setCatalog(false)} onClose={() => setCatalog(false)} />}
+      {catalog && !morph.picker && !(morph.active && !layer) && (
+        <LabsCatalogCard
+          initialOpen={door} hasMedia={hasMedia}
+          onNeedMedia={(path) => { setDoor(path); setOnly('photo', { filters: [], fxGroup: null }) }}
+          onPicked={() => { setDoor(null); setCatalog(false) }}
+          onClose={() => { setDoor(null); setCatalog(false) }}
+        />
+      )}
     </div>
   )
 }

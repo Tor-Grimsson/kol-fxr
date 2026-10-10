@@ -28,6 +28,8 @@ import glass from './glass.js'
 import scanline from './scanline.js'
 import dither from './dither.js'
 import { RADAR_FX } from './fxRadar.js'
+import { BLOCKS_FX } from './fxBlocks.js'
+import { MEDIA_FX } from './fxMedia.js'
 import ascii from './fxAscii.js'
 import halftoneDither from './fxHalftoneDither.js'
 import bitmap from './fxBitmap.js'
@@ -39,6 +41,10 @@ export const FILTERS = [
   glass, scanline, dither,
   /* Radar canvas FX — labs radar/hooks/useCanvasFx.js (radar + live postfx chain) */
   ...RADAR_FX,
+  /* block corruption (plan 26 § 14) — the Post-processing rack's, and any page's post stage */
+  ...BLOCKS_FX,
+  /* the media moves — tile · drift · spin · tilt, pinned first in the chain (plan 26 § 4) */
+  ...MEDIA_FX,
   /* HALFTONE trio — labs radar Dither/ASCII (+ shared sweep rig, sweeps.js)
      and optic Bitmap (photo-luma halftone field) */
   ascii, halftoneDither, bitmap,

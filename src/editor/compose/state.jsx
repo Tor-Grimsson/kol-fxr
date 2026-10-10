@@ -9,7 +9,7 @@ import { buildPatternSvg } from '../modes/pattern/render'
 import { computeFrameGlyphs } from '../modes/type/buildTypeSvg'
 import { getAppSettings } from '../lib/appSettings'
 import { findLayerDeep } from './helpers'
-import { deleteClip, gcClips } from '../lib/clipStore'
+import { deleteClip, gcClips, loadClip, saveClip } from '../lib/clipStore'
 import { scalePathNodes, shiftNode, rotatePathNodes, normalizePath, normalizePathRings } from './path-math'
 import { shapeToPathNodes } from './shape-math'
 import { booleanCombine, computeBoolean, hasBooleanGeometry, isBooleanable, refitBoolLayer } from './boolean-ops'
@@ -914,7 +914,11 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
        * stages, before the terminal engine; a canvas stage sits before the
        * pixi batch AND the engine. */
       let at
-      if (def.kind === 'pixi') {
+      /* a `first` stage (fx-media, plan 26 § 4) moves the picture every later stage works on */
+      if (def.first) {
+        if (chain.some((s) => s.id === filterId)) return null
+        at = 0
+      } else if (def.kind === 'pixi') {
         at = engineIdx >= 0 ? engineIdx : chain.length
       } else {
         const boundary = chain.findIndex((s) => {
@@ -1623,6 +1627,24 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
       if (Array.isArray(preset.palette.locks)) setLocks(preset.palette.locks)
     }
     const fresh = reidLayers(preset.layers)
+    /* A SAVED FILE RE-LINKS ITS UPLOADS (plan 26 § 13): an upload saved before stills went into the
+       file is a `blob:` src + bytes in this browser's clip store, keyed by the OLD layer id — only the
+       draft restore re-minted it, so an opened file showed nothing. reidLayers keeps the tree's shape,
+       so old and new pair by position: re-key the clip to the new id (gcClips would reap the old one)
+       and swap a live objectURL in, untracked — it is the same picture, not an edit. */
+    const pairs = []
+    const walk = (a, b) => (a ?? []).forEach((l, i) => { pairs.push([l, b[i]]); if (Array.isArray(l?.children)) walk(l.children, b[i]?.children) })
+    walk(preset.layers, fresh)
+    for (const [old, neu] of pairs) {
+      if (!neu || typeof old?.src !== 'string' || !old.src.startsWith('blob:')) continue
+      loadClip(old.id).then((blob) => {
+        if (!blob) return
+        saveClip(neu.id, blob)
+        const url = URL.createObjectURL(blob)
+        const swap = (ls) => ls.map((l) => (l.id === neu.id ? { ...l, src: url } : Array.isArray(l.children) ? { ...l, children: swap(l.children) } : l))
+        setLayers((prev) => swap(prev))
+      })
+    }
     if (preset.intent === 'partial') {
       setLayersTracked((prev) => [...prev, ...fresh])
       /* partial chunks don't claim the loaded-preset slot; the host frame

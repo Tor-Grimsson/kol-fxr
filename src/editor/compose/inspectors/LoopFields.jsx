@@ -6,7 +6,7 @@ import { ViewToggle } from '@kolkrabbi/kol-component'
 import AutoControls from '../../params/AutoControls'
 import RollScopesDialog from '../../params/RollScopesDialog'
 import { ModulationList } from '../../params/ModulationEditor'
-import { deriveScopes, allScopeParams, computeRoll, computePresetRoll, presetRollPool, useRollSeed, SeedField } from '../../params/rolls'
+import { deriveScopes, tidyScopes, SEED_MIN_PARAMS, allScopeParams, computeRoll, computePresetRoll, presetRollPool, useRollSeed, SeedField } from '../../params/rolls'
 import { motionPresetsFor, axisKeys } from '../../params/motionPresets'
 import { lookPresetsFor } from '../../params/lookPresets'
 import { paramSection } from '../../params/schema'
@@ -93,7 +93,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
    * every press = one seeded randomizeSchema roll merged over the layer,
    * one history entry, seed persisted as `_rollSeed`. */
   const seed = useRollSeed(layer)
-  const scopes = deriveScopes(schema, layer)
+  const scopes = tidyScopes(deriveScopes(schema, layer), allScopeParams(schema, layer))
   const tables = motionPresetsFor(layer.loopId, layer)
   const [scopesOpen, setScopesOpen] = useState(false)   /* plan 18 § 3 */
   const roll = (params, scope, opts) => {
@@ -309,7 +309,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
           )}
           {/* labs keeps seed off the rail (info overlay only) — the labs
               skin (`inline`) hides it; the editor keeps its field. */}
-          {showSeed && <SeedField seed={seed} inline={inline} />}
+          {showSeed && allScopeParams(schema, layer).length >= SEED_MIN_PARAMS && <SeedField seed={seed} inline={inline} />}
           {/* Pattern-rules tiles: the rule-stack editor (labs Rules section) —
               seeded rolls share the SeedField above. */}
           {layer.loopId === 'pattern-rules' && (layer.render ?? 'tiles') === 'tiles' && (

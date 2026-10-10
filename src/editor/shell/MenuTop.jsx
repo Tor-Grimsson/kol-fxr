@@ -97,14 +97,15 @@ export default function MenuTop() {
    * layer's chain and jump to the Effects tab. Engine (GL) filters need a
    * pixel source: photo layers AND 2d loop layers get the full catalog
    * (the loop's live canvas feeds the engine), other positioned layers the
-   * canvas set; engine (GL) loops can't host effects (no GL source path).
+   * canvas set; engine (GL) loops take the canvas + pixi tiers (their GL frame is the chain's source,
+   * plan 26 § 15) but never a GL engine stage — there is no GL→GL path.
    * One engine stage max — engine options drop out while one is present. */
   const fxLayer = selectedId && selectedId !== 'canvas' ? findLayerDeep(layers, selectedId) : null
   const fxEngineLoop = fxLayer?.type === 'loop' && loopById(fxLayer.loopId)?.kind === 'engine'
-  const fxTarget = fxLayer && !fxEngineLoop && ['shape', 'text', 'pattern', 'path', 'loop', 'misc', 'photo'].includes(fxLayer.type) ? fxLayer : null
+  const fxTarget = fxLayer && ['shape', 'text', 'pattern', 'path', 'loop', 'misc', 'photo'].includes(fxLayer.type) ? fxLayer : null
   const fxChain = fxTarget ? bareChain(fxTarget) : []
   const fxHasEngine = fxChain.some((s) => filterById(s.id)?.kind === 'engine')
-  const fxEngineHost = fxTarget && (fxTarget.type === 'photo' || fxTarget.type === 'loop' || fxTarget.type === 'misc')
+  const fxEngineHost = fxTarget && !fxEngineLoop && (fxTarget.type === 'photo' || fxTarget.type === 'loop' || fxTarget.type === 'misc')
   const fxOptions = fxTarget
     ? (fx()?.FILTERS ?? []).filter((f) => f.kind !== 'engine' || (fxEngineHost && !fxHasEngine))
     : []

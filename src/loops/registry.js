@@ -9,7 +9,7 @@
 // loops via inspector dropdowns, not routes).
 
 import { loopDefaults } from './contract.js'
-import { TIME_PARAMS, TIME_DEFAULTS } from './lib/viewport.js'
+import { TIME_PARAMS, TIME_DEFAULTS, VP_PARAMS, VP_DEFAULTS } from './lib/viewport.js'
 import { SHAPE_LOOPS, SHAPE_PRESETS } from './shape/presets.js'
 import { FIELD_LOOPS, FIELD_PRESETS } from './field/presets.js'
 import { PATTERN_LOOPS, PATTERN_PRESETS } from './pattern/presets.js'
@@ -59,6 +59,17 @@ for (const def of LOOPS) {
   if (def?.group === 'penrose' || !def?.params || def.params.some((p) => p.key === 'vpTime')) continue
   def.params = [...def.params, ...TIME_PARAMS]
   if (def.defaults) Object.assign(def.defaults, TIME_DEFAULTS)
+}
+/* THE CAMERA REACHES EVERY 2D GENERATOR (plan 26 § 11): contract.js folds Spin · Zoom · Pulse ·
+ * Wobble onto shape + pattern-rules only, so field, the 55 Penrose sims, distress, paratype and the
+ * modulator had no whole-frame motion at all. contract.js itself calls a wrapping camera on a sim
+ * "still valid but un-schema'd" — schema'd here. Every 2d draw goes through drawLoopFrame, which
+ * applies it; identity defaults, so nothing that exists moves. Engines keep their own cameras. */
+const CAMERA_GROUPS = new Set(['field', 'penrose', 'distress', 'paratype', 'modulator'])
+for (const def of LOOPS) {
+  if (!CAMERA_GROUPS.has(def?.group) || def.kind === 'engine' || !def.params || def.params.some((p) => p.key === 'vpSpin')) continue
+  def.params = [...def.params, ...VP_PARAMS]
+  if (def.defaults) Object.assign(def.defaults, VP_DEFAULTS)
 }
 const PRESETS_BY_GROUP = {
   shape: SHAPE_PRESETS,

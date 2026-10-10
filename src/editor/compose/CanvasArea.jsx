@@ -20,6 +20,7 @@ import { CURSORS } from './cursors'
 import { resolveMasks, canMask } from './masks'
 import { CanvasZoomContext } from '../shell/Canvas'
 import { setZoom } from '../shell/zoomStore'
+import { stillToDataUrl } from '../lib/stillUpload'
 
 /* Per-tool cursor on the canvas stage (spec R8.1–R8.2): every tool sets its own. Shape tools
  * `crosshair` (Photoshop/Figma), `cell` for pattern, the `text` I-beam, `zoom-in` (⌥ zoom-out);
@@ -355,8 +356,14 @@ export default function CanvasArea() {
       h = Math.max(8, Math.round(h * k))
       const x = Math.max(0, Math.min(CANVAS_W - w, at.vx - w / 2))
       const y = Math.max(0, Math.min(viewH - h, at.vy - h / 2))
-      const id = addLayer('photo', { src: url, srcType: isVideo ? 'video' : 'image', fit: 'cover', x, y, w, h })
-      if (id) saveClip(id, file)
+      if (isVideo) {
+        const id = addLayer('photo', { src: url, srcType: 'video', fit: 'cover', x, y, w, h })
+        if (id) saveClip(id, file)
+        return
+      }
+      /* a still goes into the layer as a downscaled data URL — it travels with the saved file
+         (plan 26 § 13); the probe objectURL is only for its size */
+      stillToDataUrl(file).then((src) => { URL.revokeObjectURL(url); addLayer('photo', { src, srcType: 'image', fit: 'cover', x, y, w, h }) })
     }
     if (isVideo) {
       const v = document.createElement('video')

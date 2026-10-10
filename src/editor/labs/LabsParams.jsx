@@ -21,6 +21,8 @@ import { computeRoll, allScopeParams } from '../params/rolls'
 import { useBindDots, toggleDots } from '../params/dotVisibility'
 import { useLabsLayer } from './useLabsLayer'
 import MorphTab from '../morph/MorphTab'
+import QuickMotion from '../params/QuickMotion'
+import ModelSource from './ModelSource'
 import { useMorph } from '../morph/morphStore'
 import Hint from '../components/Hint'
 import { useControlSize, stripClamp } from '../params/controlSize'
@@ -135,7 +137,11 @@ function EffectSurface({ layer, showMod }) {
   const { addFilter, replaceFilter, removeFilter, toggleFilter, updateLayer, palette } = useComposeState()
   const edit = useLayerEdit(layer.id, { history: 'coalesce' })
   const chain = resolvedChain(layer)
-  const stage = chain[0] ?? null
+  /* THE PAGE'S EFFECT IS THE FIRST STAGE THAT IS NOT PINNED FIRST — fx-media (plan 26 § 4) sits in
+     front of it at index 0 when the media moves; every "stage 0" below reads `at` */
+  const eff = chain.findIndex((s) => !s.def?.first)
+  const at = eff < 0 ? chain.length : eff
+  const stage = eff < 0 ? null : chain[eff]
 
   /* Chips only for the halftone TRIO (labs' one chipped effect family —
    * Dither · ASCII · Bitmap are modes of one page there). Every other
@@ -146,7 +152,7 @@ function EffectSurface({ layer, showMod }) {
   const title = !isTrio && stage ? stage.def.label : null
   const onChip = (id) => {
     if (!stage) { addFilter(layer.id, id); return }
-    if (id !== stage.id) replaceFilter(layer.id, 0, id)
+    if (id !== stage.id) replaceFilter(layer.id, at, id)
   }
 
   const bareFilters = chain.map(({ def: _def, ...s }) => s)
@@ -157,13 +163,13 @@ function EffectSurface({ layer, showMod }) {
     const filters = bareFilters.map((s, i) => (i === idx ? { ...s, params: { ...s.params, [k]: v } } : s))
     edit.patch({ filters })
   }
-  const setStageProp = setStagePropAt(0)
+  const setStageProp = setStagePropAt(at)
   const renderAnimate = showMod ? (p) => <BindDot layer={paramsView} param={p} setProp={setStageProp} /> : undefined
 
   /* Patch stage 0's params in one write — StageRolls hands back a whole
    * param patch, not a key/value pair like setStageProp. */
   const patchStageParams = (patch) => {
-    const filters = bareFilters.map((s, i) => (i === 0 ? { ...s, params: { ...s.params, ...patch } } : s))
+    const filters = bareFilters.map((s, i) => (i === at ? { ...s, params: { ...s.params, ...patch } } : s))
     updateLayer(layer.id, { filters })   /* discrete — one undo per roll */
   }
   /* R rolls the EFFECT half only — motion is the Motion tab's own button now
@@ -271,7 +277,7 @@ function EffectSurface({ layer, showMod }) {
             </>
           )}
           <PostProcessing
-            chain={chain} layer={layer} hostView={paramsView}
+            chain={chain} from={at + 1} layer={layer} hostView={paramsView}
             addFilter={addFilter} removeFilter={removeFilter} toggleFilter={toggleFilter}
             setStagePropAt={setStagePropAt} palette={palette} showMod={showMod}
           />
@@ -280,7 +286,10 @@ function EffectSurface({ layer, showMod }) {
       {tab === 'anim' && (
         <>
           <AutoControls schema={stage.def.params} {...auto} tab="anim" />
-          <StageRolls inline def={stage.def} view={paramsView} tab="anim" onPatch={patchStageParams} />
+          {/* the roll block is its own section — the Effect tab's hairline, here too (plan 26 § 8) */}
+          <LabeledControlSection divided>
+            <StageRolls inline def={stage.def} view={paramsView} tab="anim" onPatch={patchStageParams} />
+          </LabeledControlSection>
           {stage.def.sweeps && (
             <SweepStack
               sweeps={Array.isArray(stage.params.sweeps) ? stage.params.sweeps : []}
@@ -288,9 +297,60 @@ function EffectSurface({ layer, showMod }) {
               inline
             />
           )}
+          <QuickMotion schema={stage.def.params} layer={paramsView} setProp={setStageProp} />
+          <MediaMotion chain={chain} layer={layer} hostView={paramsView} addFilter={addFilter} removeFilter={removeFilter} setStagePropAt={setStagePropAt} palette={palette} showMod={showMod} />
         </>
       )}
     </Surface>
+  )
+}
+
+/* ── A generator's post-processing (plan 26 § 15: "imported to use with f.e. ascii fx") — any
+ * generator, the GL ones included, takes the canvas tier on its own frame: ASCII, Dither, Halftone,
+ * Scanline, Blocks… stacked in order on the Style tab. No pixi / GL-engine stages here: a GL loop
+ * has no GL→GL path, and the canvas tier is what the page effects are. ── */
+const GEN_POST = FILTERS.filter((f) => !f.kind && !f.first)
+function GeneratorPost({ layer, edit, palette, showMod }) {
+  const { addFilter, removeFilter, toggleFilter } = useComposeState()
+  const chain = resolvedChain(layer)
+  const bare = chain.map(({ def: _def, ...s }) => s)
+  const setStagePropAt = (idx) => (k, v) => edit.patch({ filters: bare.map((s, i) => (i === idx ? { ...s, params: { ...s.params, [k]: v } } : s)) })
+  return (
+    <PostProcessing
+      chain={chain} from={0} filters={GEN_POST} layer={layer} hostView={layer}
+      addFilter={addFilter} removeFilter={removeFilter} toggleFilter={toggleFilter}
+      setStagePropAt={setStagePropAt} palette={palette} showMod={showMod}
+    />
+  )
+}
+
+/* ── Media motion (plan 26 § 4): the fx-media stage pinned in front of the effect — tile, drift,
+ * spin, zoom, tilt. Its own section on the Motion tab: one press adds it, its params follow, one
+ * press takes it away. ── */
+function MediaMotion({ chain, layer, hostView, addFilter, removeFilter, setStagePropAt, palette, showMod }) {
+  const cs = useControlSize()
+  const idx = chain.findIndex((s) => s.id === 'fx-media')
+  const s = idx < 0 ? null : chain[idx]
+  const view = s ? { ...hostView, ...s.params, id: layer.id } : null
+  const setProp = s ? setStagePropAt(idx) : null
+  return (
+    <LabeledControlSection label="Media" divided>
+      {s?.def ? (
+        <>
+          <AutoControls
+            schema={s.def.params} layer={view} setProp={setProp} palette={palette} inline
+            renderAnimate={showMod ? (p) => <BindDot layer={view} param={p} setProp={setProp} /> : undefined}
+          />
+          <Button tone="primary" size={cs} className="w-full" iconLeft="x" iconSize={12} onClick={() => removeFilter(layer.id, idx)}>
+            Remove media motion
+          </Button>
+        </>
+      ) : (
+        <Button tone="primary" size={cs} className="w-full" iconLeft="plus" iconSize={12} disabled={chain.length >= MAX_FILTERS} onClick={() => addFilter(layer.id, 'fx-media')}>
+          Add media motion
+        </Button>
+      )}
+    </LabeledControlSection>
   )
 }
 
@@ -332,16 +392,16 @@ function StackCards({ chain, from = 0, layer, hostView, toggleFilter, removeFilt
 /* ── Post-Processing (labs "Add FX..."): the stages past the page's own
  * effect. The adder draws from labs' CANVAS_FX_DEFS equivalent — the rack's
  * Post-Processing category — never the whole catalog. ── */
-function PostProcessing({ chain, layer, hostView, addFilter, removeFilter, toggleFilter, setStagePropAt, palette, showMod }) {
+function PostProcessing({ chain, from = 1, filters = null, layer, hostView, addFilter, removeFilter, toggleFilter, setStagePropAt, palette, showMod }) {
   const cs = useControlSize()
   const options = [
     { value: '', label: 'Add FX…' },
-    ...postProcessingFilters(FILTERS).map((f) => ({ value: f.id, label: f.label ?? f.id })),
+    ...(filters ?? postProcessingFilters(FILTERS)).map((f) => ({ value: f.id, label: f.label ?? f.id })),
   ]
   return (
     <LabeledControlSection label="Post-Processing" divided>
       <StackCards
-        chain={chain} from={1} layer={layer} hostView={hostView}
+        chain={chain} from={from} layer={layer} hostView={hostView}
         toggleFilter={toggleFilter} removeFilter={removeFilter}
         setStagePropAt={setStagePropAt} palette={palette} showMod={showMod}
       />
@@ -404,6 +464,9 @@ function GenerativeSurface({ layer, showMod, tree }) {
         palette={palette} renderAnimate={showMod ? (p) => <BindDot layer={layer} param={p} setProp={edit.setProp} /> : undefined}
         tab={tab} tabStrip={null} tree={tree} inline onReset={reset}
       />
+      {tab === 'generate' && layer.loopId === 'scene3d' && layer.primitive === 'mesh' && <ModelSource layer={layer} setProp={edit.setProp} />}
+      {tab === 'style' && <GeneratorPost layer={layer} edit={edit} palette={palette} showMod={showMod} />}
+      {tab === 'anim' && <QuickMotion schema={loopById(layer.loopId)?.params ?? []} layer={layer} setProp={edit.setProp} />}
     </Surface>
   )
 }

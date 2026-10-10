@@ -35,7 +35,7 @@
     "@kolkrabbi/kol-icons": "0.35.0",
     "@kolkrabbi/kol-media-client": "0.5.0",
     "@kolkrabbi/kol-shell": "0.63.0",
-    "@kolkrabbi/kol-theme": "0.171.0",
+    "@kolkrabbi/kol-theme": "0.173.0",
     "@vitejs/plugin-react": "^6.0.5",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

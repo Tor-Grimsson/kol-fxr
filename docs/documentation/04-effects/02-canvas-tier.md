@@ -2,7 +2,7 @@
 title: Canvas-2D tier
 type: reference
 status: active
-updated: 2026-07-08
+updated: 2026-10-10
 description: Tier 1 — the Canvas-2D effect set. fxCore.runChain / runFx, the per-source ImageData cache, the dry/wet Amount contract, and the full catalog (glass, scanline, dither, radar FX, ASCII, halftone, bitmap, FX-rack).
 tags:
   - project/kol-fxr
@@ -105,3 +105,10 @@ Assembled in `src/filters/index.js`. All are Canvas-2D (`kind` absent) except wh
 `fx-noise` is the only animated one: the labs pass rolled `Math.random()` per frame (never seamless), so it's replaced by a deterministic per-pixel hash whose seed steps `floor(u·flicker) mod flicker` — an integer number of frames per loop, `frame(0) === frame(1)` exactly.
 
 > The categories the panel groups these under (Halftone / Scanline / CRT / Refraction / FX rack / Pattern) live in `effectCategories.js`, not the registry — see [[06-effects-panel|effects panel]]. That list carries a few ids **defensively** (e.g. `fx-sharpen`) with no registered filter; an unregistered id simply doesn't render.
+
+## Blocks and Media motion (2026-10-10, plan 26)
+
+Two canvas filters added after the labs port:
+
+- **`fx-blocks`** — block corruption (`src/filters/fxBlocks.js`). The frame is a grid of square blocks; each rolls for one fate — **Drop** (filled ink · paper · its own average), **Displace** (copied from a block 1…Shift blocks away, horizontal · vertical · both), **Chromatic** (its own R/B offset, so the aberration is irregular), **Channel noise** (clusters of pure R·G·B·C·M·Y) — then **Tear** slides thin row bands. The pattern is `hash(block, seed, floor(u·Rate))`, so it reshuffles **Rate** times a loop and is back at epoch 0 for u = 1; **Hold** keeps that fraction of blocks across reshuffles. Claimed by the Post-processing rack.
+- **`fx-media`** — the media moves (`src/filters/fxMedia.js`): **Tile X/Y**, **Drift X/Y** (whole tiles per loop — the pattern's period, so the wrap never jumps), **Spin** (whole turns), **Zoom**, and **Tilt X/Y** + **Swing** + **Perspective** — a true perspective tilt drawn as row / column strips, since canvas 2D has no 3D transform. It carries `first: true`, so `addFilter` pins it at index 0: every later stage works on the moving picture. It is a stage, not a schema field or a CSS transform, because the fitted source is cached for stills and export snapshots the live chain canvas.

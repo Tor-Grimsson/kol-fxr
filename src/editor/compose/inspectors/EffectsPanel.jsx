@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Dropdown, LabeledControl, SegmentedToggle, SettingsRow, ToggleSwitch, Slider, Input, Tooltip } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, LabeledControl, SegmentedToggle, SettingsRow, ToggleSwitch, Slider, Input, Tooltip, XYPad } from '@kolkrabbi/kol-component'
 import { PickerRow, PickerDropdown } from './TreePicker'
 import { useComposeState } from '../state'
 import { findLayerDeep } from '../helpers'
@@ -7,10 +7,10 @@ import { useLayerEdit } from '../useLayerEdit'
 import AutoControls from '../../params/AutoControls'
 import BindDot from '../../params/BindDot'
 import { paramTab } from '../../params/schema'
-import { deriveScopes, allScopeParams, computeRoll, useRollSeed, SeedField } from '../../params/rolls'
+import { deriveScopes, tidyScopes, SEED_MIN_PARAMS, allScopeParams, computeRoll, useRollSeed, SeedField } from '../../params/rolls'
 import { FILTERS } from '../../../filters'
 import {
-  SWEEP_PRESETS, SWEEP_SHAPE_OPTIONS, SWEEP_TARGET_OPTIONS, ANGLED_SHAPES, makeSweep,
+  SWEEP_PRESETS, SWEEP_SHAPE_OPTIONS, SWEEP_TARGET_OPTIONS, SWEEP_TRAVEL_OPTIONS, ANGLED_SHAPES, makeSweep,
 } from '../../../filters/sweeps'
 import { MAX_FILTERS, resolvedChain } from '../filterChain'
 import { categoryOf, presetParamOf, presetPatchFor, effectHost, flatCategories } from './effectCategories'
@@ -251,8 +251,8 @@ export function StageRolls({ def, view, tab, onPatch, inline = false }) {
    * MOTION_SECTIONS list would have put a param's slider on one tab and its
    * roll button on the other. */
   const params = def.params.filter((p) => (paramTab(p) === 'anim') === motion)
-  const scopes = deriveScopes(params, view)
   const allParams = motion ? params.filter((p) => !p.noRandom) : allScopeParams(params, view)
+  const scopes = tidyScopes(deriveScopes(params, view), allParams)
 
   const roll = (params, scope) => {
     if (!params.length) return
@@ -268,7 +268,7 @@ export function StageRolls({ def, view, tab, onPatch, inline = false }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <SeedField seed={seed} inline={inline} />
+      {allParams.length >= SEED_MIN_PARAMS && <SeedField seed={seed} inline={inline} />}
       {allParams.length > 0 && (
         <div className="flex gap-2">
           <Button tone="primary" size={cs} className="flex-1 min-w-0"
@@ -401,6 +401,16 @@ export function SweepStack({ sweeps, onChange, inline = false }) {
                 <Row label="Width" min={0.05} max={1} step={0.01} value={sw.width ?? 0.35} onChange={(v) => setField(i, 'width', v)} />
                 {angled && (
                   <Row label="Angle" min={0} max={360} step={1} value={sw.angle ?? 0} onChange={(v) => setField(i, 'angle', v)} />
+                )}
+                {/* TRAVEL + ORIGIN (plan 26 § 5) — ping-pong runs out and back on whole cycles; the
+                    origin is a pad over the frame (top-left = 0,0), not two blind sliders */}
+                <PickerDropdown options={SWEEP_TRAVEL_OPTIONS} value={sw.travel ?? 'forward'} onChange={(v) => setField(i, 'travel', v)} />
+                {(sw.shape ?? 'linear') !== 'noise' && (
+                  <XYPad
+                    xValue={sw.cx ?? 0.5} yValue={sw.cy ?? 0.5} xMin={0} xMax={1} yMin={1} yMax={0}
+                    xLabel="Origin X" yLabel="Origin Y"
+                    onChange={(x, y) => onChange(sweeps.map((s, j) => (j === i ? { ...s, cx: Math.round(x * 100) / 100, cy: Math.round(y * 100) / 100 } : s)))}
+                  />
                 )}
               </>
             )}

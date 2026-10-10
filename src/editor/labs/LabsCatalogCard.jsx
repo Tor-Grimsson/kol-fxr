@@ -13,9 +13,12 @@ import { SPREAD, useSheetChrome } from '../mobile/CategoryScreen'
  * row only opens the params, because modulation lives on every parameter's bind dot — so it is
  * left out here and stays on the rail.
  */
-export default function LabsCatalogCard({ onPicked, onClose }) {
+/* the doors that work ON media — their groups come after the source is picked (plan 26 § 2) */
+const MEDIA_DOORS = new Set(['#rail/sec:effects'])
+
+export default function LabsCatalogCard({ onPicked, onClose, initialOpen = null, hasMedia = true, onNeedMedia }) {
   const { items, dispatch } = useRailExtras()
-  const [open, setOpen] = useState(null)
+  const [open, setOpen] = useState(initialOpen)
   useSheetChrome(onClose)
   const doors = items.filter((i) => i.path !== '#rail/sec:modulation')
   const section = doors.find((i) => i.path === open) ?? null
@@ -37,6 +40,7 @@ export default function LabsCatalogCard({ onPicked, onClose }) {
               iconLeft={row.icon}
               iconRight={row.icon}
               onClick={() => {
+                if (!section && MEDIA_DOORS.has(row.path) && !hasMedia && onNeedMedia) { onNeedMedia(row.path); return }
                 if (!section && row.sub?.length) { setOpen(row.path); return }
                 if (dispatch?.(row.path)) onPicked?.()
               }}

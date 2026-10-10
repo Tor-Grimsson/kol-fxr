@@ -114,11 +114,14 @@ export function buildLabsCatalog({ layer, setOnly, addFilter, patchFilter, carri
    * From library | Upload empty state (see ./LabsSourcePicker), which is
    * exactly labs' behaviour on e.g. /radar/ascii. An existing photo layer
    * keeps its source, so browsing effects doesn't make you re-pick media. */
+  /* the media stage (fx-media, pinned first — plan 26 § 4) rides along when the effect is swapped */
+  const keptMedia = () => (layer?.type === 'photo' ? (layer.filters ?? []).filter((s) => s?.id === 'fx-media') : [])
   const pickEffect = (filterId, patch) => {
-    const id = setOnly('photo', { ...carriedSource(), filters: [], fxGroup: null })
+    const keep = keptMedia()
+    const id = setOnly('photo', { ...carriedSource(), filters: keep, fxGroup: null })
     if (id) {
       addFilter(id, filterId)
-      if (patch) patchFilter(id, 0, patch)
+      if (patch) patchFilter(id, keep.length, patch)
     }
     window.dispatchEvent(new CustomEvent('kol:open-effects'))
   }
@@ -126,7 +129,7 @@ export function buildLabsCatalog({ layer, setOnly, addFilter, patchFilter, carri
   /* A rack CATEGORY leaf (labs /radar/effects/<group>): an empty effect
    * stack scoped to that category — the rail becomes the rack surface. */
   const pickRackGroup = (groupId) => {
-    setOnly('photo', { ...carriedSource(), filters: [], fxGroup: groupId })
+    setOnly('photo', { ...carriedSource(), filters: keptMedia(), fxGroup: groupId })
     window.dispatchEvent(new CustomEvent('kol:open-effects'))
   }
 
@@ -145,7 +148,7 @@ export function buildLabsCatalog({ layer, setOnly, addFilter, patchFilter, carri
   }
 
   const activePresetId = layer?.presetId ?? null
-  const activeFilterId = layer?.filters?.[0]?.id ?? null
+  const activeFilterId = (layer?.filters ?? []).find((s) => s?.id !== 'fx-media')?.id ?? null
   const activePreset = activePresetId
     ? presetsInGroup(layer?.loopGroup).find((p) => p.id === activePresetId) ?? null
     : null
@@ -210,7 +213,7 @@ export function buildLabsCatalog({ layer, setOnly, addFilter, patchFilter, carri
               label: lk.label,
               onSelect: () => pickEffect('scanline', lk.patch),
               active: !layer?.fxGroup && activeFilterId === 'scanline'
-                && scanlineLookOf(layer?.filters?.[0]?.params) === lk.label,
+                && scanlineLookOf((layer?.filters ?? []).find((s) => s?.id === 'scanline')?.params) === lk.label,
             }))
             : cat.filters.map((f) => ({
               label: f.label ?? f.id,

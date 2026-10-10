@@ -20,6 +20,20 @@
  */
 import { renderScanlines, GEOMETRY_OPTIONS, MARK_OPTIONS, CHARSET_OPTIONS } from '../loops/scanline/engine.js'
 import { registerSourceCache } from './fxCore.js'
+import { sweepStates, evalSweeps } from './sweeps.js'
+
+/* THE SWEEP RIG ON SCANLINE (plan 26 § 5; the user: "what sweeps … there could be sweep from and
+ * direction and size"): the stacked sweeps — shape, target, origin, travel — as a per-mark size
+ * multiplier the engine composes with its own Form › Sweep. Brightness and geometry both scale the
+ * mark (a mark's size IS its brightness here); reveal has no meaning on a field of marks. */
+function sweepMulFor(p, u) {
+  const st = sweepStates(p, u)
+  if (!st) return null
+  return (nx, ny) => {
+    const k = evalSweeps(st, nx, ny)
+    return Math.max(0, (1 + k.bright) * k.scaleMul)
+  }
+}
 
 /* Downscaled luma sampler, cached by source-canvas identity — the host hands
  * us a NEW fitted canvas whenever the image / fit / size changes, so the
@@ -56,6 +70,7 @@ const isRows = (l) => (l.geometry ?? 'rows') === 'rows' || l.geometry === 'colum
 
 export default {
   id: 'scanline',
+  sweeps: true,   /* the stacked sweep rig on the Motion tab (plan 26 § 5) */
   label: 'Scanline',
   animated: true,
   params: [
@@ -102,6 +117,7 @@ export default {
       spin: 0,
       seed: 0,
       sample: lumaSampler(src),
+      sweepMul: sweepMulFor(p, u),
     })
   },
 }

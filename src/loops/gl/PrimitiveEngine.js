@@ -5,6 +5,7 @@ import { Wireframe } from 'three/addons/lines/Wireframe.js'
 import { WireframeGeometry2 } from 'three/addons/lines/WireframeGeometry2.js'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 import { PRESETS, DURATION } from './primitivePresets.js'
 import { sampleKeyframes } from './primitiveKeyframes.js'
 import { layout } from './primitiveComposition.js'
@@ -48,15 +49,17 @@ export default class PrimitiveEngine {
     this.controls.minDistance = 2
     this.controls.maxDistance = 14
 
-    // Lights — key / fill / ambient + hemisphere for a soft graded look.
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.35))
-    this.scene.add(new THREE.HemisphereLight(0xccd6ff, 0x202028, 0.5))
-    const key = new THREE.DirectionalLight(0xffffff, 1.5)
-    key.position.set(3, 4, 2)
-    this.scene.add(key)
-    const fill = new THREE.DirectionalLight(0x99aaff, 0.5)
-    fill.position.set(-3, -1, -2)
-    this.scene.add(fill)
+    // Lights — key / fill / rim / ambient + hemisphere for a soft graded look. Kept on the engine
+    // so the Lighting section drives them (plan 26 § 15); the defaults are the old fixed rig.
+    this.ambient = new THREE.AmbientLight(0xffffff, 0.35)
+    this.hemi = new THREE.HemisphereLight(0xccd6ff, 0x202028, 0.5)
+    this.key = new THREE.DirectionalLight(0xffffff, 1.5)
+    this.key.position.set(3, 4, 2)
+    this.fill = new THREE.DirectionalLight(0x99aaff, 0.5)
+    this.fill.position.set(-3, -1, -2)
+    this.rim = new THREE.DirectionalLight(0xffffff, 0)
+    this.rim.position.set(0, 2, -4)
+    this.scene.add(this.ambient, this.hemi, this.key, this.fill, this.rim)
 
     // Procedural environment IBL (built lazily on first enable).
     this.pmrem = new THREE.PMREMGenerator(this.renderer)
@@ -125,6 +128,8 @@ export default class PrimitiveEngine {
       case 'icosahedron': return new THREE.IcosahedronGeometry(1.1, p.detail ?? 0)
       case 'octahedron': return new THREE.OctahedronGeometry(1.15, p.detail ?? 0)
       case 'dodecahedron': return new THREE.DodecahedronGeometry(1.05, p.detail ?? 0)
+      /* an uploaded model (plan 26 § 15) — the loaded geometry once it lands, a placeholder before */
+      case 'mesh': return this.meshGeom ?? new THREE.IcosahedronGeometry(0.6, 1)
       default: return new THREE.BoxGeometry(1.5, 1.5, 1.5)
     }
   }
@@ -138,8 +143,70 @@ export default class PrimitiveEngine {
       it.mesh.geometry = this.activeGeom
       it.wire.geometry = this.wireGeom
     }
-    oldGeom.dispose()
+    if (oldGeom !== this.meshGeom) oldGeom.dispose()   /* the loaded model is cached — never disposed on a swap */
     oldWire.dispose()
+  }
+
+  /* LOAD A MODEL (plan 26 § 15): OBJ · GLB/GLTF · STL by extension. Every mesh in the file merges into
+     one BufferGeometry (position + normal — the material is the scene's), centred on its bounds and
+     scaled so its longest side is 1.7 units, framed by the default camera. A failed load keeps the placeholder. */
+  async setMeshSrc(src, type = null) {
+    if (src === this.meshSrc) return
+    this.meshSrc = src
+    if (!src) return
+    /* a data URL carries no extension — the picker stores the type beside it */
+    const ext = (type || (src.split('?')[0].match(/\.([a-z0-9]+)$/i)?.[1] ?? '')).toLowerCase()
+    try {
+      const geoms = []
+      if (ext === 'stl') {
+        const { STLLoader } = await import('three/addons/loaders/STLLoader.js')
+        geoms.push(await new STLLoader().loadAsync(src))
+      } else {
+        const root = ext === 'glb' || ext === 'gltf'
+          ? (await new (await import('three/addons/loaders/GLTFLoader.js')).GLTFLoader().loadAsync(src)).scene
+          : await new (await import('three/addons/loaders/OBJLoader.js')).OBJLoader().loadAsync(src)
+        root.updateMatrixWorld(true)
+        root.traverse((o) => { if (o.isMesh && o.geometry) geoms.push(o.geometry.clone().applyMatrix4(o.matrixWorld)) })
+      }
+      if (src !== this.meshSrc || !geoms.length) return
+      const clean = geoms.map((g) => {
+        const n = g.index ? g.toNonIndexed() : g
+        const out = new THREE.BufferGeometry()
+        out.setAttribute('position', n.getAttribute('position'))
+        if (n.getAttribute('normal')) { out.setAttribute('normal', n.getAttribute('normal')); return out }
+        /* no normals in the file (scans usually) — weld the vertices first, or every face shades flat */
+        const welded = mergeVertices(out, 1e-6)
+        welded.computeVertexNormals()
+        return welded.toNonIndexed()
+      })
+      const merged = clean.length > 1 ? mergeGeometries(clean, false) : clean[0]
+      merged.computeBoundingBox()
+      const size = new THREE.Vector3(), mid = new THREE.Vector3()
+      merged.boundingBox.getSize(size); merged.boundingBox.getCenter(mid)
+      merged.translate(-mid.x, -mid.y, -mid.z)
+      const k = 1.7 / Math.max(size.x, size.y, size.z, 1e-6)   /* framed inside the default camera, with room to turn */
+      merged.scale(k, k, k)
+      const old = this.meshGeom
+      this.meshGeom = merged
+      if (this.primId === 'mesh') this.rebuildGeometry()
+      if (old && old !== this.activeGeom) old.dispose()
+      /* the model lands asynchronously — a paused transport draws no next frame, so paint this one */
+      this.step(0)
+    } catch (e) {
+      console.warn('[scene] mesh load failed', src, e?.message ?? e)
+    }
+  }
+
+  /* the Lighting section — key azimuth / elevation in degrees, intensities, and `orbit` whole turns of
+     the key around the subject per loop (seamless) */
+  placeLights(u) {
+    const L = this.light ?? {}
+    const az = ((L.keyAngle ?? 37) * Math.PI) / 180 + u * Math.PI * 2 * Math.round(L.orbit ?? 0)
+    const el = ((L.keyElevation ?? 42) * Math.PI) / 180
+    const r = 5
+    this.key.position.set(Math.sin(az) * Math.cos(el) * r, Math.sin(el) * r, Math.cos(az) * Math.cos(el) * r)
+    this.fill.position.set(-this.key.position.x, -1, -this.key.position.z * 0.5)
+    this.rim.position.set(-Math.sin(az) * 4, 2, -Math.cos(az) * 4)
   }
 
   makeMaterial(type) {
@@ -203,6 +270,17 @@ export default class PrimitiveEngine {
 
     if (globals) {
       this.globals = globals
+      if (this.primId === 'mesh' || globals.meshSrc) this.setMeshSrc(globals.meshSrc ?? null, globals.meshType ?? null)
+      // Lighting.
+      this.light = globals.light ?? this.light
+      if (this.light) {
+        const L = this.light
+        this.key.intensity = L.key ?? 1.5
+        this.fill.intensity = L.fill ?? 0.5
+        this.rim.intensity = L.rim ?? 0
+        this.ambient.intensity = L.ambient ?? 0.35
+        this.hemi.intensity = (L.ambient ?? 0.35) * (0.5 / 0.35)
+      }
       // Material.
       this.color = globals.color || this.color
       this.roughness = globals.roughness ?? this.roughness
@@ -309,6 +387,7 @@ export default class PrimitiveEngine {
     }
     if (this.onProgress) this.onProgress({ t, dur: this.dur })
     const u = this.dur > 0 ? t / this.dur : 0
+    this.placeLights(u)
 
     const g = rawG  /* expression params stripped in the editor port */
 
