@@ -291,22 +291,22 @@ export default {
     // Camera / Frame (all render kinds; flow is whole cycles ⇒ seamless)
     { key: 'camZoom', label: 'Zoom', type: 'range', min: 0.3, max: 3, step: 0.05, default: 1, section: 'Frame' },
     { key: 'camAngle', label: 'Angle', type: 'range', min: 0, max: 360, step: 1, default: 0, section: 'Frame' },
-    { key: 'camFlow', label: 'Flow', type: 'range', min: 0, max: 4, step: 1, default: 1, section: 'Frame' },
+    { key: 'camFlow', label: 'Flow', type: 'range', min: -8, max: 8, rMin: 0, rMax: 4, step: 1, default: 1, section: 'Frame' },
     { key: 'panDir', label: 'Direction', type: 'select', options: DIR_OPTIONS, default: 'diag', when: (l) => !isBands(l), section: 'Frame' },
     { key: 'panDir', label: 'Direction', type: 'select', options: FIELD_DIR_OPTIONS, default: 'right', noRandom: true, when: isBands, section: 'Frame' },
-    { key: 'spin', label: 'Spin', type: 'range', min: 0, max: 3, step: 1, default: 0, when: isTiles, section: 'Form' },
+    { key: 'spin', label: 'Spin', type: 'range', min: -8, max: 8, rMin: 0, rMax: 3, step: 1, default: 0, when: isTiles, section: 'Form' },
     // Field — along-axis travel + per-band Form (whole cycles ⇒ seamless)
-    { key: 'waveFlow', label: 'Travel', type: 'range', min: 0, max: 4, step: 1, default: 0, when: isField, section: 'Frame' },
+    { key: 'waveFlow', label: 'Travel', type: 'range', min: -8, max: 8, rMin: 0, rMax: 4, step: 1, default: 0, when: isField, section: 'Frame' },
     { key: 'fieldSway', label: 'Sway', type: 'range', min: 0, max: 1, step: 0.05, default: 0, when: isField, section: 'Form' },
     { key: 'fieldStagger', label: 'Stagger', type: 'range', min: 0, max: 1, step: 0.05, default: 0, when: isField, section: 'Form' },
-    { key: 'fieldCycles', label: 'Form cycles', type: 'range', min: 1, max: 4, step: 1, default: 1, when: isField, section: 'Form' },
+    { key: 'fieldCycles', label: 'Form cycles', type: 'range', min: 1, max: 8, rMin: 1, rMax: 4, step: 1, default: 1, when: isField, section: 'Form' },
     // Split-gap fill (only meaningful when Direction = Split)
     { key: 'fillMode', label: 'Split fill', type: 'select', default: 'off', when: (l) => isBands(l) && l.panDir === 'split', section: 'Frame',
       options: [{ value: 'off', label: 'Off' }, { value: 'extend', label: 'Extend' }, { value: 'solid', label: 'Solid' }] },
     { key: 'fillColor', label: 'Fill colour', type: 'color', default: '#101014', when: (l) => isBands(l) && l.panDir === 'split' && l.fillMode === 'solid', section: 'Frame' },
     // Animation sweep (per-cell tiles / per-crossing weave)
     { key: 'animAxis', label: 'Sweep axis', type: 'select', options: AXIS_OPTIONS, default: 'none', when: (l) => !isField(l), section: 'Form' },
-    { key: 'animCycles', label: 'Sweep cycles', type: 'range', min: 1, max: 4, step: 1, default: 1, when: (l) => !isField(l), section: 'Form' },
+    { key: 'animCycles', label: 'Sweep cycles', type: 'range', min: 1, max: 8, rMin: 1, rMax: 4, step: 1, default: 1, when: (l) => !isField(l), section: 'Form' },
     { key: 'animWaves', label: 'Sweep waves', type: 'range', min: 0, max: 8, step: 0.5, default: 2, when: (l) => !isField(l), section: 'Form' },
     { key: 'pulse', label: 'Pulse', type: 'range', min: 0, max: 1, step: 0.05, default: 0, when: (l) => !isField(l), section: 'Form' },
     { key: 'fade', label: 'Fade', type: 'range', min: 0, max: 1, step: 0.05, default: 0, when: (l) => !isField(l), section: 'Form' },

@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { previewDpr } from '../../editor/lib/previewScale.js'
 
 /**
  * Chromatic-aberration distortion engine. Ported from kol-labs-single
@@ -338,7 +339,7 @@ export default class DistortionEngine {
 
   resize(w, h) {
     if (w < 1 || h < 1) return
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    const dpr = previewDpr()   /* Settings › Preview resolution */
     this.renderer.setPixelRatio(dpr)
     this.renderer.setSize(w, h, false)
     const rw = Math.max(2, Math.round(w * TRAIL_SCALE))

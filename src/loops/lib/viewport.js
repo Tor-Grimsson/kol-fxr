@@ -45,7 +45,7 @@ export const TIME_CURVES = [
 ]
 export const TIME_PARAMS = [
   { key: 'vpTime',  label: 'Time',  type: 'select', default: 'linear', options: TIME_CURVES, tab: 'anim', section: 'Form' },
-  { key: 'vpSpeed', label: 'Speed', type: 'range', min: 1, max: 4, step: 1,    default: 1, tab: 'anim', section: 'Form' },
+  { key: 'vpSpeed', label: 'Speed', type: 'range', min: 1, max: 8, rMin: 1, rMax: 4, step: 1,    default: 1, tab: 'anim', section: 'Form' },
   { key: 'vpPhase', label: 'Phase', type: 'range', min: 0, max: 1, step: 0.05, default: 0, tab: 'anim', section: 'Form' },
 ]
 const frac = (x) => x - Math.floor(x)
@@ -72,11 +72,11 @@ export function warpTime(u, p) {
  * its actual split: Frame = Spin + Zoom · Form = Pulse + Wobble + Rate).
  * Ranges match the labs sliders (LoopsShell.jsx:364-375). */
 export const VP_PARAMS = [
-  { key: 'vpSpin',   label: 'Spin',   type: 'range', min: 0, max: 4,   step: 1,    default: 0, tab: 'anim', section: 'Frame' },
+  { key: 'vpSpin',   label: 'Spin',   type: 'range', min: -8, max: 8, rMin: 0, rMax: 4,   step: 1,    default: 0, tab: 'anim', section: 'Frame' },
   { key: 'vpZoom',   label: 'Zoom',   type: 'range', min: 1, max: 2.5, step: 0.05, default: 1, tab: 'anim', section: 'Frame' },
   { key: 'vpPulse',  label: 'Pulse',  type: 'range', min: 0, max: 1,   step: 0.05, default: 0, tab: 'anim', section: 'Form' },
   { key: 'vpWobble', label: 'Wobble', type: 'range', min: 0, max: 30,  step: 1,    default: 0, tab: 'anim', section: 'Form' },
-  { key: 'vpRate',   label: 'Rate',   type: 'range', min: 1, max: 4,   step: 1,    default: 1, tab: 'anim', section: 'Form' },
+  { key: 'vpRate',   label: 'Rate',   type: 'range', min: 1, max: 8, rMin: 1, rMax: 4,   step: 1,    default: 1, tab: 'anim', section: 'Form' },
 ]
 
 // Apply the camera transform to ctx for frame u. Returns true if it transformed

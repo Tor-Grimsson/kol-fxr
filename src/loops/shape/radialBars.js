@@ -15,7 +15,7 @@ export default {
     { key: 'count', label: 'Spokes', type: 'range', min: 6, max: 64, step: 1, default: 32, noRandom: true },
     { key: 'minR', label: 'Inner', type: 'range', min: 0.05, max: 0.4, step: 0.01, default: 0.15 },
     { key: 'maxR', label: 'Outer', type: 'range', min: 0.4, max: 0.95, step: 0.01, default: 0.85 },
-    { key: 'cycles', label: 'Cycles', type: 'range', min: 1, max: 4, step: 1, default: 1 },
+    { key: 'cycles', label: 'Cycles', type: 'range', min: 1, max: 8, rMin: 1, rMax: 4, step: 1, default: 1 },
     { key: 'waves', label: 'Waves', type: 'range', min: 1, max: 8, step: 1, default: 3 },
     { key: 'weight', label: 'Weight', type: 'range', min: 1, max: 30, step: 0.5, default: 4 },
   ],

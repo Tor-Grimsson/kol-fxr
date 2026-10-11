@@ -16,111 +16,33 @@
  *   pulse — shift amplitude breathes on one sine cycle (labs sin(t·3) → sin(TAU·u)).
  */
 
-import { buffersFor, intHash2 as hash2 } from './fxCore.js'
+import { glFx, stillUnless } from './fxCore.js'
+import { HASH_GLSL } from '../loops/lib/glPass.js'
 
 const TAU = Math.PI * 2
 
-/* ── deterministic value noise (frosted "Glass" + shard patterns) ────── */
-const fade = (t) => t * t * (3 - 2 * t)
-function vnoise(x, y) {
-  const xi = Math.floor(x), yi = Math.floor(y)
-  const xf = x - xi, yf = y - yi
-  const a = hash2(xi, yi), b = hash2(xi + 1, yi)
-  const c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1)
-  const u = fade(xf), v = fade(yf)
-  return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v
-}
-function fbm(x, y) {
-  let s = 0, amp = 0.5, f = 1
-  for (let i = 0; i < 4; i++) { s += amp * vnoise(x * f, y * f); f *= 2; amp *= 0.5 }
-  return s
-}
-/* per-band signed offset, stable per index */
-const band = (i) => hash2(i, 7) * 2 - 1
-
-/* Each pattern: field(nx, ny, scale, t) -> [fx, fy] in roughly [-1,1].
- * nx,ny ∈ [0,1]; t is the woven animation clock — most are static at t=0.
- * `dispersion` (labs preset chroma) makes a pattern refract per-channel out
- * of the box: it stands in for Chroma while the knob sits at 0. */
+/* Each pattern is a displacement field(nx, ny, scale, t) -> [fx, fy] in roughly [-1,1] (nx,ny ∈ [0,1];
+ * t is the woven animation clock — most are static at t=0). They live in GLSL now (GLASS below, plan
+ * 27 § 3) in this order; `dispersion` (labs preset chroma) makes a pattern refract per-channel out of
+ * the box: it stands in for Chroma while the knob sits at 0. */
 const PATTERNS = [
-  { id: 'panes', label: 'Panes', field(nx, ny, s, t) {
-    const n = Math.max(2, Math.round(3 + s * 6))
-    const b = Math.floor(nx * n)
-    const drift = t ? 0.25 * Math.sin(t + b) : 0
-    return [band(b * 2) * 0.35, band(b * 2 + 1) + drift]
-  } },
-  /* labs "Tall Slivers" preset (panes at scale 3, shift 22:80) baked as a
-   * field: ~2× the pane count, offsets leaning vertical. */
-  { id: 'slivers', label: 'Slivers', field(nx, ny, s, t) {
-    const n = Math.max(4, Math.round(6 + s * 12))
-    const b = Math.floor(nx * n)
-    const drift = t ? 0.25 * Math.sin(t + b) : 0
-    return [band(b * 2) * 0.2, band(b * 2 + 1) + drift]
-  } },
-  { id: 'bands', label: 'Bands', field(nx, ny, s, t) {
-    const n = Math.max(2, Math.round(3 + s * 6))
-    const b = Math.floor(ny * n)
-    const drift = t ? 0.25 * Math.sin(t + b) : 0
-    return [band(b * 2) + drift, band(b * 2 + 1) * 0.35]
-  } },
-  { id: 'glass', label: 'Glass', field(nx, ny, s, t) {
-    const f = 2 + s * 3, e = 0.012, ph = t * 0.15
-    const base = fbm(nx * f + ph, ny * f)
-    const gx = fbm((nx + e) * f + ph, ny * f) - base
-    const gy = fbm(nx * f + ph, (ny + e) * f) - base
-    return [(gx / e) * 0.12, (gy / e) * 0.12]
-  } },
-  /* labs "Prismatic" preset — the frosted fbm gradient dispersing R/G/B
-   * (preset chroma 65). */
-  { id: 'prismatic', label: 'Prismatic', dispersion: 65, field(nx, ny, s, t) {
-    const f = 2 + s * 3, e = 0.012, ph = t * 0.15
-    const base = fbm(nx * f + ph, ny * f)
-    const gx = fbm((nx + e) * f + ph, ny * f) - base
-    const gy = fbm(nx * f + ph, (ny + e) * f) - base
-    return [(gx / e) * 0.12, (gy / e) * 0.12]
-  } },
-  { id: 'ripple', label: 'Ripple', field(nx, ny, s, t) {
-    const dx = nx - 0.5, dy = ny - 0.5
-    const r = Math.hypot(dx, dy) + 1e-4
-    const w = Math.sin(r * (8 + s * 22) - t * 2)
-    return [(dx / r) * w, (dy / r) * w]
-  } },
-  /* labs "Prism Ripple" preset — concentric ripples dispersing R/G/B
-   * (preset chroma 85). */
-  { id: 'prism-ripple', label: 'Prism Ripple', dispersion: 85, field(nx, ny, s, t) {
-    const dx = nx - 0.5, dy = ny - 0.5
-    const r = Math.hypot(dx, dy) + 1e-4
-    const w = Math.sin(r * (8 + s * 22) - t * 2)
-    return [(dx / r) * w, (dy / r) * w]
-  } },
-  { id: 'waves', label: 'Waves', field(nx, ny, s, t) {
-    const f = 4 + s * 12
-    return [Math.sin(ny * f + t), Math.sin(nx * f + t * 0.7)]
-  } },
-  { id: 'diagonal', label: 'Diagonal', field(nx, ny, s) {
-    const n = Math.max(2, Math.round(4 + s * 8))
-    const o = band(Math.floor((nx + ny) * n))
-    return [o * 0.7, o * 0.7]
-  } },
-  { id: 'shards', label: 'Shards', field(nx, ny, s) {
-    const n = Math.max(2, Math.round(2 + s * 5))
-    const cx = Math.floor(nx * n), cy = Math.floor(ny * n)
-    return [band(cx * 31 + cy), band(cy * 31 + cx)]
-  } },
-  { id: 'grid', label: 'Grid', field(nx, ny, s) {
-    const n = Math.max(2, Math.round(3 + s * 6))
-    return [band(Math.floor(ny * n)), band(Math.floor(nx * n))]
-  } },
-  { id: 'lens', label: 'Lens', field(nx, ny, s) {
-    const dx = nx - 0.5, dy = ny - 0.5
-    const k = (0.5 - Math.hypot(dx, dy)) * (1 + s)
-    return [dx * k * 2, dy * k * 2]
-  } },
-  { id: 'swirl', label: 'Swirl', field(nx, ny, s, t) {
-    const dx = nx - 0.5, dy = ny - 0.5
-    const a = (0.5 - Math.hypot(dx, dy)) * (2 + s * 4) + t * 0.5
-    return [-dy * a * 2, dx * a * 2]
-  } },
+  { id: 'panes', label: 'Panes' },
+  /* labs "Tall Slivers" preset (panes at scale 3, shift 22:80) baked as a field: ~2× the pane count,
+     offsets leaning vertical */
+  { id: 'slivers', label: 'Slivers' },
+  { id: 'bands', label: 'Bands' },
+  { id: 'glass', label: 'Glass' },
+  /* labs "Prismatic" — the frosted fbm gradient dispersing R/G/B (preset chroma 65) */
+  { id: 'prismatic', label: 'Prismatic', dispersion: 65 },
+  { id: 'ripple', label: 'Ripple' },
+  /* labs "Prism Ripple" — concentric ripples dispersing R/G/B (preset chroma 85) */
+  { id: 'prism-ripple', label: 'Prism Ripple', dispersion: 85 },
+  { id: 'waves', label: 'Waves' },
+  { id: 'diagonal', label: 'Diagonal' },
+  { id: 'shards', label: 'Shards' },
+  { id: 'grid', label: 'Grid' },
+  { id: 'lens', label: 'Lens' },
+  { id: 'swirl', label: 'Swirl' },
 ]
 const PATTERN_OPTIONS = PATTERNS.map((p) => ({ value: p.id, label: p.label }))
 
@@ -148,109 +70,100 @@ const PRESET_PATCHES = {
   swirl:          { xShift: 60, yShift: 60, scale: 1.2, angle: 0, chroma: 30, mix: 100, edge: 'mirror', mirror: false },
 }
 
-/* Edge handling for an out-of-bounds sample coordinate. */
-function edgeAt(v, n, mode) {
-  if (v >= 0 && v < n) return v | 0
-  if (mode === 'wrap') { let m = v % n; return (m < 0 ? m + n : m) | 0 }
-  if (mode === 'mirror') {
-    const p = n - 1, m = Math.abs(v) % (2 * p)
-    return (m <= p ? m : 2 * p - m) | 0
+/* The displacement pass over the fitted source pixels, as a fragment shader (plan 27 § 3 — the
+ * per-pixel JS ran a moving Glass at 30 fps). With chroma > 0 the R/G/B channels sample slightly
+ * different offsets (dispersion along the displacement + a radial lens fringe) → chromatic
+ * aberration. Alpha is carried from the sampled pixel (labs forced 255; `fit: contain` letterbox
+ * would go black otherwise). jsHash is fxCore's intHash2 bit for bit, so every pane, band and
+ * shard keeps the offset it had. */
+const GLASS = /* glsl */`${HASH_GLSL}
+uniform float uPat, uScale, uAx, uAy, uMix, uCa, uSa, uChroma, uEdge, uMirror, uPanX, uPanY, uTime;
+float band(int i) { return jsHash(i, 7) * 2.0 - 1.0; }   /* per-band signed offset, stable per index */
+float fade(float t) { return t * t * (3.0 - 2.0 * t); }
+float vnoise(vec2 q) {
+  vec2 i = floor(q), f = q - i;
+  int xi = int(i.x), yi = int(i.y);
+  float a = jsHash(xi, yi), b = jsHash(xi + 1, yi), c = jsHash(xi, yi + 1), d = jsHash(xi + 1, yi + 1);
+  float u = fade(f.x), v = fade(f.y);
+  return (a * (1.0 - u) + b * u) * (1.0 - v) + (c * (1.0 - u) + d * u) * v;
+}
+float fbm(vec2 q) { float s = 0.0, amp = 0.5, f = 1.0; for (int i = 0; i < 4; i++) { s += amp * vnoise(q * f); f *= 2.0; amp *= 0.5; } return s; }
+int count(float base, float k, int lo) { return max(lo, int(floor(base + uScale * k + 0.5))); }
+vec2 field(vec2 n) {
+  int pat = int(uPat); float s = uScale, t = uTime;
+  if (pat <= 1) {   /* panes · slivers */
+    int N = pat == 0 ? count(3.0, 6.0, 2) : count(6.0, 12.0, 4);
+    int b = int(floor(n.x * float(N)));
+    float dr = t != 0.0 ? 0.25 * sin(t + float(b)) : 0.0;
+    return vec2(band(b * 2) * (pat == 0 ? 0.35 : 0.2), band(b * 2 + 1) + dr);
   }
-  return v < 0 ? 0 : n - 1 // clamp
-}
-
-/* Per-source pixel cache — fxCore's shared buffersFor (canvas identity is the
- * key: base pixels read once per source, the output ImageData reused every
- * frame, no per-frame getImageData / allocation). */
-
-/* Shared blit canvas — putImageData ignores the dest ctx's dpr transform, so
- * we compose into this scratch and drawImage it (transform-aware) instead. */
-let scratch = null
-function scratchFor(w, h) {
-  if (!scratch) scratch = document.createElement('canvas')
-  if (scratch.width !== w) scratch.width = w
-  if (scratch.height !== h) scratch.height = h
-  return scratch
-}
-
-/* Core displacement pass over the fitted source pixels. With chroma > 0 the
- * R/G/B channels sample slightly different offsets (dispersion along the
- * displacement + a radial lens fringe) → chromatic aberration. Alpha is
- * carried from the sampled pixel (labs forced 255; `fit: contain` letterbox
- * would go black otherwise). */
-function displace(src, q) {
-  const w = src.width, h = src.height
-  const { base, out } = buffersFor(src)
-  const sd = base.data
-  const od = out.data
-
-  const pat = PATTERNS.find((p) => p.id === q.pattern) || PATTERNS[0]
-  const ax = (q.xShift / 100) * w * 0.25 // full shift ≈ quarter-frame
-  const ay = (q.yShift / 100) * h * 0.25
-  const m = q.mix / 100
-  const rad = (q.angle * Math.PI) / 180
-  const ca = Math.cos(rad), sa = Math.sin(rad)
-  // dispersion-native patterns refract at their baked strength while the
-  // Chroma knob sits at 0; a nonzero Chroma takes over as usual.
-  const chroma = q.chroma > 0 ? q.chroma : (pat.dispersion ?? 0)
-  const cAmt = chroma / 100              // dispersion: per-channel displacement gain
-  const cRad = (chroma / 100) * w * 0.02 // radial lens fringe (px)
-  const hw = w / 2, hh = h / 2
-  const edge = q.edge
-
-  for (let y = 0; y < h; y++) {
-    const ny = y / h
-    for (let x = 0; x < w; x++) {
-      // kaleidoscope fold: mirror the right half onto the left before sampling
-      const fxBase = q.mirror && x >= w / 2 ? (w - 1 - x) : x
-      // rotate sample-space into the field, then rotate the result back, so
-      // the whole pattern turns with Angle. panX/panY slide the sheet.
-      const cx = fxBase / w - 0.5 - q.panX, cy = ny - 0.5 - q.panY
-      const v = pat.field(ca * cx + sa * cy + 0.5, -sa * cx + ca * cy + 0.5, q.scale, q.time)
-      const dx = (ca * v[0] - sa * v[1]) * ax
-      const dy = (sa * v[0] + ca * v[1]) * ay
-      const di = (y * w + x) << 2
-
-      if (chroma > 0) {
-        const rx = (x - hw) / hw, ry = (y - hh) / hh // radial unit
-        const rX = edgeAt(fxBase + dx * (1 + cAmt) + rx * cRad, w, edge)
-        const rY = edgeAt(y + dy * (1 + cAmt) + ry * cRad, h, edge)
-        const gX = edgeAt(fxBase + dx, w, edge), gY = edgeAt(y + dy, h, edge)
-        const bX = edgeAt(fxBase + dx * (1 - cAmt) - rx * cRad, w, edge)
-        const bY = edgeAt(y + dy * (1 - cAmt) - ry * cRad, h, edge)
-        const gi = (gY * w + gX) << 2
-        const r = sd[(rY * w + rX) << 2]
-        const g = sd[gi + 1]
-        const b = sd[((bY * w + bX) << 2) + 2]
-        const a = sd[gi + 3]
-        if (m >= 1) { od[di] = r; od[di + 1] = g; od[di + 2] = b; od[di + 3] = a }
-        else {
-          od[di] = sd[di] * (1 - m) + r * m
-          od[di + 1] = sd[di + 1] * (1 - m) + g * m
-          od[di + 2] = sd[di + 2] * (1 - m) + b * m
-          od[di + 3] = sd[di + 3] * (1 - m) + a * m
-        }
-        continue
-      }
-
-      const si = (edgeAt(y + dy, h, edge) * w + edgeAt(fxBase + dx, w, edge)) << 2
-      if (m >= 1) {
-        od[di] = sd[si]; od[di + 1] = sd[si + 1]; od[di + 2] = sd[si + 2]; od[di + 3] = sd[si + 3]
-      } else {
-        od[di] = sd[di] * (1 - m) + sd[si] * m
-        od[di + 1] = sd[di + 1] * (1 - m) + sd[si + 1] * m
-        od[di + 2] = sd[di + 2] * (1 - m) + sd[si + 2] * m
-        od[di + 3] = sd[di + 3] * (1 - m) + sd[si + 3] * m
-      }
-    }
+  if (pat == 2) {   /* bands */
+    int b = int(floor(n.y * float(count(3.0, 6.0, 2))));
+    float dr = t != 0.0 ? 0.25 * sin(t + float(b)) : 0.0;
+    return vec2(band(b * 2) + dr, band(b * 2 + 1) * 0.35);
   }
-  return out
+  if (pat == 3 || pat == 4) {   /* glass · prismatic */
+    float f = 2.0 + s * 3.0, e = 0.012, ph = t * 0.15;
+    float base = fbm(vec2(n.x * f + ph, n.y * f));
+    float gx = fbm(vec2((n.x + e) * f + ph, n.y * f)) - base;
+    float gy = fbm(vec2(n.x * f + ph, (n.y + e) * f)) - base;
+    return vec2((gx / e) * 0.12, (gy / e) * 0.12);
+  }
+  vec2 c = n - 0.5;
+  if (pat == 5 || pat == 6) {   /* ripple · prism ripple */
+    float r = length(c) + 1e-4;
+    return (c / r) * sin(r * (8.0 + s * 22.0) - t * 2.0);
+  }
+  if (pat == 7) { float f = 4.0 + s * 12.0; return vec2(sin(n.y * f + t), sin(n.x * f + t * 0.7)); }
+  if (pat == 8) { float o = band(int(floor((n.x + n.y) * float(count(4.0, 8.0, 2))))); return vec2(o * 0.7); }
+  if (pat == 9) {   /* shards */
+    int N = count(2.0, 5.0, 2);
+    int cx = int(floor(n.x * float(N))), cy = int(floor(n.y * float(N)));
+    return vec2(band(cx * 31 + cy), band(cy * 31 + cx));
+  }
+  if (pat == 10) { int N = count(3.0, 6.0, 2); return vec2(band(int(floor(n.y * float(N)))), band(int(floor(n.x * float(N))))); }
+  if (pat == 11) { float k = (0.5 - length(c)) * (1.0 + s); return c * k * 2.0; }
+  float a = (0.5 - length(c)) * (2.0 + s * 4.0) + t * 0.5;   /* swirl */
+  return vec2(-c.y, c.x) * a * 2.0;
 }
+/* edge handling for an out-of-bounds sample coordinate — clamp · wrap · mirror */
+int edgeAt(float v, int n) {
+  float fn = float(n);
+  if (v >= 0.0 && v < fn) return int(v);
+  if (uEdge == 1.0) return min(n - 1, int(mod(v, fn)));
+  if (uEdge == 2.0) { float p = fn - 1.0, m = mod(abs(v), 2.0 * p); return int(m <= p ? m : 2.0 * p - m); }
+  return v < 0.0 ? 0 : n - 1;
+}
+vec4 fx(ivec2 P) {
+  float w = uRes.x, h = uRes.y, x = float(P.x), y = float(P.y);
+  int W = int(w), H = int(h);
+  /* kaleidoscope fold: mirror the right half onto the left before sampling */
+  float fb = uMirror > 0.5 && x >= w * 0.5 ? w - 1.0 - x : x;
+  /* rotate sample-space into the field, then the result back, so the whole pattern turns with Angle;
+     the pan slides the sheet */
+  float cx = fb / w - 0.5 - uPanX, cy = y / h - 0.5 - uPanY;
+  vec2 v = field(vec2(uCa * cx + uSa * cy + 0.5, -uSa * cx + uCa * cy + 0.5));
+  float dx = (uCa * v.x - uSa * v.y) * uAx, dy = (uSa * v.x + uCa * v.y) * uAy;
+  vec4 c;
+  if (uChroma > 0.0) {
+    float cAmt = uChroma / 100.0, cRad = uChroma / 100.0 * w * 0.02;
+    float rx = (x - w * 0.5) / (w * 0.5), ry = (y - h * 0.5) / (h * 0.5);
+    vec4 R = srcAt(ivec2(edgeAt(fb + dx * (1.0 + cAmt) + rx * cRad, W), edgeAt(y + dy * (1.0 + cAmt) + ry * cRad, H)));
+    vec4 G = srcAt(ivec2(edgeAt(fb + dx, W), edgeAt(y + dy, H)));
+    vec4 B = srcAt(ivec2(edgeAt(fb + dx * (1.0 - cAmt) - rx * cRad, W), edgeAt(y + dy * (1.0 - cAmt) - ry * cRad, H)));
+    c = vec4(R.r, G.g, B.b, G.a);
+  } else {
+    c = srcAt(ivec2(edgeAt(fb + dx, W), edgeAt(y + dy, H)));
+  }
+  return uMix >= 1.0 ? c : srcAt(P) * (1.0 - uMix) + c * uMix;
+}
+`
+const EDGES = { clamp: 0, wrap: 1, mirror: 2 }
 
 export default {
   id: 'glass',
   label: 'Glass',
-  animated: true,
+  stillKey: stillUnless('spin', 'drift', 'phase', 'pulse'),   /* still until a Motion param is set (plan 27 § 1) */
   presetPatches: PRESET_PATCHES,
   params: [
     { key: 'pattern', label: 'Pattern', type: 'select', options: PATTERN_OPTIONS, default: 'panes', section: 'Pattern' },
@@ -267,7 +180,7 @@ export default {
         { value: 'mirror', label: 'Mirror' },
       ] },
     { key: 'mirror', label: 'Mirror fold', type: 'toggle', default: false, section: 'Blend' },
-    { key: 'spin', label: 'Spin · turns', type: 'range', min: -2, max: 2, step: 1, default: 0, tab: 'anim', section: 'Motion' },
+    { key: 'spin', label: 'Spin · turns', type: 'range', min: -8, max: 8, rMin: -2, rMax: 2, step: 1, default: 0, tab: 'anim', section: 'Motion' },
     { key: 'drift', label: 'Drift', type: 'range', min: 0, max: 0.5, step: 0.01, default: 0, tab: 'anim', section: 'Motion' },
     /* time-less pattern fields (no t arg) ignore phase */
     { key: 'phase', label: 'Phase', type: 'range', min: 0, max: 3, step: 0.05, default: 0, when: (l) => !['diagonal', 'shards', 'grid', 'lens'].includes(l.pattern), tab: 'anim', section: 'Motion' },
@@ -276,22 +189,17 @@ export default {
   apply(ctx, src, w, h, p, u) {
     const osc = Math.sin(TAU * u)
     const amp = 1 + (p.pulse ?? 0) * 0.4 * osc
-    const out = displace(src, {
-      pattern: p.pattern,
-      scale: p.scale ?? 1.5,
-      mix: p.mix ?? 100,
-      edge: p.edge ?? 'clamp',
-      mirror: !!p.mirror,
-      chroma: p.chroma ?? 0,
-      angle: (p.angle ?? 0) + 360 * u * Math.round(p.spin ?? 0),
-      xShift: (p.xShift ?? 0) * amp,
-      yShift: (p.yShift ?? 0) * amp,
-      panX: (p.drift ?? 0) * Math.cos(TAU * u),
-      panY: (p.drift ?? 0) * Math.sin(TAU * u),
-      time: (p.phase ?? 0) * Math.PI * osc,
-    })
-    const s = scratchFor(src.width, src.height)
-    s.getContext('2d').putImageData(out, 0, 0)
-    ctx.drawImage(s, 0, 0, w, h)
+    const pat = Math.max(0, PATTERNS.findIndex((x) => x.id === p.pattern))
+    /* dispersion-native patterns refract at their baked strength while Chroma sits at 0 */
+    const chroma = (p.chroma ?? 0) > 0 ? p.chroma : (PATTERNS[pat].dispersion ?? 0)
+    const rad = (((p.angle ?? 0) + 360 * u * Math.round(p.spin ?? 0)) * Math.PI) / 180
+    glFx(ctx, src, w, h, GLASS, {
+      uPat: pat, uScale: p.scale ?? 1.5, uMix: (p.mix ?? 100) / 100, uChroma: chroma,
+      uAx: (((p.xShift ?? 0) * amp) / 100) * src.width * 0.25,   /* full shift ≈ quarter-frame */
+      uAy: (((p.yShift ?? 0) * amp) / 100) * src.height * 0.25,
+      uCa: Math.cos(rad), uSa: Math.sin(rad), uEdge: EDGES[p.edge] ?? 0, uMirror: p.mirror ? 1 : 0,
+      uPanX: (p.drift ?? 0) * Math.cos(TAU * u), uPanY: (p.drift ?? 0) * Math.sin(TAU * u),
+      uTime: (p.phase ?? 0) * Math.PI * osc,
+    }, 100)
   },
 }

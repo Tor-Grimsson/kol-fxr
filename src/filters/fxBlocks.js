@@ -12,112 +12,96 @@
  * then Tear shifts thin row bands sideways over the result.
  *
  * Canvas tier, not pixi: the look is grid work on a (usually 1-bit) image and must stay pixel-crisp;
- * a pixi stage resamples. Stacks after Dither / Halftone / Scanline in the same tier.
+ * a pixi stage resamples. Stacks after Dither / Halftone / Scanline in the same tier. The pass is a
+ * fragment shader (glPass, plan 27 follow-up — the JS pass plus its full-frame readback held a moving
+ * chain at 15 fps under load): every pixel finds its tear shift, then its block's fate. jsHash is
+ * intHash2 bit for bit, so a seed corrupts the same blocks it did on the CPU.
  *
  * Motion: the pattern is hash(block, seed, epoch) with epoch = floor(u · Rate) — it reshuffles Rate
  * times a loop and is back at epoch 0 for u = 1, so the loop is seamless by construction. Hold keeps
  * that fraction of blocks on their epoch-0 fate across reshuffles: flicker, not churn. Rate 0 = still.
  */
-import { AMOUNT_PARAM, runFx, intHash2 } from './fxCore.js'
+import { AMOUNT_PARAM, glFx, stillUnless } from './fxCore.js'
+import { glPass, HASH_GLSL } from '../loops/lib/glPass.js'
 
-const PURE = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [0, 255, 255], [255, 0, 255], [255, 255, 0]]
+/* Drop · Average needs each block's mean — a small pass with one pixel per block, its result the
+   main pass's uAux (cols × rows). Block size is ≤ 96 css px × dpr 2. */
+const AVERAGE = /* glsl */`
+uniform float uB;
+void main() {
+  int B = int(uB);
+  ivec2 o0 = ivec2(pix()) * B, S = textureSize(uSrc, 0);
+  vec3 acc = vec3(0.0);
+  float n = 0.0;
+  for (int y = 0; y < 192; y++) {
+    if (y >= B || o0.y + y >= S.y) break;
+    for (int x = 0; x < 192; x++) {
+      if (x >= B || o0.x + x >= S.x) break;
+      acc += texelFetch(uSrc, o0 + ivec2(x, y), 0).rgb;
+      n += 1.0;
+    }
+  }
+  o = vec4(acc / max(n, 1.0), 1.0);
+}
+`
 
+const BLOCKS = /* glsl */`${HASH_GLSL}
+uniform float uBlock, uDensity, uSeed, uEpoch, uHold, uDisplace, uShift, uDir, uDrop, uFill, uChroma, uSpread;
+uniform float uNoise, uCluster, uBands, uTearH;
+const vec3 PURE[6] = vec3[6](vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1), vec3(0, 1, 1), vec3(1, 0, 1), vec3(1, 1, 0));
+int iround(float v) { return int(floor(v + 0.5)); }   /* Math.round */
 /* a 0..1 draw per (block, salt), on this epoch unless the block is held */
-const roller = (seed, epoch, hold) => (bx, by, salt) => {
-  const held = intHash2(bx * 31 + seed, by * 17 + 7919) < hold
-  return intHash2(bx + salt * 1013 + seed * 7, by + salt * 389 + (held ? 0 : epoch * 9973))
+float roll(int bx, int by, int salt, bool held) {
+  int seed = int(uSeed);
+  return jsHash(bx + salt * 1013 + seed * 7, by + salt * 389 + (held ? 0 : int(uEpoch) * 9973));
 }
-
-function fxBlocks(sd, od, w, h, q) {
-  od.set(sd)
-  const B = q.block
-  const cols = Math.ceil(w / B)
-  const rows = Math.ceil(h / B)
-  const r = roller(q.seed, q.epoch, q.hold)
-  const d = q.density
-
-  for (let by = 0; by < rows; by++) {
-    for (let bx = 0; bx < cols; bx++) {
-      const x0 = bx * B, y0 = by * B
-      const x1 = Math.min(w, x0 + B), y1 = Math.min(h, y0 + B)
-
-      if (r(bx, by, 1) < q.drop * d) {
-        let cr = 0, cg = 0, cb = 0
-        if (q.dropColor === 'average') {
-          let n = 0
-          for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = (y * w + x) << 2; cr += sd[i]; cg += sd[i + 1]; cb += sd[i + 2]; n++ }
-          cr /= n; cg /= n; cb /= n
-        } else if (q.dropColor === 'paper') { cr = cg = cb = 255 }
-        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = (y * w + x) << 2; od[i] = cr; od[i + 1] = cg; od[i + 2] = cb; od[i + 3] = 255 }
-        continue
-      }
-
-      if (r(bx, by, 2) < q.displace * d) {
-        const span = Math.max(1, q.shift)
-        const pick = (salt) => Math.round((r(bx, by, salt) * 2 - 1) * span) || 1
-        const dx = q.dir === 'vertical' ? 0 : pick(3)
-        const dy = q.dir === 'horizontal' ? 0 : pick(4)
-        for (let y = y0; y < y1; y++) {
-          const sy = Math.max(0, Math.min(h - 1, y + dy * B))
-          for (let x = x0; x < x1; x++) {
-            const sx = Math.max(0, Math.min(w - 1, x + dx * B))
-            const i = (y * w + x) << 2, j = (sy * w + sx) << 2
-            od[i] = sd[j]; od[i + 1] = sd[j + 1]; od[i + 2] = sd[j + 2]; od[i + 3] = sd[j + 3]
-          }
-        }
-        continue
-      }
-
-      if (r(bx, by, 5) < q.chroma * d) {
-        const ox = Math.round((r(bx, by, 6) * 2 - 1) * q.spread)
-        const oy = Math.round((r(bx, by, 7) * 2 - 1) * q.spread * 0.5)
-        for (let y = y0; y < y1; y++) {
-          for (let x = x0; x < x1; x++) {
-            const i = (y * w + x) << 2
-            const rx = Math.max(0, Math.min(w - 1, x - ox)), ry = Math.max(0, Math.min(h - 1, y - oy))
-            const bxp = Math.max(0, Math.min(w - 1, x + ox)), byp = Math.max(0, Math.min(h - 1, y + oy))
-            od[i] = sd[(ry * w + rx) << 2]
-            od[i + 2] = sd[((byp * w + bxp) << 2) + 2]
-          }
-        }
-        continue
-      }
-
-      if (r(bx, by, 8) < q.noise * d) {
-        const c = Math.max(1, q.cluster)
-        for (let y = y0; y < y1; y++) {
-          for (let x = x0; x < x1; x++) {
-            const cx = (x / c) | 0, cy = (y / c) | 0
-            const v = intHash2(cx * 7 + q.seed + q.epoch * 131, cy * 13 + bx)
-            if (v > 0.55) continue
-            const col = PURE[(v * 1000 | 0) % PURE.length]
-            const i = (y * w + x) << 2
-            od[i] = col[0]; od[i + 1] = col[1]; od[i + 2] = col[2]; od[i + 3] = 255
-          }
-        }
-      }
-    }
+vec4 blockAt(ivec2 p) {
+  int B = int(uBlock), seed = int(uSeed);
+  ivec2 S = ivec2(uRes);
+  int bx = p.x / B, by = p.y / B;
+  bool held = jsHash(bx * 31 + seed, by * 17 + 7919) < uHold;
+  float d = uDensity;
+  if (roll(bx, by, 1, held) < uDrop * d) {
+    vec3 c = uFill == 2.0 ? texelFetch(uAux, ivec2(bx, by), 0).rgb : vec3(uFill);   /* ink 0 · paper 1 · average */
+    return vec4(c, 1.0);
   }
-
-  /* Tear — thin row bands slid sideways over the result */
-  if (q.tear > 0) {
-    const bands = Math.round(q.tear * 12)
-    const th = Math.max(1, q.tearH)
-    const row = new Uint8ClampedArray(w * 4)
-    for (let t = 0; t < bands; t++) {
-      const y0 = Math.floor(intHash2(t * 53 + q.seed, q.epoch * 7 + 3) * h)
-      const sx = Math.round((intHash2(t * 97 + q.seed, q.epoch * 11 + 5) * 2 - 1) * w * 0.12)
-      for (let y = y0; y < Math.min(h, y0 + th); y++) {
-        row.set(od.subarray(y * w * 4, (y + 1) * w * 4))
-        for (let x = 0; x < w; x++) {
-          const fx = ((x - sx) % w + w) % w
-          const i = (y * w + x) << 2, j = fx << 2
-          od[i] = row[j]; od[i + 1] = row[j + 1]; od[i + 2] = row[j + 2]; od[i + 3] = row[j + 3]
-        }
-      }
-    }
+  if (roll(bx, by, 2, held) < uDisplace * d) {
+    float span = max(1.0, uShift);
+    int dx = 0, dy = 0;
+    if (uDir != 1.0) { dx = iround((roll(bx, by, 3, held) * 2.0 - 1.0) * span); if (dx == 0) dx = 1; }
+    if (uDir != 0.0) { dy = iround((roll(bx, by, 4, held) * 2.0 - 1.0) * span); if (dy == 0) dy = 1; }
+    return srcAt(p + ivec2(dx, dy) * B);
   }
+  if (roll(bx, by, 5, held) < uChroma * d) {
+    int ox = iround((roll(bx, by, 6, held) * 2.0 - 1.0) * uSpread);
+    int oy = iround((roll(bx, by, 7, held) * 2.0 - 1.0) * uSpread * 0.5);
+    vec4 s = srcAt(p);
+    return vec4(srcAt(p - ivec2(ox, oy)).r, s.g, srcAt(p + ivec2(ox, oy)).b, s.a);
+  }
+  if (roll(bx, by, 8, held) < uNoise * d) {
+    int c = max(1, int(uCluster));
+    float v = jsHash((p.x / c) * 7 + seed + int(uEpoch) * 131, (p.y / c) * 13 + bx);
+    if (v <= 0.55) return vec4(PURE[int(v * 1000.0) % 6], 1.0);
+  }
+  return srcAt(p);
 }
+vec4 fx(ivec2 p) {
+  /* Tear — thin row bands slid sideways over the result, applied in order on the CPU; here each
+     pixel walks them backwards to find the column it shows */
+  int x = p.x, W = int(uRes.x), H = int(uRes.y), seed = int(uSeed), ep = int(uEpoch), th = max(1, int(uTearH));
+  for (int t = 15; t >= 0; t--) {
+    if (t >= int(uBands)) continue;
+    int y0 = int(floor(jsHash(t * 53 + seed, ep * 7 + 3) * float(H)));
+    if (p.y < y0 || p.y >= min(H, y0 + th)) continue;
+    int sx = iround((jsHash(t * 97 + seed, ep * 11 + 5) * 2.0 - 1.0) * float(W) * 0.12);
+    x = ((x - sx) % W + W) % W;
+  }
+  return blockAt(ivec2(x, p.y));
+}
+`
+const FILL = { ink: 0, paper: 1, average: 2 }
+const DIR = { horizontal: 0, vertical: 1, both: 2 }
+let avg = null
 
 const range = (key, label, min, max, step, dflt, extra = {}) => ({ key, label, type: 'range', min, max, step, default: dflt, ...extra })
 const sel = (key, label, dflt, options, extra = {}) => ({ key, label, type: 'select', default: dflt, options, ...extra })
@@ -126,7 +110,7 @@ export const BLOCKS_FX = [
   {
     id: 'fx-blocks',
     label: 'Blocks',
-    animated: true,
+    stillKey: stillUnless('rate'),   /* Rate 0 = one frozen corruption (plan 27 § 1) */
     params: [
       range('size', 'Block size', 4, 96, 1, 16, { section: 'Blocks' }),
       range('density', 'Density', 0, 1, 0.01, 0.35, { section: 'Blocks' }),
@@ -154,18 +138,25 @@ export const BLOCKS_FX = [
       /* css px → source pixels (k = 1 at dpr 1) */
       const k = src.width / w || 1
       const rate = Math.max(0, Math.round(p.rate ?? 4))
-      runFx(ctx, src, w, h, fxBlocks, {
-        block: Math.max(2, Math.round((p.size ?? 16) * k)),
-        density: p.density ?? 0.35,
-        seed: Math.round(p.seed ?? 1),
-        epoch: rate ? Math.floor(((u % 1) + 1) % 1 * rate) : 0,
-        hold: p.hold ?? 0.5,
-        displace: p.displace ?? 0.5, shift: Math.round(p.shift ?? 2), dir: p.dir ?? 'horizontal',
-        drop: p.drop ?? 0.3, dropColor: p.dropColor ?? 'ink',
-        chroma: p.chroma ?? 0.3, spread: Math.round((p.spread ?? 6) * k),
-        noise: p.noise ?? 0.2, cluster: Math.max(1, Math.round((p.cluster ?? 2) * k)),
-        tear: p.tear ?? 0, tearH: Math.max(1, Math.round((p.tearH ?? 6) * k)),
-      }, p.amount)
+      const block = Math.max(2, Math.round((p.size ?? 16) * k))
+      const fill = FILL[p.dropColor] ?? 0
+      if (fill === 2) {
+        const cols = Math.ceil(src.width / block), rows = Math.ceil(src.height / block)
+        if (!avg) avg = document.createElement('canvas')
+        if (avg.width !== cols) avg.width = cols
+        if (avg.height !== rows) avg.height = rows
+        glPass(avg.getContext('2d'), cols, rows, cols, rows, AVERAGE, { uB: block }, src)
+        avg._fxGen = (avg._fxGen ?? 0) + 1   /* redrawn in place — re-upload as uAux */
+      }
+      glFx(ctx, src, w, h, BLOCKS, {
+        uBlock: block, uDensity: p.density ?? 0.35, uSeed: Math.round(p.seed ?? 1),
+        uEpoch: rate ? Math.floor(((u % 1) + 1) % 1 * rate) : 0, uHold: p.hold ?? 0.5,
+        uDisplace: p.displace ?? 0.5, uShift: Math.round(p.shift ?? 2), uDir: DIR[p.dir] ?? 0,
+        uDrop: p.drop ?? 0.3, uFill: fill,
+        uChroma: p.chroma ?? 0.3, uSpread: Math.round((p.spread ?? 6) * k),
+        uNoise: p.noise ?? 0.2, uCluster: Math.max(1, Math.round((p.cluster ?? 2) * k)),
+        uBands: (p.tear ?? 0) > 0 ? Math.round((p.tear ?? 0) * 12) : 0, uTearH: Math.max(1, Math.round((p.tearH ?? 6) * k)),
+      }, p.amount, fill === 2 ? avg : null)
     },
   },
 ]

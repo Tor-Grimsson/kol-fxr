@@ -11,10 +11,10 @@ import { clear, strokeOutline, wrapLoop, sampleInside, repelPoints, pc } from '.
 // bursts a bigger hub cluster at the cursor.
 
 const PARAMS = [
-  { key: 'N', type: 'int', min: 30, max: 600, default: 300, step: 10 },
-  { key: 'm', type: 'int', min: 1, max: 8, default: 3, step: 1 },
-  { key: 'addPerSec', type: 'int', min: 1, max: 40, default: 12, step: 1 },
-  { key: 'nodeSize', type: 'range', min: 0.5, max: 6, default: 2.4, step: 0.5 },
+  { key: 'N', label: 'nodes', type: 'int', min: 30, max: 600, default: 300, step: 10 },
+  { key: 'm', label: 'links per node', type: 'int', min: 1, max: 8, default: 3, step: 1 },
+  { key: 'addPerSec', label: 'nodes/sec', type: 'int', min: 1, max: 40, default: 12, step: 1 },
+  { key: 'nodeSize', label: 'node size', type: 'range', min: 0.5, max: 6, default: 2.4, step: 0.1 },
   { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]
 

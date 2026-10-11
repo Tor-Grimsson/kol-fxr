@@ -10,6 +10,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { buildRibbonGeometry } from './ribbonGeometry.js'
 import { FilterShader } from './filterPass.js'
+import { previewDpr } from '../../editor/lib/previewScale.js'
 
 /* RibbonEngine — a single hero glass ribbon (the joe_ryba "Puddle" look). One
  * swept-ribbon mesh on a black stage with RoomEnvironment IBL; the form turns on
@@ -29,7 +30,7 @@ export default class RibbonEngine {
     this.autoLoop = autoLoop
     this.canvas = canvas
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, alpha: true })
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+    this.renderer.setPixelRatio(previewDpr())
     this.renderer.setClearColor(new THREE.Color('#000000'), 1)
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = 1.1
@@ -183,7 +184,9 @@ export default class RibbonEngine {
   }
 
   resize(w, h) {
+    this.renderer.setPixelRatio(previewDpr())   /* Settings › Preview resolution — re-read on every resize */
     this.renderer.setSize(w, h, false)
+    this.composer.setPixelRatio(previewDpr())
     this.composer.setSize(w, h)
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()

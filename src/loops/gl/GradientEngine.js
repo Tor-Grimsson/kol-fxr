@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { gradientVertex, gradientFragment, bgVertex, bgFragment } from './gradientShaders.js'
+import { previewDpr } from '../../editor/lib/previewScale.js'
 
 /* GradientEngine — one renderer, one WebGL context. Grid mode renders every
  * variation into its own scissored viewport (the three.js multi-scene
@@ -31,7 +32,7 @@ export default class GradientEngine {
     this.autoLoop = autoLoop
     this.canvas = canvas
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true })
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+    this.renderer.setPixelRatio(previewDpr())
     this.renderer.setClearColor(new THREE.Color(BG), 1)
     this.camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50)
     this.camera.position.set(0, 0.15, 4.2)
@@ -142,6 +143,7 @@ export default class GradientEngine {
   }
 
   resize(w, h) {
+    this.renderer.setPixelRatio(previewDpr())   /* Settings › Preview resolution — re-read on every resize */
     this.renderer.setSize(w, h, false)
     this.w = w
     this.h = h

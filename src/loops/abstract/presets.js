@@ -65,7 +65,7 @@ const rdLoop = {
   duration: 8,
   params: [
     { key: 'variation', label: 'Variation', type: 'select', default: 'coral', options: opts(RD_VARIATIONS) },
-    { key: 'feed', label: 'Feed', type: 'range', min: 0.01, max: 0.1, step: 0.001, default: 0.0545, when: (l) => rdModel(l) === 'gray-scott' },
+    { key: 'feed', label: 'Feed', type: 'range', min: 0.01, max: 0.1, step: 0.0005, default: 0.0545, when: (l) => rdModel(l) === 'gray-scott' },
     { key: 'kill', label: 'Kill', type: 'range', min: 0.04, max: 0.08, step: 0.001, default: 0.062, when: (l) => rdModel(l) === 'gray-scott' },
     { key: 'a', label: 'Feed A', type: 'range', min: 0.02, max: 0.2, step: 0.005, default: 0.1, when: (l) => rdModel(l) === 'schnakenberg' },
     { key: 'b', label: 'Feed B', type: 'range', min: 0.4, max: 1.6, step: 0.02, default: 0.9, when: (l) => rdModel(l) === 'schnakenberg' },

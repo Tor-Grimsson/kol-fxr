@@ -17,9 +17,9 @@ export default {
     ...FILL_PARAMS,
     ...SHAPE_FILL_PARAMS,
     { key: 'k', label: 'Petals (k)', type: 'range', min: 2, max: 9, step: 1, default: 5, noRandom: true },
-    { key: 'spin', label: 'Spin', type: 'range', min: 0, max: 3, step: 1, default: 1 },
+    { key: 'spin', label: 'Spin', type: 'range', min: -8, max: 8, rMin: 0, rMax: 3, step: 1, default: 1 },
     { key: 'weight', label: 'Weight', type: 'range', min: 1, max: 24, step: 0.5, default: 2.5 },
-    { key: 'size', label: 'Size', type: 'range', min: 0.5, max: 0.95, step: 0.02, default: 0.85 },
+    { key: 'size', label: 'Size', type: 'range', min: 0.5, max: 0.95, step: 0.01, default: 0.85 },
     { key: 'showGuide', label: 'Guides', type: 'toggle', default: false },
   ],
   draw(ctx, u, w, h, p) {

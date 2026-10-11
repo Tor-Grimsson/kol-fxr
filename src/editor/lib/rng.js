@@ -44,8 +44,10 @@ export function randomizeSchema(params, rng) {
      * (e.g. a text expression) supplies its own seeded generator. */
     if (p.roll) { out[p.key] = p.roll(rng); continue }
     if (p.type === 'range') {
-      const min = p.min ?? 0
-      const max = p.max ?? 1
+      /* `rMin`/`rMax` keep a roll inside the musical span of a slider whose hand range is wider —
+         kinetic knobs' convention (knobs.js), schema-wide since plan 27 § 7 */
+      const min = p.rMin ?? p.min ?? 0
+      const max = p.rMax ?? p.max ?? 1
       const step = p.step || 0.01
       const v = min + rng() * (max - min)
       out[p.key] = step >= 1 ? Math.round(v) : Math.round(v / step) * step

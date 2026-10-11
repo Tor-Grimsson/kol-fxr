@@ -33,6 +33,7 @@ const DEFAULTS = {
    * persists it under its own `kol-placeholders` key. Keeping a second copy
    * here would be two sources of truth for one switch. */
   defaultLoopSeconds: 4,  // transport loop length seeded at labs boot
+  previewRes: 'full',     // 'full' | 'half' — live canvas backing ratio (lib/previewScale.js); exports stay full
 }
 
 function load() {

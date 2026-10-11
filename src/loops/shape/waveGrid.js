@@ -13,7 +13,7 @@ export default {
     { key: 'colA', label: 'Color A', type: 'color', role: 'accent', default: '#1c2740' },
     { key: 'colB', label: 'Color B', type: 'color', role: 'fg', default: '#e8e4dc' },
     { key: 'cols', label: 'Columns', type: 'range', min: 4, max: 32, step: 1, default: 14, noRandom: true },
-    { key: 'cycles', label: 'Cycles', type: 'range', min: 1, max: 4, step: 1, default: 1 },
+    { key: 'cycles', label: 'Cycles', type: 'range', min: 1, max: 8, rMin: 1, rMax: 4, step: 1, default: 1 },
     { key: 'wavesX', label: 'Waves X', type: 'range', min: 0, max: 6, step: 1, default: 2 },
     { key: 'wavesY', label: 'Waves Y', type: 'range', min: 0, max: 6, step: 1, default: 1 },
     { key: 'maxDot', label: 'Max dot', type: 'range', min: 0.3, max: 1.1, step: 0.05, default: 0.8 },

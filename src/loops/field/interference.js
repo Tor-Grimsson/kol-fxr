@@ -1,9 +1,23 @@
-import { hexToRgb } from '../lib/util.js'
-import { CAMERA_SCHEMA, makeCam, sample } from './camera.js'
-import { raster, mix3 } from './raster.js'
+import { CAMERA_SCHEMA } from './camera.js'
+import { fieldPass, col } from './fieldGL.js'
 
 // Interference — overlapping circular waves from several point sources arranged
 // on a ring; flow pulses them. Seamless: phase is periodic in u.
+const FRAG = /* glsl */`
+uniform vec3 uA, uB, uC;
+uniform float uS, uN, uSpan;
+void main() {
+  vec2 q = fieldXY();
+  float acc = 0.0;
+  for (int k = 0; k < 16; k++) {
+    if (float(k) >= uN) break;
+    float a = (float(k) / uN) * 6.283185307179586;
+    acc += sin(length(q - vec2(cos(a), sin(a)) * uSpan) * uS - uCam.w);
+  }
+  o = vec4(mix3(0.5 + 0.5 * (acc / uN), uA, uB, uC), 1.0);
+}
+`
+
 export default {
   id: 'interference',
   label: 'Interference',
@@ -19,25 +33,6 @@ export default {
     { key: 'freq', label: 'Frequency', type: 'range', min: 1, max: 16, step: 0.5, default: 8 },
   ],
   draw(ctx, u, w, h, p) {
-    const cam = makeCam(u, p, w, h)
-    const A = hexToRgb(p.colA)
-    const B = hexToRgb(p.colB)
-    const C = hexToRgb(p.colC)
-    const n = Math.round(p.sources)
-    const s = p.freq * 0.03
-    const span = Math.min(w, h) * 0.3
-    raster(ctx, w, h, (i, j, W, H) => {
-      const [rx, ry] = sample(cam, (i / W) * w, (j / H) * h)
-      let acc = 0
-      for (let k = 0; k < n; k++) {
-        const a = (k / n) * Math.PI * 2
-        const sx = Math.cos(a) * span
-        const sy = Math.sin(a) * span
-        const d = Math.hypot(rx - sx, ry - sy)
-        acc += Math.sin(d * s - cam.phase)
-      }
-      const f = 0.5 + 0.5 * (acc / n)
-      return mix3(f, A, B, C)
-    })
+    fieldPass(ctx, u, w, h, p, FRAG, { uA: col(p.colA), uB: col(p.colB), uC: col(p.colC), uS: p.freq * 0.03, uN: Math.round(p.sources), uSpan: Math.min(w, h) * 0.3 })
   },
 }

@@ -10,7 +10,7 @@
  *   fx-kaleido    spin   — whole 360° turns per loop (rotation is 360-periodic)
  * The rest are static (`animated: false`).
  */
-import { AMOUNT_PARAM, runFx } from './fxCore.js'
+import { AMOUNT_PARAM, runFx, glFx, stillUnless } from './fxCore.js'
 
 const TAU = Math.PI * 2
 
@@ -117,7 +117,91 @@ function sortSegment(data, start, stride, len) {
   }
 }
 
+/* The deal path (plan 27 close-out — a moving Pixel sort held 30 fps at retina). A still source's
+ * sort keys never change, only the threshold does. So once per source, every line's pixels are put
+ * in key order (one native sort of the frame's keys, ~0.4 s at 2160×2700). A frame then needs no
+ * sort: one pass finds the segments, a second walks the line in key order and deals each pixel to
+ * the next slot of its segment — linear, whatever the threshold, and identical output (equal keys
+ * are equal pixels). Keyed on the base pixel array buffersFor hands out (a new source = a new
+ * array), and only once that array comes back unchanged on a second frame: a source that moves
+ * every frame keeps the direct path and never pays the ordering. */
+const orderCache = new WeakMap()
+let lastSd = null
+let segId = new Int32Array(0), segStart = new Int32Array(0), segCur = new Int32Array(0)
+function orderFor(sd, w, h, vertical) {
+  let R = orderCache.get(sd)
+  if (!R) {
+    const n = sd.length >> 2
+    const lum = new Float64Array(n)   /* the threshold test must match the direct path bit for bit */
+    const keys = new Float64Array(n)
+    for (let p = 0, i = 0; p < n; p++, i += 4) {
+      const l = sd[i] * 0.299 + sd[i + 1] * 0.587 + sd[i + 2] * 0.114
+      lum[p] = l
+      keys[p] = Math.round(l * 256) * 4294967296 + ((sd[i] * 256 + sd[i + 1]) * 256 + sd[i + 2]) * 256 + sd[i + 3]
+    }
+    /* every pixel's place in key order: rank by binary search into the sorted keys, ties dealt in turn */
+    const sorted = Float64Array.from(keys).sort()
+    const slot = new Uint32Array(n)
+    for (let r = 0; r < n; r++) slot[r] = r
+    const ord = new Uint32Array(n)
+    for (let p = 0; p < n; p++) {
+      const k = keys[p]
+      let lo = 0, hi = n - 1
+      while (lo < hi) { const m = (lo + hi) >>> 1; if (sorted[m] < k) lo = m + 1; else hi = m }
+      ord[slot[lo]++] = p
+    }
+    R = { lum, ord, lines: {} }
+    orderCache.set(sd, R)
+  }
+  /* per direction, each line's positions in key order (built in one walk of the global order) */
+  const dir = vertical ? 'v' : 'h'
+  if (!R.lines[dir]) {
+    const n = R.ord.length, L = new Uint16Array(n), fill = new Uint32Array(vertical ? w : h)
+    for (let r = 0; r < n; r++) {
+      const p = R.ord[r], y = (p / w) | 0, x = p - y * w
+      if (vertical) L[x * h + fill[x]++] = y
+      else L[y * w + fill[y]++] = x
+    }
+    R.lines[dir] = L
+  }
+  return R
+}
+
 function fxPixelSort(sd, od, w, h, q) {
+  const stable = sd === lastSd
+  lastSd = sd
+  if (!stable) { pixelSortDirect(sd, od, w, h, q); return }
+  const vertical = q.vertical
+  const { lum, lines } = orderFor(sd, w, h, vertical)
+  const L = lines[vertical ? 'v' : 'h']
+  const thresh = (q.threshold / 100) * 255
+  od.set(sd)
+  const out = new Uint32Array(od.buffer, od.byteOffset, od.length >> 2)
+  const src = new Uint32Array(sd.buffer, sd.byteOffset, sd.length >> 2)
+  const nLines = vertical ? w : h, along = vertical ? h : w, step = vertical ? w : 1
+  if (segId.length < along) { segId = new Int32Array(along); segStart = new Int32Array(along); segCur = new Int32Array(along) }
+  for (let l = 0; l < nLines; l++) {
+    const base = vertical ? l : l * w
+    let ns = 0, s = -1
+    for (let a = 0; a <= along; a++) {
+      if (a < along && lum[base + a * step] > thresh) {
+        if (s < 0) { s = a; segStart[ns] = a; segCur[ns] = 0 }
+        segId[a] = ns
+      } else {
+        if (s >= 0) { ns++; s = -1 }
+        if (a < along) segId[a] = -1
+      }
+    }
+    if (!ns) continue
+    const lo = l * along
+    for (let k = 0; k < along; k++) {
+      const a = L[lo + k], id = segId[a]
+      if (id >= 0) out[base + (segStart[id] + segCur[id]++) * step] = src[base + a * step]
+    }
+  }
+}
+
+function pixelSortDirect(sd, od, w, h, q) {
   const thresh = (q.threshold / 100) * 255
   const vertical = q.vertical
   od.set(sd)
@@ -187,36 +271,22 @@ function fxMirror(sd, od, w, h, q) {
 
 // Kaleidoscope — N-fold mirrored radial symmetry. Each output pixel folds its
 // angle (about the centre) into one wedge of 2π/segments, mirrored within the
-// wedge, then samples the source there (nearest, edge-clamped).
-function fxKaleidoscope(sd, od, w, h, q) {
-  const seg = Math.max(2, q.segments | 0)
-  const rot = ((q.angle || 0) * Math.PI) / 180
-  const cx = w / 2
-  const cy = h / 2
-  const wedge = TAU / seg
-  const half = wedge / 2
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const dx = x - cx
-      const dy = y - cy
-      const r = Math.sqrt(dx * dx + dy * dy)
-      let a = Math.atan2(dy, dx) - rot
-      a -= Math.floor(a / wedge) * wedge // → [0, wedge)
-      if (a > half) a = wedge - a // mirror within the wedge
-      a += rot
-      let sx = Math.round(cx + r * Math.cos(a))
-      let sy = Math.round(cy + r * Math.sin(a))
-      if (sx < 0) sx = 0; else if (sx >= w) sx = w - 1
-      if (sy < 0) sy = 0; else if (sy >= h) sy = h - 1
-      const si = (sy * w + sx) << 2
-      const di = (y * w + x) << 2
-      od[di] = sd[si]
-      od[di + 1] = sd[si + 1]
-      od[di + 2] = sd[si + 2]
-      od[di + 3] = sd[si + 3]
-    }
-  }
+// wedge, then samples the source there (nearest, edge-clamped). A fragment
+// shader (plan 27 § 3) — the per-pixel JS pass ran the frame at 15 fps.
+const KALEIDO = /* glsl */`
+uniform float uSeg, uRot;
+vec4 fx(ivec2 p) {
+  vec2 c = uRes * 0.5;
+  vec2 d = vec2(p) - c;
+  float r = length(d);
+  float wedge = 6.283185307179586 / uSeg;
+  float a = atan(d.y, d.x) - uRot;
+  a -= floor(a / wedge) * wedge;
+  if (a > wedge * 0.5) a = wedge - a;
+  a += uRot;
+  return srcAt(ivec2(floor(c + r * vec2(cos(a), sin(a)) + 0.5)));
 }
+`
 
 function fxThreshold(sd, od, w, h, q) {
   const level = (q.level / 100) * 255
@@ -240,7 +310,7 @@ export const RADAR_FX = [
   {
     id: 'fx-chromatic',
     label: 'RGB Split',
-    animated: true,
+    stillKey: stillUnless('wobble'),   /* plan 27 § 1 */
     params: [
       { key: 'offsetX', label: 'Offset X', type: 'range', min: 0, max: 50, step: 1, default: 5 },
       { key: 'offsetY', label: 'Offset Y', type: 'range', min: 0, max: 50, step: 1, default: 0 },
@@ -282,7 +352,7 @@ export const RADAR_FX = [
   {
     id: 'fx-pixelsort',
     label: 'Pixel Sort',
-    animated: true,
+    stillKey: stillUnless('sweep'),   /* plan 27 § 1 */
     params: [
       { key: 'threshold', label: 'Threshold', type: 'range', min: 0, max: 100, step: 1, default: 50 },
       { key: 'direction', label: 'Direction', type: 'select', options: AXIS_OPTIONS, default: 'horizontal' },
@@ -291,10 +361,8 @@ export const RADAR_FX = [
     ],
     apply(ctx, src, w, h, p, u) {
       const t = (p.threshold ?? 50) + (p.sweep ?? 0) * 50 * Math.sin(TAU * u)
-      runFx(ctx, src, w, h, fxPixelSort, {
-        threshold: Math.max(0, Math.min(100, t)),
-        vertical: p.direction === 'vertical',
-      }, p.amount)
+      const q = { threshold: Math.max(0, Math.min(100, t)), vertical: p.direction === 'vertical' }
+      runFx(ctx, src, w, h, fxPixelSort, q, p.amount)
     },
   },
   {
@@ -312,17 +380,17 @@ export const RADAR_FX = [
   {
     id: 'fx-kaleido',
     label: 'Kaleidoscope',
-    animated: true,
+    stillKey: stillUnless('spin'),   /* plan 27 § 1 */
     params: [
       { key: 'segments', label: 'Segments', type: 'range', min: 2, max: 16, step: 1, default: 6 },
       { key: 'angle', label: 'Angle', type: 'range', min: 0, max: 360, step: 1, default: 0 },
-      { key: 'spin', label: 'Spin · turns', type: 'range', min: -2, max: 2, step: 1, default: 0 },
+      { key: 'spin', label: 'Spin · turns', type: 'range', min: -8, max: 8, rMin: -2, rMax: 2, step: 1, default: 0 },
       AMOUNT_PARAM,
     ],
     apply(ctx, src, w, h, p, u) {
-      runFx(ctx, src, w, h, fxKaleidoscope, {
-        segments: p.segments ?? 6,
-        angle: (p.angle ?? 0) + 360 * u * Math.round(p.spin ?? 0),
+      glFx(ctx, src, w, h, KALEIDO, {
+        uSeg: Math.max(2, (p.segments ?? 6) | 0),
+        uRot: (((p.angle ?? 0) + 360 * u * Math.round(p.spin ?? 0)) * Math.PI) / 180,
       }, p.amount)
     },
   },

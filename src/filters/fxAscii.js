@@ -13,7 +13,7 @@
  * port, superset params: legacy keys (cellSize / charset / fg / bg / invert)
  * resolve unchanged.
  */
-import { AMOUNT_PARAM, mixSourceOver, registerSourceCache } from './fxCore.js'
+import { AMOUNT_PARAM, mixSourceOver, registerSourceCache, stillUnless } from './fxCore.js'
 import { NO_SWEEP, sweepStates, evalSweeps, anyReveal } from './sweeps.js'
 
 const DENSITY_RAMP = ' .:-=+*#%@'
@@ -62,10 +62,45 @@ function pixelsFor(src) {
   return d
 }
 
+/* Glyph atlas (plan 27 § 5) — fillText per cell was a fifth of the frame. Each glyph is rendered once
+ * per (font, colour) into a sprite and stamped with drawImage. Colour mode stamps WHITE sprites into
+ * one layer and tints the whole layer once (`source-in` over a per-cell colour grid) instead of a
+ * fillStyle string per cell; a glyph that leaves its cell (geometry sweep, glyph scale > 1) would
+ * take a neighbour's colour that way, so those frames keep fillText. */
+let atlasKey = ''
+const atlas = new Map()
+function spriteFor(ch, fontPx, font, color) {
+  const key = `${font}|${color}`
+  if (key !== atlasKey) { atlas.clear(); atlasKey = key }
+  let sp = atlas.get(ch)
+  if (!sp) {
+    const S = Math.ceil(fontPx * 2) + 2
+    sp = document.createElement('canvas')
+    sp.width = S
+    sp.height = S
+    const g = sp.getContext('2d')
+    g.font = font
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.fillStyle = color
+    g.fillText(ch, S / 2, S / 2)
+    atlas.set(ch, sp)
+  }
+  return sp
+}
+let layer = null
+let grid = null
+function canvasFor(c, w, h) {
+  if (!c) c = document.createElement('canvas')
+  if (c.width !== w) c.width = w
+  if (c.height !== h) c.height = h
+  return c
+}
+
 export default {
   id: 'fx-ascii',
   label: 'ASCII',
-  animated: true,
+  stillKey: stillUnless('sweeps'),   /* moves only through the sweep rig (plan 27 § 1) */
   sweeps: true,   /* stacked sweep rig (sweeps.js) — Effects panel Motion tab */
   params: [
     { ...AMOUNT_PARAM, section: 'Effect' },
@@ -133,7 +168,22 @@ export default {
     ctx.fillStyle = p.fg ?? '#f4f1ea'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.font = `${Math.max(4, step * (p.glyphScale ?? 1))}px ui-monospace, monospace`
+    const fontPx = Math.max(4, step * (p.glyphScale ?? 1))
+    const font = `${fontPx}px ui-monospace, monospace`
+    ctx.font = font
+    /* the atlas path, unless a coloured glyph can leave its cell (see the atlas note) */
+    const stamp = !useColor || (!geo && (p.glyphScale ?? 1) <= 1)
+    const cols = Math.ceil(sw / step), rows = Math.ceil(sh / step)
+    let g = ctx, cells = null
+    if (stamp && useColor) {
+      layer = canvasFor(layer, sw, sh)
+      g = layer.getContext('2d')
+      g.setTransform(1, 0, 0, 1, 0, 0)
+      g.clearRect(0, 0, sw, sh)
+      grid = canvasFor(grid, cols, rows)
+      cells = grid.getContext('2d').createImageData(cols, rows)
+    }
+    const ink = useColor ? '#ffffff' : (p.fg ?? '#f4f1ea')
 
     for (let y = 0; y < sh; y += step) {
       for (let x = 0; x < sw; x += step) {
@@ -184,6 +234,27 @@ export default {
         }
         if (!ch || ch === ' ') continue
 
+        if (stamp) {
+          if (cells) {
+            const ci = Math.round(Math.max(0, Math.min(sw - 1, cx))), cj = Math.round(Math.max(0, Math.min(sh - 1, cy)))
+            const i = (cj * sw + ci) << 2, o = (((y / step) | 0) * cols + ((x / step) | 0)) << 2
+            cells.data[o] = Math.floor(adjust(data[i])); cells.data[o + 1] = Math.floor(adjust(data[i + 1]))
+            cells.data[o + 2] = Math.floor(adjust(data[i + 2])); cells.data[o + 3] = 255
+          }
+          const sp = spriteFor(ch, fontPx, font, ink)
+          const half = sp.width / 2
+          if (geo) {
+            g.save()
+            g.translate(cx + pkt.offX * step, cy + pkt.offY * step)
+            g.rotate(pkt.rot)
+            g.scale(pkt.scaleMul, pkt.scaleMul)
+            g.drawImage(sp, -half, -half)
+            g.restore()
+          } else {
+            g.drawImage(sp, cx - half, cy - half)
+          }
+          continue
+        }
         if (useColor) ctx.fillStyle = colorAt(cx, cy)
         if (geo) {
           ctx.save()
@@ -196,6 +267,15 @@ export default {
           ctx.fillText(ch, cx, cy)
         }
       }
+    }
+    if (cells) {
+      /* tint the white glyph layer by its cells' colours in one composite */
+      grid.getContext('2d').putImageData(cells, 0, 0)
+      g.globalCompositeOperation = 'source-in'
+      g.imageSmoothingEnabled = false
+      g.drawImage(grid, 0, 0, cols * step, rows * step)
+      g.globalCompositeOperation = 'source-over'
+      ctx.drawImage(layer, 0, 0, sw, sh)
     }
     ctx.restore()
     mixSourceOver(ctx, src, w, h, p.amount) // dry/wet: photo back over the glyphs

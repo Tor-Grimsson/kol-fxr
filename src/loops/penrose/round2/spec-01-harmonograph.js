@@ -10,9 +10,9 @@ import { clear, strokeOutline, wrapLoop, pc } from '../common.js'
 const PARAMS          = [
   { key: 'f1', type: 'range', min: 1, max: 7, default: 3, step: 0.05, label: 'freq 1' },
   { key: 'f2', type: 'range', min: 1, max: 7, default: 4, step: 0.05, label: 'freq 2' },
-  { key: 'phi', type: 'range', min: 0, max: 6.28, default: 1.57, step: 0.05, label: 'phase' },
-  { key: 'damp', type: 'range', min: 0, max: 0.15, default: 0.018, step: 0.001 },
-  { key: 'trail', type: 'int', min: 200, max: 4000, default: 1800, step: 100 },
+  { key: 'phi', type: 'range', min: 0, max: 6.28, default: 1.57, step: 0.01, label: 'phase' },
+  { key: 'damp', label: 'damp', type: 'range', min: 0, max: 0.15, default: 0.018, step: 0.001 },
+  { key: 'trail', label: 'trail', type: 'int', min: 200, max: 4000, default: 1800, step: 100 },
   { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]
 

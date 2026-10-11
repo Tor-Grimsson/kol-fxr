@@ -18,7 +18,7 @@ export default {
     ...SHAPE_FILL_PARAMS,
     { key: 'turns', label: 'Turns', type: 'range', min: 2, max: 8, step: 1, default: 5, noRandom: true },
     { key: 'weight', label: 'Weight', type: 'range', min: 1, max: 30, step: 0.5, default: 3 },
-    { key: 'spin', label: 'Spin', type: 'range', min: 1, max: 4, step: 1, default: 1 },
+    { key: 'spin', label: 'Spin', type: 'range', min: -8, max: 8, rMin: 1, rMax: 4, step: 1, default: 1 },
     { key: 'size', label: 'Reach', type: 'range', min: 0.6, max: 1, step: 0.02, default: 0.92 },
     { key: 'showGuide', label: 'Guides', type: 'toggle', default: false },
   ],

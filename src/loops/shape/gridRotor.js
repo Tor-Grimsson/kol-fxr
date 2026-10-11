@@ -13,7 +13,7 @@ export default {
     { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#0b0b0e' },
     { key: 'stroke', label: 'Stroke', type: 'color', role: 'fg', default: '#e8e4dc' },
     { key: 'cols', label: 'Columns', type: 'range', min: 3, max: 24, step: 1, default: 10, noRandom: true },
-    { key: 'turns', label: 'Turns', type: 'range', min: 1, max: 3, step: 1, default: 1 },
+    { key: 'turns', label: 'Turns', type: 'range', min: 1, max: 8, rMin: 1, rMax: 3, step: 1, default: 1 },
     { key: 'wavesX', label: 'Waves X', type: 'range', min: 0, max: 6, step: 1, default: 2 },
     { key: 'wavesY', label: 'Waves Y', type: 'range', min: 0, max: 6, step: 1, default: 1 },
     { key: 'len', label: 'Length', type: 'range', min: 0.3, max: 1, step: 0.05, default: 0.75 },

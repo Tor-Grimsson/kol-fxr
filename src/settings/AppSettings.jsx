@@ -47,6 +47,8 @@ const ASPECT_OPTIONS = ASPECTS
   .map((a) => ({ value: a.id, label: a.label }))
   .filter((o) => o.value !== 'custom')
 
+const PREVIEW_RES_OPTIONS = [{ value: 'full', label: 'Full' }, { value: 'half', label: 'Half' }]
+
 const LOOP_LENGTH_OPTIONS = [2, 4, 8, 12, 16].map((n) => ({ value: n, label: `${n} s` }))
 
 /* The sections, as data. `s` is the live store — every `render` reads it, so a
@@ -64,6 +66,22 @@ const sectionsFor = (s) => [
            `ThemeToggle` writes, so the header's toggle and this row stay in
            step. `system` is still reachable from the header control. */
         render: () => <ThemeDarkSwitch />,
+      },
+      {
+        label: 'Preview resolution',
+        align: 'fill',
+        /* Half renders the live canvases at half the pixel ratio — smoother playback for recording
+           the pixel-y effects; exports always render full (lib/previewScale.js) */
+        render: () => (
+          <SettingsChoice
+            options={PREVIEW_RES_OPTIONS}
+            value={s.previewRes}
+            onChange={(v) => setAppSetting('previewRes', v)}
+            tone="sunken"
+            className="w-full max-w-24"
+            ariaLabel="Preview resolution"
+          />
+        ),
       },
     ],
   },

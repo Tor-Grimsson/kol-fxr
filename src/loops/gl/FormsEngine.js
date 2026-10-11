@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { formCount, writePositions, writeVParam } from './formsShapes.js'
+import { previewDpr } from '../../editor/lib/previewScale.js'
 
 /* FormsEngine — parametric point-cloud forms (helix + creatures) as a real 3D
  * THREE.Points cloud: the de-lofi'd cousin of the interfaces lofi widgets. The
@@ -35,7 +36,7 @@ export default class FormsEngine {
     this.autoLoop = autoLoop
     this.canvas = canvas
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, alpha: true })
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+    this.renderer.setPixelRatio(previewDpr())
     this.renderer.setClearColor(new THREE.Color(BG), 1)
 
     this.scene = new THREE.Scene()
@@ -135,6 +136,7 @@ export default class FormsEngine {
   }
 
   resize(w, h) {
+    this.renderer.setPixelRatio(previewDpr())   /* Settings › Preview resolution — re-read on every resize */
     this.renderer.setSize(w, h, false)
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()

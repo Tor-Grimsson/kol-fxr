@@ -31,9 +31,14 @@ function buf(role, w, h) {
 }
 
 /* rows of `src` drawn into `g` as a plane tilted `a` radians about the horizontal axis (focal `f`) */
+/* the strips are BANDS, not single rows — a 1500-row source drew 1500 strips a frame; a band of
+   ~H/400 rows is the same picture at a quarter of the draw calls (plan 26 follow-up: "super low
+   framerate") */
+const bandOf = (n) => Math.max(1, Math.round(n / 400))
 function tiltRows(g, src, W, H, a, f) {
   const s = Math.sin(a), co = Math.cos(a)
-  for (let yo = 0; yo < H; yo++) {
+  const B = bandOf(H)
+  for (let yo = 0; yo < H; yo += B) {
     const y = yo - H / 2
     const den = f * co - y * s
     if (den <= 1e-6) continue
@@ -41,12 +46,13 @@ function tiltRows(g, src, W, H, a, f) {
     const row = ys + H / 2
     if (row < 0 || row >= H) continue
     const k = f / (f + ys * s)                     /* that row's width at its depth */
-    g.drawImage(src, 0, row | 0, W, 1, W / 2 - (W * k) / 2, yo, W * k, 1)
+    g.drawImage(src, 0, row | 0, W, B, W / 2 - (W * k) / 2, yo, W * k, B)
   }
 }
 function tiltCols(g, src, W, H, a, f) {
   const s = Math.sin(a), co = Math.cos(a)
-  for (let xo = 0; xo < W; xo++) {
+  const B = bandOf(W)
+  for (let xo = 0; xo < W; xo += B) {
     const x = xo - W / 2
     const den = f * co - x * s
     if (den <= 1e-6) continue
@@ -54,7 +60,7 @@ function tiltCols(g, src, W, H, a, f) {
     const col = xs + W / 2
     if (col < 0 || col >= W) continue
     const k = f / (f + xs * s)
-    g.drawImage(src, col | 0, 0, 1, H, xo, H / 2 - (H * k) / 2, 1, H * k)
+    g.drawImage(src, col | 0, 0, B, H, xo, H / 2 - (H * k) / 2, B, H * k)
   }
 }
 
@@ -67,18 +73,27 @@ export const MEDIA_FX = [
     label: 'Media motion',
     animated: true,
     first: true,
+    /* ONE SECTION EACH, IN ORDER (the user: sections read Tile · Motion · Tile · Tilt · Motion · Tilt —
+       AutoControls groups consecutive params). Drift and Spin stay WHOLE numbers — the loop only
+       closes on whole tiles / turns — but on a range wide enough to be fast (±16 tiles, ±8 turns per
+       loop); Zoom, Tilt, Swing and Perspective are continuous. */
     params: [
-      range('tileX', 'Tile X', 1, 8, 1, 1, 'Tile'),
-      range('tileY', 'Tile Y', 1, 8, 1, 1, 'Tile'),
-      range('driftX', 'Drift X', -4, 4, 1, 0, 'Motion', { tab: 'anim' }),
-      range('driftY', 'Drift Y', -4, 4, 1, 0, 'Motion', { tab: 'anim' }),
-      range('spin', 'Spin', -4, 4, 1, 0, 'Motion', { tab: 'anim' }),
-      range('zoom', 'Zoom', 0.25, 4, 0.05, 1, 'Tile'),
-      range('tiltX', 'Tilt X', -60, 60, 1, 0, 'Tilt'),
-      range('tiltY', 'Tilt Y', -60, 60, 1, 0, 'Tilt'),
-      range('swing', 'Swing', 0, 45, 1, 0, 'Motion', { tab: 'anim' }),
-      range('perspective', 'Perspective', 0.5, 6, 0.1, 2, 'Tilt'),
+      range('tileX', 'Tile X', 1, 16, 1, 1, 'Tile'),
+      range('tileY', 'Tile Y', 1, 16, 1, 1, 'Tile'),
+      range('zoom', 'Zoom', 0.25, 4, 0.01, 1, 'Tile'),
+      range('tiltX', 'Tilt X', -60, 60, 0.5, 0, 'Tilt'),
+      range('tiltY', 'Tilt Y', -60, 60, 0.5, 0, 'Tilt'),
+      range('perspective', 'Perspective', 0.5, 6, 0.05, 2, 'Tilt'),
+      range('driftX', 'Drift X', -16, 16, 1, 0, 'Motion', { tab: 'anim' }),
+      range('driftY', 'Drift Y', -16, 16, 1, 0, 'Motion', { tab: 'anim' }),
+      range('spin', 'Spin', -8, 8, 1, 0, 'Motion', { tab: 'anim' }),
+      range('swing', 'Swing', 0, 45, 0.5, 0, 'Motion', { tab: 'anim' }),
     ],
+    /* still while nothing moves — runChain keeps the frame and every later stage keeps its cache */
+    stillKey(p) {
+      if (int(p.driftX) || int(p.driftY) || int(p.spin) || (p.swing ?? 0)) return null
+      return ['tileX', 'tileY', 'zoom', 'tiltX', 'tiltY', 'perspective'].map((k) => p[k]).join('|') + '|' + p.id
+    },
     apply(ctx, src, w, h, p, u) {
       const tx = Math.max(1, int(p.tileX, 1)), ty = Math.max(1, int(p.tileY, 1))
       const zoom = p.zoom ?? 1
@@ -89,7 +104,10 @@ export const MEDIA_FX = [
       const tilted = Math.abs(ax) > 1e-4 || Math.abs(ay) > 1e-4
 
       /* 1 — the moving pattern, into the destination or (when tilting) a buffer at the source's pixels */
-      const k = src.width / w || 1
+      /* the tilt's buffers at ≤ 1× css, not the 2× backing — a quarter of the pixels; the profile showed
+         the frame's GPU work flushing in the next stage's readback (plan 26 follow-up, "super low
+         framerate"), and every stage after this one resamples anyway */
+      const k = Math.min(1, src.width / w || 1)
       const W = Math.round(w * k), H = Math.round(h * k)
       const flat = tilted ? buf('flat', W, H) : null
       const g = flat ? flat.getContext('2d') : ctx

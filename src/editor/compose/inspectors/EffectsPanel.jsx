@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Dropdown, LabeledControl, SegmentedToggle, SettingsRow, ToggleSwitch, Slider, Input, Tooltip, XYPad } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, LabeledControl, LabeledControlSection, SegmentedToggle, SettingsRow, ToggleSwitch, Slider, Input, Tooltip, XYPad } from '@kolkrabbi/kol-component'
 import { PickerRow, PickerDropdown } from './TreePicker'
 import { useComposeState } from '../state'
 import { findLayerDeep } from '../helpers'
@@ -331,95 +331,79 @@ function StageRow({ stage, selected, options, onSelect, onPick, onToggle, onRemo
  * Exported: labs' Motion tab (LabsParams) renders the same rig; `inline`
  * is its skin — enable becomes the DS ToggleSwitch and the sliders go
  * label-left with a value readout (the labs sweep card). */
+/* A sweep's rows as a schema, so the rail draws them exactly like every other param (plan 26
+ * follow-up; the user: "these sliders are very buggy … whats with this container? why cant it just be
+ * a pane section like everything else? and why are the labels lowercase or sentence case?"). The old
+ * card defined its slider row as a component INSIDE the render — every change remounted every
+ * slider, so a drag died a few pixels in and Amount never reached its end. Labels say what they set:
+ * "Speed", not "Speed · cycles" — the unit is the loop's. */
+const sweepSchema = (sw) => [
+  { key: 'shape', label: 'Shape', type: 'select', options: SWEEP_SHAPE_OPTIONS, default: 'linear' },
+  { key: 'target', label: 'Target', type: 'select', options: SWEEP_TARGET_OPTIONS, default: 'brightness' },
+  { key: 'travel', label: 'Travel', type: 'select', options: SWEEP_TRAVEL_OPTIONS, default: 'forward' },
+  ...(sw.target === 'reveal' ? [] : [{ key: 'amount', label: 'Amount', type: 'range', min: -1, max: 1, step: 0.01, default: 0.6 }]),
+  { key: 'speed', label: 'Speed', type: 'range', min: -8, max: 8, step: 1, default: 1 },
+  { key: 'width', label: 'Width', type: 'range', min: 0.05, max: 1, step: 0.01, default: 0.35 },
+  ...(ANGLED_SHAPES.has(sw.shape ?? 'linear') ? [{ key: 'angle', label: 'Angle', type: 'range', min: 0, max: 360, step: 1, default: 0 }] : []),
+]
+
+/* Stacked sweep rig (labs SweepControls over the sweeps array): one-click
+ * presets append a tuned sweep, plus add/remove/edit custom. Speed is whole
+ * wavefront cycles per loop (integer — the editor's loop-safe time model).
+ * Exported: labs' Motion tab (LabsParams) renders the same rig. Each sweep is
+ * its own rail section — header row (its shape · on/off · remove), its rows,
+ * its origin pad. */
 export function SweepStack({ sweeps, onChange, inline = false }) {
   const cs = useControlSize()
   const shapeLabel = (v) => SWEEP_SHAPE_OPTIONS.find((s) => s.value === v)?.label ?? v
   const add = (preset) => onChange([...sweeps, preset ? makeSweep(preset.shape, preset) : makeSweep()])
   const removeAt = (i) => onChange(sweeps.filter((_, j) => j !== i))
-  const setField = (i, k, v) => onChange(sweeps.map((sw, j) => (j === i ? { ...sw, [k]: v } : sw)))
-
-  /* The DS Slider is already the row (track + editable readout); inline
-   * swaps its sentence-case label for the labs uppercase pair. */
-  const Row = ({ label, ...slider }) => inline ? (
-    <div className="flex items-center gap-3">
-      <span className="kol-helper-10 tracking-widest text-meta whitespace-nowrap">{label}</span>
-      <div className="flex-1 min-w-0"><Slider {...slider} /></div>
-    </div>
-  ) : (
-    <LabeledControl label={label}><Slider {...slider} /></LabeledControl>
-  )
+  const patchAt = (i, patch) => onChange(sweeps.map((sw, j) => (j === i ? { ...sw, ...patch } : sw)))
 
   return (
-    <div className="flex flex-col gap-3">
-      <span className="kol-eyebrow text-fg-80">Motion</span>
-      <PickerDropdown
-        options={[{ value: '', label: 'Add motion…' }, ...SWEEP_PRESETS.map((p) => ({ value: p.name, label: p.name }))]}
-        value=""
-        onChange={(name) => {
-          const p = SWEEP_PRESETS.find((x) => x.name === name)
-          if (p) add(p)
-        }}
-      />
+    <>
+      <LabeledControlSection label="Motion" divided>
+        <PickerDropdown
+          options={[{ value: '', label: 'Add motion…' }, ...SWEEP_PRESETS.map((p) => ({ value: p.name, label: p.name }))]}
+          value=""
+          onChange={(name) => {
+            const p = SWEEP_PRESETS.find((x) => x.name === name)
+            if (p) add(p)
+          }}
+        />
+        <Button tone="primary" size={cs} className="w-full" iconLeft="plus" iconSize={12} onClick={() => add()}>
+          Add custom sweep
+        </Button>
+      </LabeledControlSection>
       {sweeps.map((sw, i) => {
         const enabled = sw.enabled !== false
-        const isReveal = sw.target === 'reveal'
-        const angled = ANGLED_SHAPES.has(sw.shape ?? 'linear')
         return (
-          <div key={i} className="flex flex-col gap-2 p-2 rounded bg-oq-04">
+          <LabeledControlSection key={i} divided>
             <div className="flex items-center gap-2">
-              {inline ? (
-                <>
-                  <span className={`kol-helper-10 tracking-widest ${enabled ? 'text-emphasis' : 'text-meta'}`}>
-                    {shapeLabel(sw.shape ?? 'linear')}
-                  </span>
-                  <ToggleSwitch size={cs} checked={enabled} onChange={(v) => setField(i, 'enabled', v)} />
-                  <div className="flex-1" />
-                </>
-              ) : (
-                <>
-                  <Tooltip label={enabled ? 'Disable sweep' : 'Enable sweep'}><Button
-                    tone="ghost" quiet size={cs} iconOnly={enabled ? 'eye-on' : 'eye-off'}
-                    aria-label={enabled ? 'Disable sweep' : 'Enable sweep'}
-                    onClick={() => setField(i, 'enabled', !enabled)}
-                    className="shrink-0"
-                  /></Tooltip>
-                  <span className={`kol-helper-12 flex-1 truncate ${enabled ? 'text-emphasis' : 'text-meta'}`}>
-                    {shapeLabel(sw.shape ?? 'linear')}
-                  </span>
-                </>
-              )}
+              <span className={`kol-eyebrow flex-1 truncate ${enabled ? 'text-fg-80' : 'text-meta'}`}>{shapeLabel(sw.shape ?? 'linear')}</span>
+              <ToggleSwitch size={cs} checked={enabled} onChange={(v) => patchAt(i, { enabled: v })} />
               <Tooltip label="Delete sweep"><Button tone="ghost" quiet size={cs} iconOnly="x" aria-label="Delete sweep" className="shrink-0" onClick={() => removeAt(i)} /></Tooltip>
             </div>
             {enabled && (
               <>
-                <PickerDropdown options={SWEEP_SHAPE_OPTIONS} value={sw.shape ?? 'linear'} onChange={(v) => setField(i, 'shape', v)} />
-                <PickerDropdown options={SWEEP_TARGET_OPTIONS} value={sw.target ?? 'brightness'} onChange={(v) => setField(i, 'target', v)} />
-                {!isReveal && (
-                  <Row label="Amount" min={-1} max={1} step={0.05} value={sw.amount ?? 0.6} onChange={(v) => setField(i, 'amount', v)} />
-                )}
-                <Row label="Speed · cycles" min={-4} max={4} step={1} value={sw.speed ?? 1} onChange={(v) => setField(i, 'speed', v)} />
-                <Row label="Width" min={0.05} max={1} step={0.01} value={sw.width ?? 0.35} onChange={(v) => setField(i, 'width', v)} />
-                {angled && (
-                  <Row label="Angle" min={0} max={360} step={1} value={sw.angle ?? 0} onChange={(v) => setField(i, 'angle', v)} />
-                )}
-                {/* TRAVEL + ORIGIN (plan 26 § 5) — ping-pong runs out and back on whole cycles; the
-                    origin is a pad over the frame (top-left = 0,0), not two blind sliders */}
-                <PickerDropdown options={SWEEP_TRAVEL_OPTIONS} value={sw.travel ?? 'forward'} onChange={(v) => setField(i, 'travel', v)} />
+                <AutoControls schema={sweepSchema(sw)} layer={sw} setProp={(k, v) => patchAt(i, { [k]: v })} inline={inline} />
+                {/* origin — a pad over the frame (top-left = 0,0), in the control column like any row */}
                 {(sw.shape ?? 'linear') !== 'noise' && (
-                  <XYPad
-                    xValue={sw.cx ?? 0.5} yValue={sw.cy ?? 0.5} xMin={0} xMax={1} yMin={1} yMax={0}
-                    xLabel="Origin X" yLabel="Origin Y"
-                    onChange={(x, y) => onChange(sweeps.map((s, j) => (j === i ? { ...s, cx: Math.round(x * 100) / 100, cy: Math.round(y * 100) / 100 } : s)))}
-                  />
+                  /* a block box — SettingsRow's inline-flex wrapper left the square pad no width (a lone puck) */
+                  <LabeledControl inline label="ORIGIN" labelWidth={RAIL_LABEL_W}>
+                    <div className="w-full min-w-0">
+                      <XYPad
+                        xValue={sw.cx ?? 0.5} yValue={sw.cy ?? 0.5} xMin={0} xMax={1} yMin={1} yMax={0}
+                        onChange={(x, y) => patchAt(i, { cx: Math.round(x * 100) / 100, cy: Math.round(y * 100) / 100 })}
+                      />
+                    </div>
+                  </LabeledControl>
                 )}
               </>
             )}
-          </div>
+          </LabeledControlSection>
         )
       })}
-      <Button tone="primary" size={cs} className="w-full" iconLeft="plus" iconSize={12} onClick={() => add()}>
-        Add custom sweep
-      </Button>
-    </div>
+    </>
   )
 }

@@ -19,7 +19,7 @@ export default {
     ...FILL_PARAMS,
     { key: 'minR', label: 'Min radius', type: 'range', min: 0.05, max: 0.4, step: 0.01, default: 0.12 },
     { key: 'maxR', label: 'Max radius', type: 'range', min: 0.3, max: 0.62, step: 0.01, default: 0.46 },
-    { key: 'spin', label: 'Spin · turns', type: 'range', min: 0, max: 3, step: 1, default: 1 },
+    { key: 'spin', label: 'Spin · turns', type: 'range', min: -8, max: 8, rMin: 0, rMax: 3, step: 1, default: 1 },
   ],
   draw(ctx, u, w, h, p) {
     ctx.fillStyle = p.bg

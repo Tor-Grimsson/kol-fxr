@@ -12,7 +12,7 @@ const PARAMS          = [
   { key: 'res',  type: 'int',   min: 80,  max: 200, default: 128, step: 16, label: 'grid res' },
   { key: 'ri',   type: 'int',   min: 2,   max: 8,   default: 4,             label: 'inner radius' },
   { key: 'ro',   type: 'int',   min: 5,   max: 18,  default: 12,            label: 'outer radius' },
-  { key: 'b1',   type: 'range', min: 0.2, max: 0.4, default: 0.278, step: 0.005, label: 'birth low' },
+  { key: 'b1',   type: 'range', min: 0.2, max: 0.4, default: 0.278, step: 0.002, label: 'birth low' },
   { key: 'b2',   type: 'range', min: 0.3, max: 0.6, default: 0.365, step: 0.005, label: 'birth high' },
   { key: 'dt',   type: 'range', min: 0.05, max: 0.4, default: 0.1, step: 0.01,   label: 'timestep' },
   { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },

@@ -17,7 +17,7 @@ export default {
     { key: 'amp', label: 'Wobble', type: 'range', min: 0, max: 0.4, step: 0.02, default: 0.18 },
     { key: 'lobes', label: 'Lobes', type: 'range', min: 2, max: 8, step: 1, default: 4, noRandom: true },
     { key: 'size', label: 'Size', type: 'range', min: 0.3, max: 0.6, step: 0.01, default: 0.42 },
-    { key: 'spin', label: 'Spin', type: 'range', min: 0, max: 3, step: 1, default: 1 },
+    { key: 'spin', label: 'Spin', type: 'range', min: -8, max: 8, rMin: 0, rMax: 3, step: 1, default: 1 },
   ],
   draw(ctx, u, w, h, p) {
     ctx.fillStyle = p.bg

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { writePositions, writeVParam, buildIndex, isWrapped } from './envScenes.js'
+import { previewDpr } from '../../editor/lib/previewScale.js'
 
 /* EnvironmentEngine — abstract mood scenes (mountain / ocean / tunnel) as a
  * single displaced grid mesh. Mirrors FormsEngine's contract (camera / clock /
@@ -23,7 +24,7 @@ export default class EnvironmentEngine {
     this.autoLoop = autoLoop
     this.canvas = canvas
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, alpha: true })
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+    this.renderer.setPixelRatio(previewDpr())
     this.renderer.setClearColor(new THREE.Color(BG), 1)
 
     this.scene = new THREE.Scene()
@@ -113,6 +114,7 @@ export default class EnvironmentEngine {
   }
 
   resize(w, h) {
+    this.renderer.setPixelRatio(previewDpr())   /* Settings › Preview resolution — re-read on every resize */
     this.renderer.setSize(w, h, false)
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()

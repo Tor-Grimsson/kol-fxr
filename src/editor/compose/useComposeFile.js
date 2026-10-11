@@ -11,6 +11,7 @@ import { transport } from '../params/transport'
 import { downloadBlob } from '../lib/download'
 import { PRESET_SIZES } from '../shell/aspects'
 import { makeZip } from '../lib/zipStore'
+import { atFullRes } from '../lib/previewScale'
 
 /**
  * useComposeFile — the compose frame's save / save-as / export actions,
@@ -177,23 +178,25 @@ export function useComposeFile() {
     if (hasKineticLayer(resolvedLayers)) await pack('motion')?.warmFontCss()
     await warmImageSrcs(resolvedLayers)
   }
-  const onExportSvg = async () => {
+  /* every export renders at full resolution, whatever Settings › Preview resolution says — the live
+     canvases it snapshots are lifted first (lib/previewScale.js) */
+  const onExportSvg = () => atFullRes(async () => {
     const args = buildArgs()
     await warmExportFonts(args.layers)
     downloadComposeSvg(buildLayersSvg(args), `compose-${canvasW}x${canvasH}-${Date.now().toString(36)}.svg`)
-  }
+  })
   /* PNG takes the footer's 1×/2×/3× scale on top of the set W×H (the canvas
    * carries real output pixels; scale is a resolution bump). Guarded so
    * event-object callers (topbar menu onClick) fall back to 1×. SVG is
    * vector — scale doesn't apply. */
-  const onExportPng = async (scale) => {
+  const onExportPng = (scale) => atFullRes(async () => {
     const k = [1, 2, 3].includes(scale) ? scale : 1
     const args = buildArgs()
     await warmExportFonts(args.layers)
     /* rasterScale bakes snapshot/redraw rasters (2d loops, video frames)
      * inside the SVG at k× so they stay crisp when the whole SVG scales. */
     downloadComposePng(buildLayersSvg({ ...args, rasterScale: k }), `compose-${canvasW * k}x${canvasH * k}-${Date.now().toString(36)}.png`, k)
-  }
+  })
 
   /* Render the current frame at an ARBITRARY aspect preset + @Nx scale to a
    * PNG Blob (no download) — the batch-export matrix loops this. The aspect
@@ -219,7 +222,7 @@ export function useComposeFile() {
    * is paused for the run so every size captures the SAME live moment, then
    * restored. `onProgress(done, total)` drives the N/M counter; filenames
    * encode preset+scale (e.g. `compose-9x16@2x.png`). */
-  const runBatchExport = async (jobs, onProgress) => {
+  const runBatchExport = (jobs, onProgress) => atFullRes(async () => {
     if (!jobs?.length) return
     const wasPlaying = transport.isPlaying()
     if (wasPlaying) transport.pause()
@@ -239,7 +242,7 @@ export function useComposeFile() {
     } finally {
       if (wasPlaying) transport.play()
     }
-  }
+  })
 
   /* Bake exactly one transport loop to webm, fully OFFLINE: seek t = i/N per
    * frame, rasterize the resolved frame SVG onto a scratch canvas, and encode
@@ -254,7 +257,7 @@ export function useComposeFile() {
    * transport t + play state are restored after the bake.
    * ponytail: Mediabunny (dynamic import, code-split) — supersedes webm-muxer.
    * WebCodecs-gated — Safari no-ops until it ships VideoEncoder. */
-  const onExportWebm = async (scale, onProgress) => {
+  const onExportWebm = (scale, onProgress) => atFullRes(async () => {
     if (typeof VideoEncoder === 'undefined') return
     const k = [1, 2, 3].includes(scale) ? scale : 1
     /* Warm text + kinetic fonts once — every baked frame builds sync from
@@ -313,7 +316,7 @@ export function useComposeFile() {
       transport.seek(prevT)
       if (wasPlaying) transport.play()
     }
-  }
+  })
 
   /* Live record — capture whatever's happening on screen in REAL time
    * (transport running, params being tweaked), the complement to onExportWebm's

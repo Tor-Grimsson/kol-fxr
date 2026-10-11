@@ -65,3 +65,9 @@ ruling if you want them the same.
 All three. Then `/labs` with both rails visible is the check — no surface in
 kol-ds-ui renders `useDragResize`, so the right rail's wake is source-verified
 only and yours is the first real test.
+
+## Adopted — 2026-08-30 (squared 2026-10-10)
+
+Bumped the same day; labs' right rail runs `useGrabEdge` (wake/travel/dwell) — recorded in AGENT-CONTEXT's 2026-08-30 rails entry. Now on component 0.251.0 · shell 0.63.0 · framework 0.49.0.
+
+**Remainder here:** none.

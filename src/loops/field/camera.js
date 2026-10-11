@@ -10,7 +10,7 @@ import { TAU } from '../lib/util.js'
 
 export const CAMERA_SCHEMA = [
   { key: 'camZoom', label: 'Zoom', type: 'range', min: 0.25, max: 3, step: 0.05, default: 1 },
-  { key: 'camFlow', label: 'Flow', type: 'range', min: 0, max: 4, step: 1, default: 1 },
+  { key: 'camFlow', label: 'Flow', type: 'range', min: -8, max: 8, rMin: 0, rMax: 4, step: 1, default: 1 },
   { key: 'camAngle', label: 'Angle', type: 'range', min: 0, max: 360, step: 1, default: 0 },
 ]
 

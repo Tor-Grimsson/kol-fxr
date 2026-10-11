@@ -141,7 +141,7 @@ export default {
     { key: 'posY', label: 'Position Y', type: 'range', min: -1, max: 1, step: 0.02, default: 0 },
     { key: 'baseScale', label: 'Scale', type: 'range', min: 0.3, max: 2, step: 0.05, default: 1 },
     // Frame (whole-figure sweep; flow pans whole frames ⇒ seamless)
-    { key: 'flow', label: 'Flow', type: 'range', min: 0, max: 3, step: 1, default: 0, tab: 'anim', section: 'Frame' },
+    { key: 'flow', label: 'Flow', type: 'range', min: -8, max: 8, rMin: 0, rMax: 3, step: 1, default: 0, tab: 'anim', section: 'Frame' },
     { key: 'panDir', label: 'Direction', type: 'select', options: DIR_OPTIONS, default: 'right', tab: 'anim', section: 'Frame' },
     { key: 'zoom', label: 'Zoom', type: 'range', min: 0.3, max: 3, step: 0.05, default: 1, tab: 'anim', section: 'Frame' },
     { key: 'angle', label: 'Angle', type: 'range', min: 0, max: 360, step: 1, default: 0, tab: 'anim', section: 'Frame' },

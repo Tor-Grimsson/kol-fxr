@@ -186,7 +186,7 @@ export default {
     { key: 'wings', label: 'Wings', type: 'range', min: 2, max: 6, step: 1, default: 3 },
     { key: 'perWing', label: 'Per wing', type: 'range', min: 1, max: 5, step: 1, default: 3 },
     { key: 'lines', label: 'Lines', type: 'range', min: 1, max: 24, step: 1, default: 6 },
-    { key: 'reach', label: 'Reach', type: 'range', min: 0.2, max: 1, step: 0.02, default: 0.45 },
+    { key: 'reach', label: 'Reach', type: 'range', min: 0.2, max: 1, step: 0.01, default: 0.45 },
     { key: 'ballSpeed', label: 'Ball speed', type: 'range', min: 0.25, max: 3, step: 0.05, default: 1, tab: 'anim', section: 'Motion' },
     { key: 'lineSpeed', label: 'Line speed', type: 'range', min: 0, max: 1, step: 0.01, default: 0.22, tab: 'anim', section: 'Motion' },
     { key: 'pull', label: 'Pull', type: 'range', min: 0, max: 0.5, step: 0.01, default: 0.18 },

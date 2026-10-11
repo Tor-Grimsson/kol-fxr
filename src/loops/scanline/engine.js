@@ -117,6 +117,20 @@ function internalField(field, nx, ny, ph, freq, lens, seed) {
 // accumulator; amp is the displacement amplitude for that path.
 // `spinAng` (radians) rotates the radial/rings/spiral layout — TAU·u·turns from
 // the caller, integer turns ⇒ seamless; rows/columns have no centre to turn about.
+/* THE PATHS ARE GEOMETRY, NOT TIME (the user, 2026-10-10: "super low framerate"; the profile put the
+ * per-frame rebuild at ~14% of a frame). They depend on the layout params, the size and the spin
+ * angle only — so a frame that changes none of those reuses the last set. Read-only downstream. */
+const pathMemo = new Map()   /* ponytail: 8 entries — a grid draws two geometries a frame, several layers share it */
+function pathsFor(geo, W, H, p, spinAng) {
+  const key = `${geo}|${W}|${H}|${p.rows}|${p.arms}|${p.rayCount}|${p.ringCount}|${p.swirl}|${p.turns}|${spinAng}`
+  let paths = pathMemo.get(key)
+  if (!paths) {
+    paths = buildPaths(geo, W, H, p, spinAng)
+    pathMemo.set(key, paths)
+    if (pathMemo.size > 8) pathMemo.delete(pathMemo.keys().next().value)
+  }
+  return paths
+}
 function buildPaths(geo, W, H, p, spinAng) {
   const step = 2
   const out = []
@@ -293,7 +307,7 @@ function renderScanlines(ctx, u, W, H, p) {
   ctx.translate(-W / 2, -H / 2)
 
   for (const geo of geos) {
-    const paths = buildPaths(geo, W, H, p, spinAng)
+    const paths = pathsFor(geo, W, H, p, spinAng)
     const crossAxis = geo === 'rows' ? 'x' : geo === 'columns' ? 'y' : null
     let prev = null
     for (let li = 0; li < paths.length; li++) {
@@ -349,11 +363,17 @@ function renderScanlines(ctx, u, W, H, p) {
         ctx.stroke()
       } else {
         const base = markSize * 1.6
+        /* ONE PATH PER ROW (the user, 2026-10-10: "super low framerate"): a fill per dot was thousands of
+           fill calls a frame; the row's circles as subpaths of one path fill the same pixels (same
+           winding, nonzero) in one call */
+        ctx.beginPath()
         for (const m of marks) {
           const rad = base * (0.45 + m.f) * (sweepK ? sweepK(m.x, m.y) : 1)
           if (rad < 0.3) continue
-          ctx.beginPath(); ctx.arc(m.x, m.y, rad, 0, TAU); ctx.fill()
+          ctx.moveTo(m.x + rad, m.y)
+          ctx.arc(m.x, m.y, rad, 0, TAU)
         }
+        ctx.fill()
       }
     }
   }
@@ -395,8 +415,8 @@ export default {
     { key: 'fontScale', label: 'Font size', type: 'range', min: 0.4, max: 2, step: 0.05, default: 1, section: 'Mark', when: (l) => l.mark === 'glyph' },
     { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#06070b', section: 'Color' },
     { key: 'fg', label: 'Ink', type: 'color', role: 'fg', default: '#f4f1ea', section: 'Color' },
-    { key: 'flow', label: 'Flow · cycles', type: 'range', min: 0, max: 4, step: 1, default: 1, noRandom: true, tab: 'anim', section: 'Frame' },
-    { key: 'spin', label: 'Spin · turns', type: 'range', min: -2, max: 2, step: 1, default: 0, noRandom: true, tab: 'anim', section: 'Frame', when: (l) => l.geometry === 'radial' || l.geometry === 'rings' || l.geometry === 'spiral' },
+    { key: 'flow', label: 'Flow', type: 'range', min: -8, max: 8, rMin: 0, rMax: 4, step: 1, default: 1, noRandom: true, tab: 'anim', section: 'Frame' },
+    { key: 'spin', label: 'Spin · turns', type: 'range', min: -8, max: 8, rMin: -2, rMax: 2, step: 1, default: 0, noRandom: true, tab: 'anim', section: 'Frame', when: (l) => l.geometry === 'radial' || l.geometry === 'rings' || l.geometry === 'spiral' },
     { key: 'pulse', label: 'Pulse', type: 'range', min: 0, max: 1, step: 0.05, default: 0, noRandom: true, tab: 'anim', section: 'Form' },
     { key: 'sweep', label: 'Sweep', type: 'range', min: 0, max: 1, step: 0.05, default: 0, noRandom: true, tab: 'anim', section: 'Form', when: (l) => (l.mark ?? 'dots') !== 'lattice' },
   ],

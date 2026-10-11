@@ -12,6 +12,7 @@
 
 import * as THREE from 'three'
 import { PALETTES, paletteBy } from './driftPalettes.js'
+import { previewScale } from '../../editor/lib/previewScale.js'
 
 export { PALETTES }
 
@@ -327,6 +328,7 @@ export class DriftEngine {
 
   resize(w, h) {
     if (!this.renderer) return
+    this.renderer.setPixelRatio(previewScale())   /* Settings › Preview resolution (ratio 1 at Full) */
     this.renderer.setSize(w, h, false)
     this.uniforms.uAspect.value = w / h
   }

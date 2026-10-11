@@ -85,7 +85,8 @@ const COLOR_PARAMS = [
  *                      numeric flag when the values are numbers)
  *   color            → color (no role — authored, untinted by the theme) */
 function translateParam(p) {
-  const base = { key: p.key, label: p.label ?? p.key, default: p.default }
+  /* `unlabeled` marks a key-as-label fallback so schemas.check.mjs can still fail on it */
+  const base = { key: p.key, label: p.label ?? p.key, ...(p.label == null ? { unlabeled: true } : {}), default: p.default }
   switch (p.type) {
     case 'int': return { ...base, type: 'range', min: p.min, max: p.max, step: p.step ?? 1 }
     case 'range': return { ...base, type: 'range', min: p.min, max: p.max, step: p.step ?? 0.01 }

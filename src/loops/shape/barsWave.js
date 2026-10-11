@@ -14,7 +14,7 @@ export default {
     { key: 'count', label: 'Bars', type: 'range', min: 4, max: 48, step: 1, default: 18, noRandom: true },
     { key: 'minH', label: 'Min height', type: 'range', min: 0.04, max: 0.4, step: 0.01, default: 0.1 },
     { key: 'maxH', label: 'Max height', type: 'range', min: 0.4, max: 0.96, step: 0.01, default: 0.82 },
-    { key: 'cycles', label: 'Cycles', type: 'range', min: 1, max: 4, step: 1, default: 1 },
+    { key: 'cycles', label: 'Cycles', type: 'range', min: 1, max: 8, rMin: 1, rMax: 4, step: 1, default: 1 },
     { key: 'waves', label: 'Waves', type: 'range', min: 0, max: 6, step: 1, default: 2 },
   ],
   draw(ctx, u, w, h, p) {

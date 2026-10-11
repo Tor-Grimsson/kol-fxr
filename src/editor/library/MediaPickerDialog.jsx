@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Button, FullscreenOverlay, MediaLibrary } from '@kolkrabbi/kol-component'
+import { useEffect, useRef, useState } from 'react'
+import { Button, CloseButton, FullscreenOverlay, MediaLibrary } from '@kolkrabbi/kol-component'
 import { SETTINGS_BASE } from '@kolkrabbi/kol-component/organisms/MediaLibraryPages'
 import { getMediaClient } from './mediaLibrary'
 
@@ -27,15 +27,32 @@ export default function MediaPickerDialog({ open, accept = ['image', 'video'], o
   const [settings, setSettings] = useState(() => ({ ...SETTINGS_BASE, columnHeight: `calc(var(--kol-media-picker-h) - ${CHROME}px)` }))
   const [bucket, setBucket] = useState(undefined)
   const [file, setFile] = useState(null)
-  if (!open) return null
-
   const ok = !!file && (typeof accept === 'function' ? accept(file) : accept.includes(kindOf(file)))
   const use = () => {
     onSelect?.(client.mediaUrl(file.fullKey ?? file.key, bucket), { contentType: file.contentType, kind: kindOf(file) })
     onClose?.()
   }
+  /* ENTER IS USE (the user, 2026-10-10: "enter does not select 'use'") — on a usable pick, unless a
+     text field has the key (the library's search) */
+  const useRef_ = useRef(use); useRef_.current = ok ? use : null
+  useEffect(() => {
+    if (!open) return undefined
+    const onKey = (e) => {
+      if (e.key !== 'Enter' || e.metaKey || e.ctrlKey || e.altKey) return
+      const t = e.target
+      if (t?.closest?.('input, textarea, [contenteditable="true"]')) return
+      if (!useRef_.current) return
+      e.preventDefault(); e.stopPropagation()
+      useRef_.current()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [open])
+  if (!open) return null
   return (
-    <FullscreenOverlay open scrim onClose={onClose}>
+    /* the close rides the header row, after the gear (kol-component 0.251.0, MediaPickerCloseOnTheHeaderRow) —
+       the overlay's own X floated above it and lined up with nothing */
+    <FullscreenOverlay open scrim onClose={onClose} closeButton={false}>
       <div className="kol-media-picker gap-4">
         <MediaLibrary
           variant="browse"
@@ -46,6 +63,7 @@ export default function MediaPickerDialog({ open, accept = ['image', 'video'], o
           settings={settings}
           onSettingsChange={setSettings}
           onPickFile={setFile}
+          headerTrailing={<CloseButton onClick={onClose} />}
         />
         <div className="mt-auto flex items-center justify-end gap-4">
           <span className="kol-mono-12 text-fg-48 truncate mr-auto">{file ? file.key : 'Select a file'}</span>

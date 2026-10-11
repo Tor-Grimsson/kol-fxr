@@ -1,9 +1,18 @@
-import { hexToRgb } from '../lib/util.js'
-import { CAMERA_SCHEMA, makeCam, sample } from './camera.js'
-import { raster, mix2 } from './raster.js'
+import { CAMERA_SCHEMA } from './camera.js'
+import { fieldPass, col } from './fieldGL.js'
 
 // Stripes — flowing sine bands. The camera rotates/zooms the field; flow drifts
 // the bands. Sharpness blends sine→square. Seamless: phase is periodic in u.
+const FRAG = /* glsl */`
+uniform vec3 uA, uB;
+uniform float uS, uSharp;
+void main() {
+  float f = 0.5 + 0.5 * sin(fieldXY().x * uS + uCam.w);
+  f = f * (1.0 - uSharp) + (f > 0.5 ? 1.0 : 0.0) * uSharp;
+  o = vec4(mix2(f, uA, uB), 1.0);
+}
+`
+
 export default {
   id: 'stripes',
   label: 'Stripes',
@@ -18,16 +27,6 @@ export default {
     { key: 'sharp', label: 'Sharpness', type: 'range', min: 0, max: 1, step: 0.05, default: 0.4 },
   ],
   draw(ctx, u, w, h, p) {
-    const cam = makeCam(u, p, w, h)
-    const A = hexToRgb(p.colA)
-    const B = hexToRgb(p.colB)
-    const s = p.freq * 0.04
-    const sharp = p.sharp
-    raster(ctx, w, h, (i, j, W, H) => {
-      const [rx] = sample(cam, (i / W) * w, (j / H) * h)
-      let f = 0.5 + 0.5 * Math.sin(rx * s + cam.phase)
-      f = f * (1 - sharp) + (f > 0.5 ? 1 : 0) * sharp
-      return mix2(f, A, B)
-    })
+    fieldPass(ctx, u, w, h, p, FRAG, { uA: col(p.colA), uB: col(p.colB), uS: p.freq * 0.04, uSharp: p.sharp })
   },
 }

@@ -11,11 +11,11 @@ import { clear, strokeOutline, wrapLoop, rampRGB, roleRGB, stampGrid } from '../
 // Reference: Bak, Tang, Wiesenfeld (1987) PRL 59:381.
 
 const PARAMS          = [
-  { key: 'res',           type: 'int',   min: 80,  max: 220, default: 150, step: 10 },
-  { key: 'dropsPerFrame', type: 'int',   min: 1,   max: 120, default: 30,  step: 1  },
-  { key: 'threshold',     type: 'int',   min: 2,   max: 8,   default: 4,   step: 1  },
-  { key: 'maxRelax',      type: 'int',   min: 50,  max: 2000,default: 400, step: 50 },
-  { key: 'brightness',    type: 'range', min: 0.5, max: 2.0, default: 1.3, step: 0.05 },
+  { key: 'res', label: 'grid res',           type: 'int',   min: 80,  max: 220, default: 150, step: 10 },
+  { key: 'dropsPerFrame', label: 'drops/frame', type: 'int',   min: 1,   max: 120, default: 30,  step: 1  },
+  { key: 'threshold', label: 'threshold',     type: 'int',   min: 2,   max: 8,   default: 4,   step: 1  },
+  { key: 'maxRelax', label: 'max relax',      type: 'int',   min: 50,  max: 2000,default: 400, step: 50 },
+  { key: 'brightness',    label: 'brightness', type: 'range', min: 0.5, max: 2.0, default: 1.3, step: 0.05 },
   { key: 'interact',      type: 'range', min: 0,   max: 3,   default: 1,   step: 0.1, label: 'interaction' },
 ]
 

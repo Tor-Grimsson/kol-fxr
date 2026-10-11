@@ -17,7 +17,7 @@ export default {
     ...FILL_PARAMS,
     { key: 'ringFill', label: 'Fill rings', type: 'toggle', default: false, tab: 'color' },
     { key: 'ringAlpha', label: 'Fill opacity', type: 'range', min: 0.05, max: 1, step: 0.05, default: 0.5, tab: 'color', noRandom: true },
-    { key: 'turns', label: 'Turns', type: 'range', min: 1, max: 4, step: 1, default: 1 },
+    { key: 'turns', label: 'Turns', type: 'range', min: 1, max: 8, rMin: 1, rMax: 4, step: 1, default: 1 },
     { key: 'trail', label: 'Trail', type: 'range', min: 1, max: 9, step: 1, default: 5 },
     { key: 'rings', label: 'Rings', type: 'range', min: 0, max: 6, step: 1, default: 3, noRandom: true },
     { key: 'size', label: 'Reach', type: 'range', min: 0.6, max: 1, step: 0.02, default: 0.92 },

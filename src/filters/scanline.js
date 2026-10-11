@@ -19,7 +19,7 @@
  * the deeper Frame/Form motion belongs to the generator, not the filter.
  */
 import { renderScanlines, GEOMETRY_OPTIONS, MARK_OPTIONS, CHARSET_OPTIONS } from '../loops/scanline/engine.js'
-import { registerSourceCache } from './fxCore.js'
+import { registerSourceCache, stillUnless } from './fxCore.js'
 import { sweepStates, evalSweeps } from './sweeps.js'
 
 /* THE SWEEP RIG ON SCANLINE (plan 26 § 5; the user: "what sweeps … there could be sweep from and
@@ -41,16 +41,19 @@ function sweepMulFor(p, u) {
  * only needs a coarse density field; 160px across is plenty. */
 const LUMA_W = 160
 const lumaCache = new WeakMap()
+let lumaScratch = null
 registerSourceCache(lumaCache)   /* chain intermediates / loop sources invalidate in place */
 function lumaSampler(src) {
   let s = lumaCache.get(src)
   if (!s) {
     const sw = LUMA_W
     const sh = Math.max(1, Math.round(LUMA_W * (src.height / Math.max(1, src.width))))
-    const c = document.createElement('canvas')
+    /* one scratch, reused (fxBitmap's lumaFor) — a moving source invalidates every tick */
+    if (!lumaScratch) { lumaScratch = document.createElement('canvas'); lumaScratch.getContext('2d', { willReadFrequently: true }) }
+    const c = lumaScratch
     c.width = sw
     c.height = sh
-    const g = c.getContext('2d')
+    const g = c.getContext('2d', { willReadFrequently: true })
     g.drawImage(src, 0, 0, sw, sh)
     const { data } = g.getImageData(0, 0, sw, sh)
     s = (nx, ny) => {
@@ -72,7 +75,7 @@ export default {
   id: 'scanline',
   sweeps: true,   /* the stacked sweep rig on the Motion tab (plan 26 § 5) */
   label: 'Scanline',
-  animated: true,
+  stillKey: stillUnless('pulse', 'sweep', 'sweeps'),   /* still until Pulse, Sweep or a stacked sweep moves it (plan 27 § 1) */
   params: [
     /* Geometry — the scan-path layout the marks accumulate along. */
     { key: 'geometry', label: 'Geometry', type: 'select', options: GEOMETRY_OPTIONS, default: 'rows', section: 'Geometry' },

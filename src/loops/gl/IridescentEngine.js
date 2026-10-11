@@ -12,6 +12,7 @@ import * as THREE from 'three'
 // 5-stop palettes for the "Ramp" colour mode ("Spectral" sweeps a cosine rainbow).
 export { GRAD_PALETTES, BACKDROPS } from './gradEnums.js'
 import { GRAD_PALETTES, BACKDROPS, GRAD_LOOKS } from './gradEnums.js'
+import { previewScale } from '../../editor/lib/previewScale.js'
 
 const VERT = `
   varying vec2 vUv;
@@ -260,6 +261,7 @@ export class IridescentEngine {
 
   resize(w, h) {
     if (!this.renderer) return
+    this.renderer.setPixelRatio(previewScale())   /* Settings › Preview resolution (ratio 1 at Full) */
     this.renderer.setSize(w, h, false) // exact artboard dims (pixelRatio 1)
     this.uniforms.uAspect.value = w / h
   }

@@ -15,6 +15,7 @@
 
 import * as THREE from 'three'
 import { GRAD_PALETTES, BACKDROPS } from './IridescentEngine.js'
+import { previewScale } from '../../editor/lib/previewScale.js'
 
 export { GRAD_PALETTES, BACKDROPS }
 
@@ -268,6 +269,7 @@ export class SoftForms3DEngine {
 
   resize(w, h) {
     if (!this.renderer) return
+    this.renderer.setPixelRatio(previewScale())   /* Settings › Preview resolution (ratio 1 at Full) */
     this.renderer.setSize(w, h, false)
     this.uniforms.uAspect.value = w / h
   }

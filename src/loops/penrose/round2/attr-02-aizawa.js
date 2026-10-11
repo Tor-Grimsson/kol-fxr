@@ -8,10 +8,10 @@ import { clear, strokeOutline, wrapLoop, roleRGB, pc } from '../common.js'
 // Ref: https://www.algosome.com/articles/aizawa-attractor-chaos.html
 
 const PARAMS          = [
-  { key: 'a', type: 'range', min: 0.7, max: 1.2, default: 0.95, step: 0.01 },
-  { key: 'b', type: 'range', min: 0.4, max: 1.0, default: 0.7, step: 0.01 },
+  { key: 'a', label: 'a', type: 'range', min: 0.7, max: 1.2, default: 0.95, step: 0.01 },
+  { key: 'b', label: 'b', type: 'range', min: 0.4, max: 1.0, default: 0.7, step: 0.01 },
   { key: 'c', type: 'range', min: 0.3, max: 0.9, default: 0.6, step: 0.01, label: 'c (tube)' },
-  { key: 'dt', type: 'range', min: 0.005, max: 0.04, default: 0.01, step: 0.002, label: 'step dt' },
+  { key: 'dt', type: 'range', min: 0.005, max: 0.04, default: 0.01, step: 0.001, label: 'step dt' },
   { key: 'tail', type: 'int', min: 200, max: 4000, default: 2000, label: 'tail length' },
   { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]

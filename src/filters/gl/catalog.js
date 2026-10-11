@@ -193,7 +193,7 @@ const lens = {
       /* the SDF's circle branch has no corners */
       { ...range('radius', 'Corner radius', 0, 0.3, 0.005, 0.08), when: (l) => (l.shape ?? 'panel') !== 'circle' },
       /* uEdge — rim highlight width along the lens boundary (labs dflt 0.025) */
-      range('edge', 'Edge', 0, 0.08, 0.002, 0.025)),
+      range('edge', 'Edge', 0, 0.08, 0.001, 0.025)),
     ...sec('Position',
       range('glassX', 'Lens X', 0, 1, 0.01, 0.5),
       range('glassY', 'Lens Y', 0, 1, 0.01, 0.5)),

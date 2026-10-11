@@ -10,8 +10,8 @@ import { clear, strokeOutline, wrapLoop, sampleInside, repelPoints, pc } from '.
 // bigger node cluster at the cursor and the veins grow out to meet it.
 
 const PARAMS = [
-  { key: 'N', type: 'int', min: 40, max: 400, default: 220, step: 10 },
-  { key: 'edgesPerSec', type: 'int', min: 2, max: 80, default: 30, step: 1 },
+  { key: 'N', label: 'nodes', type: 'int', min: 40, max: 400, default: 220, step: 10 },
+  { key: 'edgesPerSec', label: 'edges/sec', type: 'int', min: 2, max: 80, default: 30, step: 1 },
   { key: 'depthBias', type: 'range', min: 0, max: 1, default: 0.6, step: 0.05, label: 'medialBias' },
   { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]

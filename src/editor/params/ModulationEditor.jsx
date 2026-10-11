@@ -224,7 +224,7 @@ export function ModulationEditor({ layer, param, setProp }) {
       </LabeledControl>
       {isLfo && (
         <div className="grid grid-cols-2 gap-2">
-          <LabeledControl label="Rate · cycles">
+          <LabeledControl label="Rate">
             <Slider min={0.25} max={16} step={0.25} value={tr?.rate ?? 1} onChange={(v) => patchTransform({ rate: v })} />
           </LabeledControl>
           <LabeledControl label="Phase">

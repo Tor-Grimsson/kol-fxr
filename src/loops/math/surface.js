@@ -411,7 +411,7 @@ export default {
     { key: 'axes', label: 'Axes', type: 'select', options: AXIS_3D_OPTIONS, default: 'none', section: 'Reference' },
     { key: 'gridColor', label: 'Grid color', type: 'color', role: 'fg', default: '#ffffff', section: 'Reference', when: (l) => l.axes && l.axes !== 'none' },
     { key: 'gridOpacity', label: 'Grid opacity', type: 'range', min: 0, max: 1, step: 0.02, default: 0.1, section: 'Reference', when: (l) => l.axes && l.axes !== 'none' },
-    { key: 'spin', label: 'Spin · turns', type: 'range', min: 0, max: 3, step: 1, default: 1, tab: 'anim', section: 'Motion' },
+    { key: 'spin', label: 'Spin · turns', type: 'range', min: -8, max: 8, rMin: 0, rMax: 3, step: 1, default: 1, tab: 'anim', section: 'Motion' },
     { key: 'yaw', label: 'Yaw', type: 'range', min: 0, max: 360, step: 1, default: 325 },
     { key: 'pitch', label: 'Pitch', type: 'range', min: -80, max: 80, step: 1, default: 26 },
     { key: 'dist', label: 'Distance', type: 'range', min: 1.5, max: 6, step: 0.1, default: 3 },

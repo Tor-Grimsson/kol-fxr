@@ -1,9 +1,18 @@
-import { hexToRgb } from '../lib/util.js'
-import { CAMERA_SCHEMA, makeCam, sample } from './camera.js'
-import { raster, mix2 } from './raster.js'
+import { CAMERA_SCHEMA } from './camera.js'
+import { fieldPass, col } from './fieldGL.js'
 
 // Checker field — an animated checkerboard from sign(sin·sin); flow slides it,
 // softness controls the edge sharpness. Seamless: phase is periodic in u.
+const FRAG = /* glsl */`
+uniform vec3 uA, uB;
+uniform float uS, uSoft;
+void main() {
+  vec2 q = fieldXY();
+  float v = sin(q.x * uS + uCam.w) * sin(q.y * uS - uCam.w);
+  o = vec4(mix2(0.5 + 0.5 * tanh(v / uSoft), uA, uB), 1.0);
+}
+`
+
 export default {
   id: 'checker-field',
   label: 'Checker field',
@@ -18,16 +27,6 @@ export default {
     { key: 'soft', label: 'Softness', type: 'range', min: 0.02, max: 1, step: 0.02, default: 0.3 },
   ],
   draw(ctx, u, w, h, p) {
-    const cam = makeCam(u, p, w, h)
-    const A = hexToRgb(p.colA)
-    const B = hexToRgb(p.colB)
-    const s = p.freq * 0.04
-    const soft = Math.max(0.02, p.soft)
-    raster(ctx, w, h, (i, j, W, H) => {
-      const [rx, ry] = sample(cam, (i / W) * w, (j / H) * h)
-      const v = Math.sin(rx * s + cam.phase) * Math.sin(ry * s - cam.phase)
-      const f = 0.5 + 0.5 * Math.tanh(v / soft)
-      return mix2(f, A, B)
-    })
+    fieldPass(ctx, u, w, h, p, FRAG, { uA: col(p.colA), uB: col(p.colB), uS: p.freq * 0.04, uSoft: Math.max(0.02, p.soft) })
   },
 }

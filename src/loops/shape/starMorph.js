@@ -16,7 +16,7 @@ export default {
     ...FILL_PARAMS,
     { key: 'points', label: 'Points', type: 'range', min: 3, max: 12, step: 1, default: 5, noRandom: true },
     { key: 'size', label: 'Size', type: 'range', min: 0.3, max: 0.6, step: 0.01, default: 0.46 },
-    { key: 'spin', label: 'Spin', type: 'range', min: 0, max: 3, step: 1, default: 1 },
+    { key: 'spin', label: 'Spin', type: 'range', min: -8, max: 8, rMin: 0, rMax: 3, step: 1, default: 1 },
   ],
   draw(ctx, u, w, h, p) {
     ctx.fillStyle = p.bg

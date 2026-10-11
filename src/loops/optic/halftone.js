@@ -176,8 +176,8 @@ export default {
     { key: 'contrast', label: 'Contrast', type: 'range', min: 0.3, max: 4, step: 0.05, default: 1 },
     { key: 'rotate', label: 'Rotate', type: 'range', min: 0, max: 360, step: 1, default: 0 },
     { key: 'invert', label: 'Invert', type: 'toggle', default: false },
-    { key: 'flow', label: 'Flow · cycles', type: 'range', min: 0, max: 4, step: 1, default: 1, noRandom: true, tab: 'anim', section: 'Motion' },
-    { key: 'spin', label: 'Spin · turns', type: 'range', min: -2, max: 2, step: 1, default: 0, noRandom: true, tab: 'anim', section: 'Motion' },
+    { key: 'flow', label: 'Flow', type: 'range', min: -8, max: 8, rMin: 0, rMax: 4, step: 1, default: 1, noRandom: true, tab: 'anim', section: 'Motion' },
+    { key: 'spin', label: 'Spin · turns', type: 'range', min: -8, max: 8, rMin: -2, rMax: 2, step: 1, default: 0, noRandom: true, tab: 'anim', section: 'Motion' },
   ],
   draw(ctx, u, w, h, p) {
     renderHalftone(ctx, u, w, h, p)

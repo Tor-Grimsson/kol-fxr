@@ -17,7 +17,7 @@ export default {
     ...FILL_PARAMS,
     { key: 'size', label: 'Size', type: 'range', min: 0.3, max: 0.62, step: 0.01, default: 0.42 },
     { key: 'nMax', label: 'Squareness', type: 'range', min: 3, max: 12, step: 0.5, default: 8 },
-    { key: 'spin', label: 'Spin · turns', type: 'range', min: 0, max: 3, step: 1, default: 1 },
+    { key: 'spin', label: 'Spin · turns', type: 'range', min: -8, max: 8, rMin: 0, rMax: 3, step: 1, default: 1 },
   ],
   draw(ctx, u, w, h, p) {
     ctx.fillStyle = p.bg

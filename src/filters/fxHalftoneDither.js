@@ -12,7 +12,7 @@
  * the editor's transport that strobes at 60fps, so they use a deterministic
  * per-cell hash instead (stable stills, still animatable via sweeps).
  */
-import { AMOUNT_PARAM, mixSourceOver, buffersFor, sinHash2 as cellRand } from './fxCore.js'
+import { AMOUNT_PARAM, mixSourceOver, buffersFor, sinHash2 as cellRand, stillUnless } from './fxCore.js'
 import { NO_SWEEP, sweepStates, evalSweeps, anyReveal } from './sweeps.js'
 
 const TAU = Math.PI * 2
@@ -165,7 +165,7 @@ const INTENSITY_MODES = new Set(['glitch', 'flow', 'edges', 'melt', 'jitter', 'i
 export default {
   id: 'fx-halftone-dither',
   label: 'Dither',
-  animated: true,
+  stillKey: stillUnless('sweeps'),   /* moves only through the sweep rig (plan 27 § 1) */
   sweeps: true,   /* stacked sweep rig (sweeps.js) — Effects panel Motion tab */
   params: [
     { ...AMOUNT_PARAM, section: 'Effect' },

@@ -9,6 +9,7 @@
 // camera/gizmo paradigm, see port notes).
 
 import * as THREE from 'three'
+import { previewDpr } from '../../editor/lib/previewScale.js'
 
 // surface id → shader branch (H()). kaleido = the banded "hall of mirrors" folds.
 const TYPE_INDEX = { glass: 0, ripple: 1, ice: 2, mirror: 3, kaleido: 4, waves: 5 }
@@ -184,7 +185,7 @@ export class RefractEngine {
 
   resize(w, h) {
     if (!this.renderer || w < 1 || h < 1) return
-    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1))
+    this.renderer.setPixelRatio(previewDpr())   /* Settings › Preview resolution */
     this.renderer.setSize(w, h, false)
     this.uniforms.uViewAspect.value = w / h
   }

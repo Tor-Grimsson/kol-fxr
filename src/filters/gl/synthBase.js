@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { previewDpr } from '../../editor/lib/previewScale.js'
 
 /* SynthEngine — shared base for the "Synth" image-effect family (analog
  * video-synthesis lineage: trails, slitscan, Rutt-Etra scan, disco). Ported
@@ -86,7 +87,7 @@ export default class SynthEngine {
 
   resize(w, h) {
     if (w < 1 || h < 1) return
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    const dpr = previewDpr()   /* Settings › Preview resolution */
     this.renderer.setPixelRatio(dpr)
     this.renderer.setSize(w, h, false)
     this.w = w

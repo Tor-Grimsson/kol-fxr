@@ -15,7 +15,7 @@ export default {
     { key: 'rings', label: 'Rings', type: 'range', min: 4, max: 40, step: 1, default: 16, noRandom: true },
     { key: 'weight', label: 'Weight', type: 'range', min: 1, max: 30, step: 0.5, default: 4 },
     { key: 'size', label: 'Reach', type: 'range', min: 0.5, max: 1, step: 0.02, default: 0.92 },
-    { key: 'drift', label: 'Drift', type: 'range', min: 1, max: 4, step: 1, default: 1 },
+    { key: 'drift', label: 'Drift', type: 'range', min: -8, max: 8, rMin: 1, rMax: 4, step: 1, default: 1 },
   ],
   draw(ctx, u, w, h, p) {
     ctx.fillStyle = p.bg

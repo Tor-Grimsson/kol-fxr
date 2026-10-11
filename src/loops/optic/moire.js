@@ -1,5 +1,6 @@
-import { TAU, clamp01, hexToRgb } from '../lib/util.js'
-import { raster } from '../field/raster.js'
+import { hexToRgb } from '../lib/util.js'
+import { glPass, rgb01 } from '../lib/glPass.js'
+import { fieldRes } from '../field/fieldGL.js'
 
 // Moiré / interference engine — two (optionally three) overlapping grids
 // (lines / concentric / radial), each with its own frequency, rotation and
@@ -10,8 +11,8 @@ import { raster } from '../field/raster.js'
 // g1*/g2*/g3* params (the inspector renders flat schemas); grid A is always on.
 // Time is woven for the loop contract: each grid's labs drift (ph = t·speed)
 // becomes ph = u · cycles with a whole number of cycles per loop, so
-// frame(0) === frame(1) exactly. Per-pixel work goes through the shared field
-// rasterizer (the draw ctx is CSS-px-transformed; putImageData would bypass it).
+// frame(0) === frame(1) exactly. Per-pixel work is a fragment shader (glPass, plan 27 § 2) at the
+// field family's buffer size.
 
 export const GRID_OPTIONS = [
   { value: 'lines', label: 'Lines' },
@@ -31,33 +32,40 @@ export const MOIRE_PALETTES = [
   { value: 'gold', label: 'Gold', cols: ['#0a0a00', '#ffd23f'] },
 ]
 
-function gridVal(g, nx, ny, u) {
-  const cx = nx - 0.5
-  const cy = ny - 0.5
-  const a = (g.angle * Math.PI) / 180
-  const ph = u * g.cycles // whole cycles per loop (integer) ⇒ seamless
-  if (g.type === 'concentric') {
-    const r = Math.sqrt(cx * cx + cy * cy)
-    return 0.5 + 0.5 * Math.sin(r * g.freq * 28 + ph * TAU)
-  }
-  if (g.type === 'radial') {
-    const ang = Math.atan2(cy, cx)
-    return 0.5 + 0.5 * Math.sin(ang * Math.round(g.freq) * 2 + ph * TAU)
-  }
-  // lines (rotated)
-  const q = nx * Math.cos(a) + ny * Math.sin(a)
-  return 0.5 + 0.5 * Math.sin(q * g.freq * 40 + ph * TAU)
-}
+const TYPES = { lines: 0, concentric: 1, radial: 2 }
+const MODES = { xor: 0, multiply: 1, add: 2, screen: 3 }
 
-function combine(mode, a, b) {
-  switch (mode) {
-    case 'multiply': return a * b
-    case 'add': return (a + b) * 0.5
-    case 'screen': return 1 - (1 - a) * (1 - b)
-    case 'xor':
-    default: return Math.abs(a - b)
-  }
+/* gridVal + combine, as GLSL — grid k is uG[k] = (type, freq, angle°, cycles) */
+const FRAG = /* glsl */`
+uniform vec4 uG[3];
+uniform float uN, uMode, uEdge, uInvert;
+uniform vec3 uC0, uC1;
+const float TAU = 6.283185307179586;
+float gridVal(vec4 g, vec2 n, float u) {
+  vec2 c = n - 0.5;
+  float ph = u * g.w;   /* whole cycles per loop (integer) ⇒ seamless */
+  if (g.x == 1.0) return 0.5 + 0.5 * sin(length(c) * g.y * 28.0 + ph * TAU);
+  if (g.x == 2.0) return 0.5 + 0.5 * sin(atan(c.y, c.x) * floor(g.y + 0.5) * 2.0 + ph * TAU);
+  float a = g.z * 3.141592653589793 / 180.0;
+  return 0.5 + 0.5 * sin((n.x * cos(a) + n.y * sin(a)) * g.y * 40.0 + ph * TAU);
 }
+float combine(float a, float b) {
+  if (uMode == 1.0) return a * b;
+  if (uMode == 2.0) return (a + b) * 0.5;
+  if (uMode == 3.0) return 1.0 - (1.0 - a) * (1.0 - b);
+  return abs(a - b);
+}
+uniform float uU;
+void main() {
+  vec2 n = pix() / uRes;
+  float v = uN > 0.0 ? gridVal(uG[0], n, uU) : 0.5;
+  for (int k = 1; k < 3; k++) { if (float(k) >= uN) break; v = combine(v, gridVal(uG[k], n, uU)); }
+  float lo = uEdge, hi = 1.0 - uEdge;
+  v = lo == hi ? (v < 0.5 ? 0.0 : 1.0) : clamp((v - lo) / (hi - lo), 0.0, 1.0);
+  if (uInvert > 0.5) v = 1.0 - v;
+  o = vec4(mix(uC0, uC1, v), 1.0);
+}
+`
 
 export default {
   id: 'optic-moire',
@@ -75,19 +83,19 @@ export default {
     { key: 'g1Type', label: 'Grid A', type: 'select', options: GRID_OPTIONS, default: 'lines' },
     { key: 'g1Freq', label: 'A · freq', type: 'range', min: 1, max: 30, step: 0.5, default: 6 },
     { key: 'g1Angle', label: 'A · angle', type: 'range', min: 0, max: 180, step: 1, default: 0, when: (l) => (l.g1Type ?? 'lines') === 'lines' },
-    { key: 'g1Cycles', label: 'A · drift', type: 'range', min: -4, max: 4, step: 1, default: 1, noRandom: true, tab: 'anim', section: 'Motion' },
+    { key: 'g1Cycles', label: 'A · drift', type: 'range', min: -8, max: 8, rMin: -4, rMax: 4, step: 1, default: 1, noRandom: true, tab: 'anim', section: 'Motion' },
     // Grid B
     { key: 'g2On', label: 'Grid B on', type: 'toggle', default: true },
     { key: 'g2Type', label: 'Grid B', type: 'select', options: GRID_OPTIONS, default: 'lines', when: (l) => l.g2On ?? true },
     { key: 'g2Freq', label: 'B · freq', type: 'range', min: 1, max: 30, step: 0.5, default: 6, when: (l) => l.g2On ?? true },
     { key: 'g2Angle', label: 'B · angle', type: 'range', min: 0, max: 180, step: 1, default: 8, when: (l) => (l.g2On ?? true) && (l.g2Type ?? 'lines') === 'lines' },
-    { key: 'g2Cycles', label: 'B · drift', type: 'range', min: -4, max: 4, step: 1, default: -1, noRandom: true, tab: 'anim', section: 'Motion', when: (l) => l.g2On ?? true },
+    { key: 'g2Cycles', label: 'B · drift', type: 'range', min: -8, max: 8, rMin: -4, rMax: 4, step: 1, default: -1, noRandom: true, tab: 'anim', section: 'Motion', when: (l) => l.g2On ?? true },
     // Grid C
     { key: 'g3On', label: 'Grid C on', type: 'toggle', default: false },
     { key: 'g3Type', label: 'Grid C', type: 'select', options: GRID_OPTIONS, default: 'concentric', when: (l) => !!l.g3On },
     { key: 'g3Freq', label: 'C · freq', type: 'range', min: 1, max: 30, step: 0.5, default: 4, when: (l) => !!l.g3On },
     { key: 'g3Angle', label: 'C · angle', type: 'range', min: 0, max: 180, step: 1, default: 0, when: (l) => !!l.g3On && l.g3Type === 'lines' },
-    { key: 'g3Cycles', label: 'C · drift', type: 'range', min: -4, max: 4, step: 1, default: 1, noRandom: true, tab: 'anim', section: 'Motion', when: (l) => !!l.g3On },
+    { key: 'g3Cycles', label: 'C · drift', type: 'range', min: -8, max: 8, rMin: -4, rMax: 4, step: 1, default: 1, noRandom: true, tab: 'anim', section: 'Motion', when: (l) => !!l.g3On },
   ],
   draw(ctx, u, w, h, p) {
     const grids = [
@@ -96,25 +104,13 @@ export default {
       { enabled: !!p.g3On, type: p.g3Type, freq: p.g3Freq, angle: p.g3Angle, cycles: Math.round(p.g3Cycles) },
     ]
     const active = grids.filter((g) => g.enabled)
-    const mode = p.combine
-    const c0 = hexToRgb(p.colA)
-    const c1 = hexToRgb(p.colB)
-    const edge = 0.5 - p.hardness * 0.49 // hardness → crisp threshold via smoothstep band
-
-    raster(ctx, w, h, (i, j, W, H) => {
-      const nx = i / W
-      const ny = j / H
-      let v = active.length ? gridVal(active[0], nx, ny, u) : 0.5
-      for (let k = 1; k < active.length; k++) v = combine(mode, v, gridVal(active[k], nx, ny, u))
-      // hardness: push toward 0/1 around the midpoint
-      const lo = edge, hi = 1 - edge
-      v = lo === hi ? (v < 0.5 ? 0 : 1) : clamp01((v - lo) / (hi - lo))
-      if (p.invert) v = 1 - v
-      return [
-        c0[0] + (c1[0] - c0[0]) * v,
-        c0[1] + (c1[1] - c0[1]) * v,
-        c0[2] + (c1[2] - c0[2]) * v,
-      ]
+    const G = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    active.forEach((g, k) => { G[k * 4] = TYPES[g.type] ?? 0; G[k * 4 + 1] = g.freq; G[k * 4 + 2] = g.angle; G[k * 4 + 3] = g.cycles })
+    const [rw, rh] = fieldRes(w, h)
+    glPass(ctx, w, h, rw, rh, FRAG, {
+      uG: G, uN: active.length, uMode: MODES[p.combine] ?? 0, uU: u,
+      uEdge: 0.5 - p.hardness * 0.49,   /* hardness → crisp threshold via smoothstep band */
+      uInvert: p.invert ? 1 : 0, uC0: rgb01(hexToRgb(p.colA)), uC1: rgb01(hexToRgb(p.colB)),
     })
   },
 }

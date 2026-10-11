@@ -195,7 +195,7 @@ const SOFTFORMS_PARAMS = [
    * uRimPow/uRimShift/uSSS — both the 2D and 3D engines read all three) */
   range('rimPow', 'Rim focus', 1, 6, 0.1, 2.6, { section: 'Look' }),
   range('rimShift', 'Rim shift', 0, 0.5, 0.01, 0.12, { section: 'Look' }),
-  range('sss', 'Subsurface', 0, 1, 0.02, 0.25, { section: 'Look' }),
+  range('sss', 'Subsurface', 0, 1, 0.01, 0.25, { section: 'Look' }),
   range('motion', 'Motion', 0, 1.5, 0.02, 0.4, ANIM),
   range('sweep', 'Sweep', 0, 360, 1, 20, ANIM),
   range('grain', 'Grain', 0, 0.2, 0.005, 0.03, { section: 'Look' }),
@@ -207,7 +207,7 @@ const SOFTFORMS_LOOP = {
   params: [
     ...SOFTFORMS_PARAMS,
     /* 2D-only surface knobs — the 3D engine's param map reads neither */
-    range('bulge', 'Bulge', 0.2, 1.2, 0.02, 0.55, { section: 'Form' }),
+    range('bulge', 'Bulge', 0.2, 1.2, 0.01, 0.55, { section: 'Form' }),
     range('relief', 'Relief', 0.2, 2.5, 0.05, 1, { section: 'Form' }),
   ],
 }
@@ -294,7 +294,7 @@ const SCENE_LOOP = {
     range('lightFill', 'Fill light', 0, 2, 0.05, 0.5, { section: 'Lighting' }),
     range('lightRim', 'Rim light', 0, 4, 0.05, 0, { section: 'Lighting' }),
     range('lightAmbient', 'Ambient', 0, 1.5, 0.05, 0.35, { section: 'Lighting' }),
-    range('lightOrbit', 'Light orbit', -4, 4, 1, 0, { tab: 'anim', section: 'Lighting' }),
+    range('lightOrbit', 'Light orbit', -8, 8, 1, 0, { tab: 'anim', section: 'Lighting', rMin: -4, rMax: 4 }),
     range('fov', 'FOV', 15, 90, 1, 38, { section: 'Camera' }),
     { key: 'cameraMotion', label: 'Camera orbit', type: 'toggle', default: false, tab: 'anim', section: 'Camera' },
     { ...range('orbitSpeed', 'Orbit speed', 0, 3, 0.05, 1, CAM_ANIM), when: (l) => !!l.cameraMotion },
@@ -334,7 +334,7 @@ const MESH_LOOP = {
     range('grain', 'Grain', 0, 0.2, 0.005, 0.06, { section: 'Field' }),
     { key: 'palette', label: 'Palette', type: 'select', default: 'spectrum', options: MESH_PALETTES.map((p) => ({ value: p.id, label: p.label })), section: 'Color' },
     range('hueShift', 'Hue shift', 0, 360, 1, 0, { section: 'Color' }),
-    range('bgAmount', 'Backdrop', 0, 1, 0.02, 0.85, { section: 'Backdrop' }),
+    range('bgAmount', 'Backdrop', 0, 1, 0.01, 0.85, { section: 'Backdrop' }),
     { key: 'bgStyle', label: 'Backdrop style', type: 'select', default: 0, options: MESH_BG_STYLES.map((b) => ({ value: b.id, label: b.label })), numeric: true, section: 'Backdrop' },
     { key: 'driver', label: 'Driver', type: 'select', default: 0, options: MESH_DRIVERS.map((d) => ({ value: d.id, label: d.label })), numeric: true, tab: 'anim', section: 'Motion' },
     range('speed', 'Speed', 0.2, 3, 0.05, 1, ANIM),
@@ -363,7 +363,7 @@ const FORMS_LOOP = {
      * one static form (its fn ignores ph, so cycles does nothing there). */
     ...tag({ section: 'Geometry' }, [
       range('samples', 'Density', 8, 60, 1, 30),
-      { ...range('cycles', 'Cycles', 1, 6, 1, 2), when: (l) => (l.form ?? 'helix') !== 'torus' },
+      { ...range('cycles', 'Cycles', 1, 8, 1, 2, { rMin: 1, rMax: 6 }), when: (l) => (l.form ?? 'helix') !== 'torus' },
       { ...range('amp', 'Amplitude', 0, 1.5, 0.05, 0.35), when: (l) => !['helix', 'torus'].includes(l.form ?? 'helix') },
       range('pointSize', 'Point size', 0.01, 0.2, 0.005, 0.05),
       { ...range('turns', 'Turns', 0.5, 6, 0.1, 2.5), when: (l) => (l.form ?? 'helix') === 'helix' },
@@ -386,7 +386,7 @@ const ENV_LOOP = {
   params: [
     { key: 'env', label: 'Scene', type: 'select', default: 'mountain', options: opts(ENVIRONMENTS) },
     range('samples', 'Density', 16, 96, 1, 48, { section: 'Geometry' }),
-    range('cycles', 'Cycles', 1, 6, 1, 2, { section: 'Geometry' }),
+    range('cycles', 'Cycles', 1, 8, 1, 2, { section: 'Geometry', rMin: 1, rMax: 6 }),
     range('amp', 'Amplitude', 0, 1.5, 0.05, 0.5, { section: 'Geometry' }),
     /* The engine suppresses auto-rotate for wrapped scenes (camera sits inside
      * the tunnel) — see isWrapped() in envScenes.js. */
@@ -410,7 +410,7 @@ const RIBBON_LOOP = {
       range('loops', 'Loops', 1, 6, 1, 3),
       range('height', 'Height', 0.5, 4, 0.1, 2.2),
       range('gap', 'Gap', 0.3, 1.6, 0.02, 0.92),
-      range('depth', 'Depth', 0, 1, 0.02, 0.35),
+      range('depth', 'Depth', 0, 1, 0.01, 0.35),
       range('curl', 'Curl', 0, 3, 0.05, 1),
       range('width', 'Width', 0.1, 1.2, 0.02, 0.5),
       range('ribbonThickness', 'Flatness', 0.04, 0.3, 0.005, 0.12),
@@ -422,7 +422,7 @@ const RIBBON_LOOP = {
       { key: 'materialType', label: 'Material', type: 'select', default: 'glass',
         options: [{ value: 'glass', label: 'Glass' }, { value: 'chrome', label: 'Chrome' }] },
       { key: 'ribbonColor', label: 'Color', type: 'color', role: 'fg', default: '#cfe0ff' },
-      range('roughness', 'Roughness', 0, 1, 0.02, 0.05),
+      range('roughness', 'Roughness', 0, 1, 0.01, 0.05),
       { ...range('metalness', 'Metalness', 0, 1, 0.02, 1), when: (l) => l.materialType === 'chrome' },
       { ...range('ior', 'IOR', 1, 2.4, 0.01, 1.55), when: (l) => (l.materialType ?? 'glass') === 'glass' },
       { ...range('dispersion', 'Dispersion', 0, 20, 0.5, 10), when: (l) => (l.materialType ?? 'glass') === 'glass' },
@@ -442,7 +442,7 @@ const RIBBON_LOOP = {
     ...tag({ section: 'Post' }, [
       range('aberration', 'Aberration', 0, 3, 0.05, 1),
       range('bloom', 'Bloom', 0, 2, 0.05, 0),
-      range('vignette', 'Vignette', 0, 1, 0.02, 0.35),
+      range('vignette', 'Vignette', 0, 1, 0.01, 0.35),
       range('grain', 'Grain', 0, 0.2, 0.005, 0),
     ]),
   ],

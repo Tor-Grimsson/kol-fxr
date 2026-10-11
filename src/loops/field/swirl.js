@@ -1,9 +1,17 @@
-import { hexToRgb } from '../lib/util.js'
-import { CAMERA_SCHEMA, makeCam, sample } from './camera.js'
-import { raster, mix3 } from './raster.js'
+import { CAMERA_SCHEMA } from './camera.js'
+import { fieldPass, col } from './fieldGL.js'
 
 // Swirl — a pinwheel: angular bands twisted by radius, spun by flow. Integer arms
 // keep the value continuous across the ±π seam; phase is periodic ⇒ seamless.
+const FRAG = /* glsl */`
+uniform vec3 uA, uB, uC;
+uniform float uArms, uTwist;
+void main() {
+  vec2 q = fieldXY();
+  o = vec4(mix3(0.5 + 0.5 * sin(uArms * atan(q.y, q.x) + length(q) * 0.01 * uTwist - uCam.w), uA, uB, uC), 1.0);
+}
+`
+
 export default {
   id: 'swirl',
   label: 'Swirl',
@@ -19,17 +27,6 @@ export default {
     { key: 'twist', label: 'Twist', type: 'range', min: 0, max: 8, step: 0.5, default: 3 },
   ],
   draw(ctx, u, w, h, p) {
-    const cam = makeCam(u, p, w, h)
-    const A = hexToRgb(p.colA)
-    const B = hexToRgb(p.colB)
-    const C = hexToRgb(p.colC)
-    const arms = Math.round(p.arms)
-    raster(ctx, w, h, (i, j, W, H) => {
-      const [rx, ry] = sample(cam, (i / W) * w, (j / H) * h)
-      const ang = Math.atan2(ry, rx)
-      const d = Math.hypot(rx, ry)
-      const f = 0.5 + 0.5 * Math.sin(arms * ang + d * 0.01 * p.twist - cam.phase)
-      return mix3(f, A, B, C)
-    })
+    fieldPass(ctx, u, w, h, p, FRAG, { uA: col(p.colA), uB: col(p.colB), uC: col(p.colC), uArms: Math.round(p.arms), uTwist: p.twist })
   },
 }

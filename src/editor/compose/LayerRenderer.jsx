@@ -22,6 +22,7 @@ import { familyFor, applyCase } from '../modes/type/cuts'
 import { pickCutFor, seedFromBlend } from '../modes/type/axisRandom'
 import { layerFamily, familyCssFor, isOutlineFamily, ensureFamilyLoaded } from '../modes/type/families'
 import { paintAlpha } from './paint'
+import { usePreviewDpr } from '../lib/previewScale'
 
 /* The seam (editor/packs.js) — loop/misc layers render through the generators pack, kinetic
  * through motion, filter chains through effects. A layer whose pack is absent renders nothing;
@@ -303,8 +304,9 @@ function chainArgs(layer, stages) {
   return stages.map((s) => ({ def: s.def, params: { ...s.params, id: `${layer.id}:${s.key}` } }))
 }
 
-/* True when any stage subscribes to the transport clock. */
-const chainAnimated = (stages) => stages.some((s) => s.def.animated !== false)
+/* True when any stage can change frame to frame with its CURRENT params (plan 27 § 1 — a still
+ * stage, by `stillOf`, keeps the layer off the transport clock: it paints once per edit). */
+const chainAnimated = (stages) => stages.some((s) => (fx()?.stillOf?.(s.def, s.params) ?? null) == null)
 
 /* Effected layer — ANY positioned layer run through the canvas filter CHAIN
  * (Phase 7 + labs post-FX chain: enabled stages run in order, the output of
@@ -328,6 +330,7 @@ function EffectedLayer({ layer, stages, pxStages = [], palette, layerStyle }) {
   const isLoop = layer.type === 'loop' || layer.type === 'misc'
   const loopDef = isLoop ? defFor(layer) : null
   const tctx = useTransportCtx(isLoop || chainAnimated(stages))
+  const dpr = usePreviewDpr()   /* Settings › Preview resolution (lib/previewScale.js) */
   const camKeys = useCameraKeysDrag(loopDef, layer, canvasRef)
 
   useEffect(() => {
@@ -335,7 +338,6 @@ function EffectedLayer({ layer, stages, pxStages = [], palette, layerStyle }) {
     if (!cv) return
     const w = Math.max(1, Math.round(layer.w ?? 1))
     const h = Math.max(1, Math.round(layer.h ?? 1))
-    const dpr = Math.min(2, window.devicePixelRatio || 1)
     /* Pixi result identity rides in the skip signatures so an async pixi land
      * (forceDraw, everything else unchanged) still re-runs this effect and
      * blits the fresh result over the pre-pixi canvas output. */
@@ -363,6 +365,7 @@ function EffectedLayer({ layer, stages, pxStages = [], palette, layerStyle }) {
         sc = document.createElement('canvas')
         sc.width = sbw
         sc.height = sbh
+        sc.getContext('2d', { willReadFrequently: true })   /* redrawn and read back every tick (plan 27 § 4) */
         srcRef.current = { canvas: sc }
       }
       const sg = sc.getContext('2d')
@@ -448,6 +451,7 @@ function EngineLoopLayer({ layer, def, layerStyle, stages = [], pxStages = [] })
   const lastTs = useRef(null)
   const [, forceDraw] = useState(0)
   const tctx = useTransportCtx(true)
+  const dpr = usePreviewDpr()   /* Settings › Preview resolution (lib/previewScale.js) */
   const orbitMode = useTool().tool === 'orbit'
   /* Param-camera engines (def.cameraKeys, no OrbitControls) — pointer orbit
    * writes the camera params; the def.orbit path below stays engine-owned. */
@@ -475,7 +479,7 @@ function EngineLoopLayer({ layer, def, layerStyle, stages = [], pxStages = [] })
     if (!r) return
     const w = Math.max(1, Math.round(layer.w ?? 1))
     const h = Math.max(1, Math.round(layer.h ?? 1))
-    if (w !== r.w || h !== r.h) { r.engine.resize(w, h); r.w = w; r.h = h }
+    if (w !== r.w || h !== r.h || dpr !== r.dpr) { r.engine.resize(w, h); r.w = w; r.h = h; r.dpr = dpr }   /* dpr: Preview resolution — engines re-read it in resize */
     r.host.applyParams(def, r.engine, layer)
     r.host.setCameraDrag?.(def, r.engine, def.orbit && orbitMode)
     const now = performance.now()
@@ -485,7 +489,6 @@ function EngineLoopLayer({ layer, def, layerStyle, stages = [], pxStages = [] })
     const out = outRef.current
     if (chained && out && canvasRef.current) {
       const gl = canvasRef.current
-      const dpr = Math.min(2, window.devicePixelRatio || 1)
       const bw = Math.round(w * dpr), bh = Math.round(h * dpr)
       if (!srcRef.current) srcRef.current = document.createElement('canvas')
       const sc = srcRef.current
@@ -550,6 +553,7 @@ function LoopLayer({ layer, layerStyle }) {
   const canvasRef = useRef(null)
   const lastDraw = useRef(null)
   const tctx = useTransportCtx(true)
+  const dpr = usePreviewDpr()   /* Settings › Preview resolution (lib/previewScale.js) */
   const def = defFor(layer)
   const camKeys = useCameraKeysDrag(def, layer, canvasRef)
   useEffect(() => {
@@ -558,7 +562,6 @@ function LoopLayer({ layer, layerStyle }) {
     if (!cv || !loop) return
     const w = Math.max(1, layer.w ?? 1)
     const h = Math.max(1, layer.h ?? 1)
-    const dpr = Math.min(2, window.devicePixelRatio || 1)
     /* Skip identical redraws. Renders reach here with everything unchanged —
      * paused transport notifies on every mousemove, and dragging ANY layer
      * re-renders the whole stack — and a field loop repaint is 10-100ms.
@@ -961,6 +964,7 @@ function fitSource(media, w, h, fit, scale = 1, mirror = false) {
   const c = document.createElement('canvas')
   c.width = Math.max(1, Math.round(w * scale))
   c.height = Math.max(1, Math.round(h * scale))
+  c.getContext('2d', { willReadFrequently: true })   /* the chain's first stage reads it back (plan 27 § 4) */
   drawFitted(media, c, fit, mirror)
   return c
 }
@@ -1158,6 +1162,7 @@ function FilteredPhotoLayer({ layer, stages, pxStages = [], layerStyle }) {
   const isLive = isVideo || isWebcam   /* frames advance outside the clock */
   const media = useSourceMedia(layer.src, layer.srcType, layer.id)
   const tctx = useTransportCtx(isLive || chainAnimated(stages))
+  const dpr = usePreviewDpr()   /* Settings › Preview resolution (lib/previewScale.js) */
 
   /* Webcam is always live but NOT transport-governed — drive the chain with a
    * self-owned rAF so the feed flows through the filters even while the
@@ -1176,7 +1181,6 @@ function FilteredPhotoLayer({ layer, stages, pxStages = [], layerStyle }) {
     const cv = canvasRef.current
     if (!cv || !media) return
     if (isVideo) syncVideoTransport(media, layer, tctx.epoch, epochRef)
-    const dpr = Math.min(2, window.devicePixelRatio || 1)
     /* Pixi result identity in the skip signature so an async pixi land
      * (forceDraw) re-runs this effect and blits the result (see EffectedLayer). */
     const pixiResult = pxStages.length ? (pixiRef.current?.canvas ?? null) : null
@@ -1280,6 +1284,7 @@ function EngineFilterLayer({ layer, engine, preStages, pxStages = [], layerStyle
   const isLive = isVideo || isWebcam
   const media = useSourceMedia(layer.src, layer.srcType, layer.id)
   const tctx = useTransportCtx(true)
+  const dpr = usePreviewDpr()   /* Settings › Preview resolution (lib/previewScale.js) */
   const orbitMode = useTool().tool === 'orbit'
 
   useEffect(() => {
@@ -1330,7 +1335,7 @@ function EngineFilterLayer({ layer, engine, preStages, pxStages = [], layerStyle
       ? { stages: pxStages, ref: pixiRef, forceDraw, token: isLive ? `live:${tctx.t}:${tctx.epoch}` : (layer.src ?? '') }
       : null
     const feed = chainIntoFeed(feedRef, fittedRef.current.canvas, layer, preStages, w, h, tctx.t, pixi)
-    if (w !== r.w || h !== r.h) { r.engine.resize(w, h); r.w = w; r.h = h }
+    if (w !== r.w || h !== r.h || dpr !== r.dpr) { r.engine.resize(w, h); r.w = w; r.h = h; r.dpr = dpr }   /* dpr: Preview resolution — engines re-read it in resize */
     if (r.srcCanvas !== feed) {
       r.host.setSource(filter, r.engine, feed)
       r.srcCanvas = feed
@@ -1381,6 +1386,7 @@ function EngineLoopFilterLayer({ layer, loop, engine, preStages, pxStages = [], 
   const lastTs = useRef(null)
   const [, forceDraw] = useState(0)
   const tctx = useTransportCtx(true)
+  const dpr = usePreviewDpr()   /* Settings › Preview resolution (lib/previewScale.js) */
   const orbitMode = useTool().tool === 'orbit'
   /* Param-camera 2d loops (surface/curves) keep their pointer orbit under a
    * GL filter — unless the FILTER owns the pointer (Rutt-Etra orbit). */
@@ -1422,7 +1428,7 @@ function EngineLoopFilterLayer({ layer, loop, engine, preStages, pxStages = [], 
       ? { stages: pxStages, ref: pixiRef, forceDraw, token: `loop:${tctx.t}:${tctx.epoch}` }
       : null
     const feed = chainIntoFeed(feedRef, sc, layer, preStages, w, h, tctx.t, pixi)
-    if (w !== r.w || h !== r.h) { r.engine.resize(w, h); r.w = w; r.h = h }
+    if (w !== r.w || h !== r.h || dpr !== r.dpr) { r.engine.resize(w, h); r.w = w; r.h = h; r.dpr = dpr }   /* dpr: Preview resolution — engines re-read it in resize */
     if (r.srcCanvas !== feed) {
       r.host.setSource(filter, r.engine, feed)
       r.srcCanvas = feed

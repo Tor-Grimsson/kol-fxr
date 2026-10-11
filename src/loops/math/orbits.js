@@ -83,6 +83,30 @@ function getState(w, h, p) {
   return s
 }
 
+/* The glow as a sprite (plan 27 § 6) — 140 shadowBlur fills a frame kept the GPU busy enough to halve
+ * the frame rate with the main thread idle. Each (colour, glow) dot is rendered once, shadow and all,
+ * and stamped with drawImage under the same 'lighter' composite. */
+const SPRITES = new Map()
+function dotSprite(color, glow) {
+  const key = `${color}|${glow}`
+  let sp = SPRITES.get(key)
+  if (!sp) {
+    if (SPRITES.size > 512) SPRITES.clear()
+    const S = 2 * Math.ceil(1.7 + glow * 1.5 + 2)
+    sp = document.createElement('canvas')
+    sp.width = S
+    sp.height = S
+    const g = sp.getContext('2d')
+    if (glow > 0) { g.shadowBlur = glow; g.shadowColor = color }
+    g.fillStyle = color
+    g.beginPath()
+    g.arc(S / 2, S / 2, 1.7, 0, TAU)
+    g.fill()
+    SPRITES.set(key, sp)
+  }
+  return sp
+}
+
 export default {
   id: 'math-orbits',
   label: 'Orbits',
@@ -126,14 +150,9 @@ export default {
       for (const b of s.bodies) {
         const px = cx + b.x * scale
         const py = cy + b.y * scale
-        const color = p.mono ? '#cfe8ff' : `hsl(${b.hue}, 90%, 66%)`
-        if (p.glow > 0) { bctx.shadowBlur = p.glow; bctx.shadowColor = color }
-        bctx.fillStyle = color
-        bctx.beginPath()
-        bctx.arc(px, py, 1.7, 0, TAU)
-        bctx.fill()
+        const sp = dotSprite(p.mono ? '#cfe8ff' : `hsl(${b.hue}, 90%, 66%)`, Math.max(0, p.glow ?? 0))
+        bctx.drawImage(sp, px - sp.width / 2, py - sp.height / 2)
       }
-      bctx.shadowBlur = 0
       bctx.globalCompositeOperation = 'source-over'
     }
 

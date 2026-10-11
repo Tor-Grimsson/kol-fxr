@@ -3,12 +3,12 @@
 import { registerPack } from '../editor/packs'
 import { FILTERS, filterById } from '../filters'
 import { makeSweep } from '../filters/sweeps'
-import { runChain, invalidateSource } from '../filters/fxCore'
+import { runChain, invalidateSource, stillOf } from '../filters/fxCore'
 import EffectsPanel from '../editor/compose/inspectors/EffectsPanel'
 import { effectCategories } from '../editor/compose/inspectors/effectCategories'
 
 export const effects = {
-  FILTERS, filterById, makeSweep, runChain, invalidateSource, effectCategories, EffectsPanel,
+  FILTERS, filterById, makeSweep, runChain, invalidateSource, stillOf, effectCategories, EffectsPanel,
   /* GPU tiers stay lazy — loaded when a chain first needs them */
   loadPixiPipeline: () => import('../filters/pixi/pipeline.js'),
   loadGlHost: () => import('../filters/gl/host.js'),

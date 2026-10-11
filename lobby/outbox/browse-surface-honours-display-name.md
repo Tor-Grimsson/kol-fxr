@@ -32,3 +32,9 @@ keyword. Absent, nothing changes. Rename still prompts with the key's segment (y
 ## Measured here — 2026-10-08
 
 Bumped to 0.243.0 and walked fxr's port: search finds by name, but Columns, Rows and Grid still show the ids — `partition` (`utilities/mediaKinds.js:143`) sets `displayKey: rel` ahead of the `?? displayName` fallback. Followed by `browse-views-label-by-display-name`; the port is parked again.
+
+## Adopted — 2026-10-08 (squared 2026-10-10)
+
+Finished under the follow-up `browse-views-label-by-display-name` (kol-component 0.244.0): port live, `files-walk.mjs` 36 green at 1600 + 390 touch. Now on 0.251.0.
+
+**Remainder here:** none.

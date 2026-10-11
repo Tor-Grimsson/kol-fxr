@@ -15,7 +15,8 @@
  * whose seed steps floor(u·flicker) mod flicker — an INTEGER number of
  * frames per loop, frame(0) === frame(1) exactly. Everything else is static.
  */
-import { AMOUNT_PARAM, runFx, intHash2 as hash2 } from './fxCore.js'
+import { AMOUNT_PARAM, runFx, glFx, stillUnless } from './fxCore.js'
+import { HASH_GLSL } from '../loops/lib/glPass.js'
 
 /* ── HSL (ImageFilters.HSLAdjustment, conversions inlined) ────────────── */
 /* labs mapping: HSLAdjustment(hue·180, sat·100, value·50) with its own
@@ -440,21 +441,16 @@ function fxEnhance(sd, od, w, h) {
 /* ── Noise (canvasEffects.applyNoise, made deterministic + loopable) ──── */
 /* per-pixel hash — fxCore's intHash2 */
 
-function fxNoise(sd, od, w, h, q) {
-  const mag = (q.noise ?? 0) * 255
-  if (mag <= 0) { od.set(sd); return }
-  const seed = q.seed | 0
-  for (let i = 0, px = 0; i < sd.length; i += 4, px++) {
-    const n = (hash2(px, seed) - 0.5) * 2 * mag
-    let v = sd[i] + n
-    od[i] = v < 0 ? 0 : v > 255 ? 255 : v
-    v = sd[i + 1] + n
-    od[i + 1] = v < 0 ? 0 : v > 255 ? 255 : v
-    v = sd[i + 2] + n
-    od[i + 2] = v < 0 ? 0 : v > 255 ? 255 : v
-    od[i + 3] = sd[i + 3]
-  }
+/* Grain — the labs per-pixel hash noise as a fragment shader (plan 27 § 3); jsHash is intHash2
+   bit for bit, so a saved grain lands on the same pixels. */
+const NOISE = /* glsl */`${HASH_GLSL}
+uniform float uMag, uSeed;
+vec4 fx(ivec2 p) {
+  vec4 s = srcAt(p);
+  float n = (jsHash(p.y * int(uRes.x) + p.x, int(uSeed)) - 0.5) * 2.0 * uMag / 255.0;
+  return vec4(clamp(s.rgb + n, 0.0, 1.0), s.a);
 }
+`
 
 /* ── filter defs ──────────────────────────────────────────────────────── */
 
@@ -613,7 +609,7 @@ export const EFFECTS_FX = [
   {
     id: 'fx-noise',
     label: 'Noise',
-    animated: true,
+    stillKey: stillUnless('flicker'),   /* Flicker 0 = one frozen grain (plan 27 § 1) */
     params: [
       { key: 'noise', label: 'Noise', type: 'range', min: 0, max: 1, step: 0.01, default: 0.2 },
       { key: 'flicker', label: 'Flicker · steps', type: 'range', min: 0, max: 12, step: 1, default: 8 },
@@ -622,7 +618,7 @@ export const EFFECTS_FX = [
     apply(ctx, src, w, h, p, u) {
       const steps = Math.max(0, Math.round(p.flicker ?? 8))
       const seed = steps > 0 ? Math.floor(u * steps) % steps : 0
-      runFx(ctx, src, w, h, fxNoise, { noise: p.noise ?? 0.2, seed }, p.amount)
+      glFx(ctx, src, w, h, NOISE, { uMag: Math.max(0, (p.noise ?? 0.2) * 255), uSeed: seed }, p.amount)
     },
   },
 ]

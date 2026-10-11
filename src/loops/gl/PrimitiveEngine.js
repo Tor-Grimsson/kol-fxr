@@ -9,6 +9,7 @@ import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometr
 import { PRESETS, DURATION } from './primitivePresets.js'
 import { sampleKeyframes } from './primitiveKeyframes.js'
 import { layout } from './primitiveComposition.js'
+import { previewDpr } from '../../editor/lib/previewScale.js'
 
 /* PrimitiveEngine — a small 3D motion studio. N instanced items (shared geometry
  * + material + wireframe) are placed by an arrangement and animated by a preset
@@ -35,7 +36,7 @@ export default class PrimitiveEngine {
     this.canvas = canvas
     this.autoLoop = autoLoop
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, alpha: true })
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+    this.renderer.setPixelRatio(previewDpr())
     this.renderer.setClearColor(new THREE.Color(BG), 1)
 
     this.scene = new THREE.Scene()
@@ -318,6 +319,7 @@ export default class PrimitiveEngine {
   }
 
   resize(w, h) {
+    this.renderer.setPixelRatio(previewDpr())   /* Settings › Preview resolution — re-read on every resize */
     this.renderer.setSize(w, h, false)
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()

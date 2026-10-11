@@ -1,9 +1,21 @@
-import { hexToRgb } from '../lib/util.js'
-import { CAMERA_SCHEMA, makeCam, sample } from './camera.js'
-import { raster, mix2 } from './raster.js'
+import { CAMERA_SCHEMA } from './camera.js'
+import { fieldPass, col } from './fieldGL.js'
 
 // Contour — topographic iso-bands of a flowing scalar field: thin lines at band
 // edges over a 2-colour fill. Seamless: phase is periodic in u.
+const FRAG = /* glsl */`
+uniform vec3 uA, uB, uL;
+uniform float uS, uBands;
+void main() {
+  vec2 q = fieldXY();
+  float ph = uCam.w;
+  float v = sin(q.x * uS + ph) + sin(q.y * uS - ph) + sin(length(q) * uS * 0.7 + ph);
+  float f = 0.5 + 0.5 * sin(v);
+  float band = f * uBands;
+  o = vec4(abs(band - floor(band + 0.5)) < 0.06 ? uL : mix2(f, uA, uB), 1.0);
+}
+`
+
 export default {
   id: 'contour',
   label: 'Contour',
@@ -19,21 +31,6 @@ export default {
     { key: 'bands', label: 'Bands', type: 'range', min: 3, max: 18, step: 1, default: 9, noRandom: true },
   ],
   draw(ctx, u, w, h, p) {
-    const cam = makeCam(u, p, w, h)
-    const A = hexToRgb(p.colA)
-    const B = hexToRgb(p.colB)
-    const L = hexToRgb(p.line)
-    const s = p.freq * 0.04
-    const bands = Math.round(p.bands)
-    raster(ctx, w, h, (i, j, W, H) => {
-      const [x, y] = sample(cam, (i / W) * w, (j / H) * h)
-      const d = Math.hypot(x, y)
-      const v = Math.sin(x * s + cam.phase) + Math.sin(y * s - cam.phase) + Math.sin(d * s * 0.7 + cam.phase)
-      const f = 0.5 + 0.5 * Math.sin(v)
-      const band = f * bands
-      const edge = Math.abs(band - Math.round(band))
-      if (edge < 0.06) return L
-      return mix2(f, A, B)
-    })
+    fieldPass(ctx, u, w, h, p, FRAG, { uA: col(p.colA), uB: col(p.colB), uL: col(p.line), uS: p.freq * 0.04, uBands: Math.round(p.bands) })
   },
 }

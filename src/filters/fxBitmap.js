@@ -16,7 +16,7 @@
  */
 
 import { TAU, clamp01 } from '../loops/lib/util.js'
-import { sinHash2 as hash2, registerSourceCache } from './fxCore.js'
+import { sinHash2 as hash2, registerSourceCache, stillUnless } from './fxCore.js'
 import { NO_SWEEP, sweepStates, evalSweeps, anyReveal } from './sweeps.js'
 
 const FIELD_OPTIONS = [
@@ -161,7 +161,7 @@ function lumaFor(src) {
 export default {
   id: 'fx-bitmap',
   label: 'Bitmap',
-  animated: true,
+  stillKey: stillUnless('flow', 'spin', 'sweeps'),   /* plan 27 § 1 */
   sweeps: true,   /* stacked sweep rig (sweeps.js) — third cell-grid filter, same wiring as the trio */
   params: [
     /* noRandom: Amount is the photo/field blend dial — not a look param. */
@@ -178,8 +178,8 @@ export default {
     { key: 'invert', label: 'Invert', type: 'toggle', default: false, section: 'Cell' },
     { key: 'palette', label: 'Palette', type: 'select', options: PALETTES.map(({ value, label }) => ({ value, label })), default: 'drekker', section: 'Color' },
     { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#06070b', section: 'Color' },
-    { key: 'flow', label: 'Flow · cycles', type: 'range', min: 0, max: 4, step: 1, default: 1, noRandom: true, tab: 'anim', section: 'Motion' },
-    { key: 'spin', label: 'Spin · turns', type: 'range', min: -2, max: 2, step: 1, default: 0, noRandom: true, tab: 'anim', section: 'Motion' },
+    { key: 'flow', label: 'Flow', type: 'range', min: -8, max: 8, rMin: 0, rMax: 4, step: 1, default: 1, noRandom: true, tab: 'anim', section: 'Motion' },
+    { key: 'spin', label: 'Spin · turns', type: 'range', min: -8, max: 8, rMin: -2, rMax: 2, step: 1, default: 0, noRandom: true, tab: 'anim', section: 'Motion' },
   ],
   apply(ctx, src, w, h, p, u) {
     const luma = lumaFor(src)
