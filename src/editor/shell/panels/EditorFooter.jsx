@@ -203,14 +203,18 @@ export default function EditorFooter() {
    * to show by default, just with the timeline"): the tab joins while the dock is up. Labs keeps it
    * — its stage loop plays on the transport whether or not a track exists. */
   const timelineUp = (pack('motion')?.useTimelineUp ?? noTimeline)()
+  /* …AND THE WHOLE FOOTER WITH IT (plan 30 § 6, the user: "not out of editor, just out of default,
+   * if you want it then it comes with the transport and timeline"): in the editor the strip is down
+   * until the timeline is up, then Transport · Output · File come together. Labs keeps it always. */
+  const footerDown = currentView() === 'editor' && !!TransportBar && !timelineUp  /* no motion pack, no timeline: Output · File stay */
   const showTransport = !!TransportBar && !touch && (currentView() !== 'editor' || timelineUp)
   const tabs = showTransport ? TABS : TABS_TOUCH
   /* ON TOUCH THE FOOTER IS ONE ROW UNTIL A TAB IS OPENED (2026-10-05): the rail is a sheet half
    * the display high there, and Output's eight controls standing open took all of it. No tab is
    * lit at rest; a tap opens one and the same tap closes it. */
-  const [tab, setTab] = useState(touch ? null : (showTransport ? 'transport' : 'output'))
+  const [tab, setTab] = useState(touch ? null : (showTransport || currentView() === 'editor' ? 'transport' : 'output'))
   /* the dock went away under an open Transport tab — fall back to Output */
-  useEffect(() => { if (tab === 'transport' && !showTransport && !touch) setTab('output') }, [tab, showTransport, touch])
+  useEffect(() => { if (tab === 'transport' && !showTransport && !touch && !footerDown) setTab('output') }, [tab, showTransport, touch, footerDown])
   const [pngScale, setPngScale] = useState(1)
   const [batchOpen, setBatchOpen] = useState(false)
   const [recording, setRecording] = useState(false)
@@ -267,6 +271,37 @@ export default function EditorFooter() {
   const selectedLayer = selectedId && selectedId !== 'canvas' ? findLayerDeep(layers, selectedId) : null
   const photoLayer = selectedLayer?.type === 'photo' ? selectedLayer : null
 
+  /* the batch modal and the bake overlay outlive the strip — File › Batch export… and a running bake
+     work with the footer down (plan 30 § 6) */
+  const modals = (
+    <>
+      {webmProgress && (
+        /* DS overlay, closeButton off — a bake is not dismissible (ruled
+           2026-08-27; it was a hand-rolled scrim at z-[1000] that dismissed
+           on nothing, which at least was honest about being modal). */
+        <FullscreenOverlay open closeButton={false}>
+          <div className="bg-surface-primary border border-oq-08 rounded shadow-xl flex flex-col gap-3" style={{ width: 320, padding: 20 }}>
+            <div className="flex items-center justify-between">
+              <span className="kol-helper-12 text-emphasis">Baking loop…</span>
+              <span className="kol-helper-10 text-meta">{webmProgress.done} / {webmProgress.total}</span>
+            </div>
+            <div className="rounded overflow-hidden" style={{ height: 6, background: 'var(--kol-oq-08)' }}>
+              <div style={{ height: '100%', width: `${Math.round((webmProgress.done / Math.max(1, webmProgress.total)) * 100)}%`, background: 'var(--kol-accent-primary)', transition: 'width 80ms linear' }} />
+            </div>
+          </div>
+        </FullscreenOverlay>
+      )}
+      <BatchExportModal
+        open={batchOpen}
+        onClose={() => setBatchOpen(false)}
+        runBatchExport={runBatchExport}
+        baseAspect={aspect}
+        defaultScale={pngScale}
+      />
+    </>
+  )
+  if (footerDown) return modals
+
   /* THE COLLAPSED DOCK — the left rail's pinned row, mirrored. The rule runs
      the full rail width out past the padding (`-mx-2`, as NavRail's does), and
      one glyph sits in a 32px box so it lands on the same x as the left rail's. */
@@ -280,6 +315,7 @@ export default function EditorFooter() {
               onClick={playing ? pause : play} className="self-center" />
           </Tooltip>
         )}
+        {modals}
       </div>
     )
   }
@@ -364,29 +400,7 @@ export default function EditorFooter() {
           <AudioInputRow />
         </>
       )}
-      {webmProgress && (
-        /* DS overlay, closeButton off — a bake is not dismissible (ruled
-           2026-08-27; it was a hand-rolled scrim at z-[1000] that dismissed
-           on nothing, which at least was honest about being modal). */
-        <FullscreenOverlay open closeButton={false}>
-          <div className="bg-surface-primary border border-oq-08 rounded shadow-xl flex flex-col gap-3" style={{ width: 320, padding: 20 }}>
-            <div className="flex items-center justify-between">
-              <span className="kol-helper-12 text-emphasis">Baking loop…</span>
-              <span className="kol-helper-10 text-meta">{webmProgress.done} / {webmProgress.total}</span>
-            </div>
-            <div className="rounded overflow-hidden" style={{ height: 6, background: 'var(--kol-oq-08)' }}>
-              <div style={{ height: '100%', width: `${Math.round((webmProgress.done / Math.max(1, webmProgress.total)) * 100)}%`, background: 'var(--kol-accent-primary)', transition: 'width 80ms linear' }} />
-            </div>
-          </div>
-        </FullscreenOverlay>
-      )}
-      <BatchExportModal
-        open={batchOpen}
-        onClose={() => setBatchOpen(false)}
-        runBatchExport={runBatchExport}
-        baseAspect={aspect}
-        defaultScale={pngScale}
-      />
+      {modals}
     </div>
   )
 }

@@ -23,6 +23,7 @@ import { CASES } from '../modes/type/cuts'
 import { toggleDots, useBindDots } from '../params/dotVisibility'
 import { toggleTimelinePinned, useTimelinePinned } from '../params/timelinePinned'
 import { openTab } from './openTab'
+import { applyWorkspace, currentWorkspaceName, resetWorkspace, saveWorkspace, useWorkspace } from '../state/workspace'
 
 /* The seam (editor/packs.js) — layer creation and effects come from the generators / effects /
  * motion packs; each part of a menu shows only when its pack is registered. */
@@ -40,10 +41,10 @@ const effectCategories = (filters) => fx()?.effectCategories(filters) ?? []
 /**
  * MenuTop — the menu bar above the editor grid (plans 28–29, on Affinity's conventions; spec R1.1).
  *
- *   [logo]  Effexor FXR  File  Edit  Layer  Text  Vector  Tools  View  Window  Help
+ *   [logo]  FXR  File  Edit  Layer  Text  Vector  Tools  View  Window  Help
  *
- * THE LOGO IS A MARK, the APP NAME IS THE APP MENU (macOS: kitty, Affinity): Home, the chromes,
- * Settings…. The cog retired into it (plan 29 § 5). The editor hides the shell rail while it is
+ * THE LOGO IS THE HOME DOOR, the APP NAME IS THE APP MENU (plan 30 § 1, the user: "just logo should
+ * go to home, and name should open menu"): Home, the chromes, Settings…. The cog retired into it (plan 29 § 5). The editor hides the shell rail while it is
  * mounted — the app menu is its nav — and `\` brings it back. Layer holds edit verbs; creation
  * and effects are Tools (the user's ruling, plan 29 § 7). Submenus open BESIDE their row
  * (the DS `MenuDropdownNest flyout`, kol-component 0.252.0), and a row that does not apply is greyed, never hidden.
@@ -84,7 +85,9 @@ const cmd = (id) => () => window.dispatchEvent(new CustomEvent('kol:command', { 
 /* the trailing slot: ✓ when on (the menus' convention since day one), then the key */
 const trail = (on, k) => (on || k ? <span className="inline-flex items-center gap-2">{on && <Icon name="check" size={11} />}{k}</span> : undefined)
 const openColorPane = (tab = 'Colour') => window.dispatchEvent(new CustomEvent('kol:open-color-pane', { detail: { tab } }))
-const PANEL = 'z-[var(--kol-z-tooltip)]'
+/* `kol-editor-menu` — the reference look (plan 30 § 4: darker panel, sans at full ink, 26px rows,
+   hairline + shadow), scoped in kol-editor.css until it lands in the DS as a MenuItem tone */
+const PANEL = 'kol-editor-menu z-[var(--kol-z-tooltip)]'
 /* an eyebrow inside a menu panel — the voice the preset lists use for their sub-buckets */
 const MenuEyebrow = ({ children }) => <div className="kol-helper-10 text-subtle px-3 pt-2 pb-1">{children}</div>
 const noTimeline = () => false
@@ -109,7 +112,13 @@ export default function MenuTop() {
   const modal = useModal()
   const dots = useBindDots()
   const timelinePinned = useTimelinePinned()
-  /* the footer's Transport tab exists only while the timeline is up (plan 29 § 9) */
+  const workspace = useWorkspace()
+  const workspaceName = currentWorkspaceName(workspace)
+  const onSaveWorkspace = async () => {
+    const name = (await modal.prompt('Workspace name', workspaceName ?? ''))?.trim()
+    if (name) saveWorkspace(name)
+  }
+  /* the footer exists only while the timeline is up (plan 29 § 9, plan 30 § 6) */
   const timelineUp = (motion()?.useTimelineUp ?? noTimeline)()
 
   /* THE EDITOR FOLDS THE SHELL RAIL (plan 28 § 14): the logo menu is its nav. A microtask, because
@@ -245,11 +254,14 @@ export default function MenuTop() {
   const paratype = gen() ? presetsInGroup('paratype') : []
 
   return (
-    <div className="kol-editor-topbar flex items-center gap-1 px-4 h-12 border-b border-oq-08">
-      {/* THE LOGO — a mark, not a menu (plan 29 § 4) */}
-      <span className="inline-flex items-center pr-2" aria-hidden="true"><Logomark svgUrl={logomarkUrl} size={16} /></span>
+    <div className="kol-editor-topbar flex items-center gap-1 px-4 h-8 border-b border-oq-08">
+      {/* THE LOGO — the Home door (plan 30 § 1) */}
+      <button type="button" aria-label="Home" title="Home" onClick={() => navigateTo('/')}
+        className="inline-flex items-center mr-1 text-body hover:text-emphasis transition-colors">
+        <Logomark svgUrl={logomarkUrl} size={16} />
+      </button>
       {/* THE APP MENU — the name holds Home, the chromes and Settings (plan 29 § 5; `APP.name`) */}
-      <MenuItem label="Effexor FXR" caret={false} panelClassName={PANEL} buttonClassName="font-bold text-emphasis">
+      <MenuItem label="FXR" size="sm" caret={false} panelClassName={PANEL} buttonClassName="font-bold text-emphasis">
         <div className="py-1 w-[200px]">
           <MenuDropdownItem onClick={() => navigateTo('/')}>Home</MenuDropdownItem>
           <MenuDropdownNest flyout label="Chromes">
@@ -264,7 +276,7 @@ export default function MenuTop() {
         </div>
       </MenuItem>
 
-      <MenuItem label="File" caret={false} panelClassName={PANEL}>
+      <MenuItem label="File" size="sm" caret={false} panelClassName={PANEL}>
         <div className="py-1 w-[240px]">
           <MenuDropdownItem onClick={onNew}>New</MenuDropdownItem>
           {/* the one place that lists what you have saved, and the only one that can rename,
@@ -326,7 +338,7 @@ export default function MenuTop() {
         </div>
       </MenuItem>
 
-      <MenuItem label="Edit" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Edit" size="sm" caret={false} panelClassName={PANEL}>
         <div className="py-1 w-[240px]">
           <MenuDropdownItem onClick={undo} disabled={!canUndo} shortcut={key('undo')}>Undo</MenuDropdownItem>
           <MenuDropdownItem onClick={redo} disabled={!canRedo} shortcut={key('redo')}>Redo</MenuDropdownItem>
@@ -342,7 +354,7 @@ export default function MenuTop() {
         </div>
       </MenuItem>
 
-      <MenuItem label="Layer" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Layer" size="sm" caret={false} panelClassName={PANEL}>
         <div className="py-1 w-[240px]">
           <MenuDropdownItem onClick={cmd('group')} disabled={sel.length < 2} shortcut={key('group')}>Group selection</MenuDropdownItem>
           <MenuDropdownItem onClick={cmd('ungroup')} disabled={layer?.type !== 'group'} shortcut={key('ungroup')}>Ungroup</MenuDropdownItem>
@@ -372,7 +384,7 @@ export default function MenuTop() {
 
       {/* TEXT — operations on the selected text layer (Affinity's Text menu: traits, alignment,
           case). Making text is Layer › New › Type. */}
-      <MenuItem label="Text" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Text" size="sm" caret={false} panelClassName={PANEL}>
         <div className="py-1 w-[240px]">
           <MenuDropdownNest flyout label="Alignment" disabled={!textLayer}>
             {[['left', 'text-align-left', 'Align text left'], ['center', 'text-align-center', 'Center text'], ['right', 'text-align-right', 'Align text right']].map(([v, icon, label]) => (
@@ -396,7 +408,7 @@ export default function MenuTop() {
         </div>
       </MenuItem>
 
-      <MenuItem label="Vector" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Vector" size="sm" caret={false} panelClassName={PANEL}>
         <div className="py-1 w-[240px]">
           {Object.entries(BOOL_OP_LABELS).map(([op, label]) => (
             <MenuDropdownItem key={op} onClick={() => booleanSelected(op)} disabled={!canBool}>{label}</MenuDropdownItem>
@@ -410,7 +422,7 @@ export default function MenuTop() {
 
       {/* TOOLS — everything that makes a layer, and effects (plan 29 § 7, the user's ruling: "fold
           effects and generative and type and pattern into tools"). Layer keeps the edit verbs. */}
-      <MenuItem label="Tools" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Tools" size="sm" caret={false} panelClassName={PANEL}>
         <div className="py-1 w-[220px]">
           {gen() && (
             <MenuDropdownNest flyout label="Generative">
@@ -483,7 +495,7 @@ export default function MenuTop() {
         </div>
       </MenuItem>
 
-      <MenuItem label="View" caret={false} panelClassName={PANEL}>
+      <MenuItem label="View" size="sm" caret={false} panelClassName={PANEL}>
         <div className="py-1 w-[260px]">
           <MenuDropdownItem onClick={cmd('view-preview')} shortcut={key('view-preview')}>Preview mode</MenuDropdownItem>
           <MenuDropdownDivider />
@@ -501,7 +513,7 @@ export default function MenuTop() {
       </MenuItem>
 
       {/* WINDOW — each row opens its panel's tab (`kol:open-tab`; the color pane has its own event). */}
-      <MenuItem label="Window" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Window" size="sm" caret={false} panelClassName={PANEL}>
         <div className="py-1 w-[240px]">
           <MenuDropdownNest flyout label="Left rail">
             {['Layers', 'Assets', 'History', 'Navigator'].map((t) => <MenuDropdownItem key={t} onClick={() => openTab(t)}>{t}</MenuDropdownItem>)}
@@ -510,20 +522,35 @@ export default function MenuTop() {
               <MenuDropdownItem key={id} onClick={() => openColorPane(id)}>{label}</MenuDropdownItem>
             ))}
             <MenuDropdownDivider />
-            {kinetic && <MenuDropdownItem onClick={() => openTab('Transport')} disabled={!timelineUp}>Transport</MenuDropdownItem>}
-            {['Output', 'File'].map((t) => <MenuDropdownItem key={t} onClick={() => openTab(t)}>{t}</MenuDropdownItem>)}
+            {/* the footer comes up with the timeline (plan 30 § 6): with it down, a row pins the
+                timeline and opens its tab */}
+            {[...(kinetic ? ['Transport'] : []), 'Output', 'File'].map((t) => (
+              <MenuDropdownItem key={t} onClick={() => { if (kinetic && !timelineUp) toggleTimelinePinned(); openTab(t) }}>{t}</MenuDropdownItem>
+            ))}
           </MenuDropdownNest>
           <MenuDropdownNest flyout label="Right rail">
             {['Inspector', 'Parameters', ...(fx() ? ['Effects'] : [])].map((t) => <MenuDropdownItem key={t} onClick={() => openTab(t)}>{t}</MenuDropdownItem>)}
           </MenuDropdownNest>
           {kinetic && <MenuDropdownItem onClick={toggleTimelinePinned} shortcut={trail(timelinePinned)}>Timeline</MenuDropdownItem>}
           <MenuDropdownDivider />
+          {/* THE WORKSPACE (plan 30 § 9; Affinity's Studio presets): the panes' arrangement — dragged by
+              their grips, collapsed by their ⌄ — saved under a name, restored, or reset to the default */}
+          <MenuDropdownNest flyout label="Workspace">
+            <MenuDropdownItem onClick={onSaveWorkspace}>Save workspace…</MenuDropdownItem>
+            {Object.keys(workspace.saved).length > 0 && <MenuDropdownDivider />}
+            {Object.keys(workspace.saved).map((n) => (
+              <MenuDropdownItem key={n} onClick={() => applyWorkspace(n)} shortcut={trail(n === workspaceName)}>{n}</MenuDropdownItem>
+            ))}
+            <MenuDropdownDivider />
+            <MenuDropdownItem onClick={resetWorkspace}>Reset workspace</MenuDropdownItem>
+          </MenuDropdownNest>
+          <MenuDropdownDivider />
           <MenuDropdownItem onClick={toggleRail} disabled={!setNavHidden} shortcut={key('toggle-rail')}>Show / hide rail</MenuDropdownItem>
           <MenuDropdownItem onClick={() => window.dispatchEvent(new CustomEvent('kol:open-settings'))} shortcut={key('settings-drawer')}>Show / hide settings</MenuDropdownItem>
         </div>
       </MenuItem>
 
-      <MenuItem label="Help" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Help" size="sm" caret={false} panelClassName={PANEL}>
         <div className="py-1 w-[240px]">
           <MenuDropdownItem onClick={() => window.dispatchEvent(new CustomEvent('kol:show-shortcuts'))} shortcut={key('show-shortcuts')}>Show / hide shortcuts</MenuDropdownItem>
         </div>

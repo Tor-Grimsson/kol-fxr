@@ -101,6 +101,9 @@ export function LayerActions() {
       {act(hidden ? 'Show' : 'Hide', hidden ? 'eye-off' : 'eye-on', () => sel.forEach((l) => toggleLayer(l.id)), { pressed: hidden })}
       {act(locked ? 'Unlock' : 'Lock', locked ? 'lock' : 'unlock', () => sel.forEach((l) => toggleLayerLock(l.id)), { pressed: locked })}
       <span className="flex-1" />
+      {/* the + rides the footer bar (plan 30 § 8, Affinity's Layers bar): the header holds the four
+          tabs, the grip and the ⌄, and the 264 rail has no room for a fifth control there */}
+      <AddLayerButton />
       {act('Duplicate', 'copy', () => sel.forEach((l) => duplicateLayer(l.id)))}
       {act('Delete', 'trash', deleteSelected)}
     </div>

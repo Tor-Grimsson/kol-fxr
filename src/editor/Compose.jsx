@@ -5,7 +5,7 @@ import LayersAssetsPanel from './shell/panels/LayersAssetsPanel'
 import SelectionPalettePanel from './shell/panels/SelectionPalettePanel'
 import ToolPalette from './shell/panels/ToolPalette'
 import EditorFooter from './shell/panels/EditorFooter'
-import StatusBar from './shell/StatusBar'
+import DocTitle from './shell/DocTitle'
 import { pack } from './packs'
 
 /**
@@ -23,17 +23,20 @@ import { pack } from './packs'
  */
 /* The timeline dock is the motion pack's slot (editor/packs.js), present only when it is
  * registered. Built at first render, not at import — packs register as their modules load. */
+/* A body pane's `id` puts it in the workspace (plan 30 § 9): its grip drags it within and across
+ * the rails, its `⌄` collapses it, Window › Workspace saves the arrangement. `order` is the default. */
 const composeRegistry = () => ({
   canvas: CanvasArea,
   resizableRails: true,
   panels: [
     { slot: 'canvas.header', order: 0,  Component: ToolPalette },
-    { slot: 'left.body',     order: -1, Component: ColorModal },
-    { slot: 'left.body',     order: 0,  Component: LayersAssetsPanel },
+    /* the document's name + zoom, centred above the ruler (spec R1.2, plan 30 § 5) */
+    { slot: 'canvas.header', order: 1,  Component: DocTitle },
+    { slot: 'left.body',     order: -1, id: 'color',     Component: ColorModal },
+    { slot: 'left.body',     order: 0,  id: 'layers',    Component: LayersAssetsPanel },
     { slot: 'left.footer',   order: 0,  Component: EditorFooter },
-    { slot: 'right.body',    order: 0,  Component: SelectionPalettePanel },
+    { slot: 'right.body',    order: 0,  id: 'selection', Component: SelectionPalettePanel },
     ...(pack('motion') ? [{ slot: 'canvas.footer', order: 0, Component: pack('motion').TimelineDock }] : []),
-    { slot: 'canvas.footer', order: 1, Component: StatusBar },
   ],
 })
 let registry = null

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { colord } from 'colord'
 import { Slider } from '@kolkrabbi/kol-component'
-import { Button, SettingsRow, Tooltip } from '@kolkrabbi/kol-component'
+import { Button, SettingsRow, Stepper, Tooltip } from '@kolkrabbi/kol-component'
 import { Dropdown } from '@kolkrabbi/kol-component'
 import { SwatchStack, EyedropPick } from '@kolkrabbi/kol-component'
 import { HueStrip, SBSquare, WheelTriangle } from '@kolkrabbi/kol-component'
@@ -39,16 +39,20 @@ export function ColourBody() {
    * app-level paint state always exists). No "no target" fallback needed. */
   const target = useColorTarget({ history: 'coalesce' })
   const [mode, setMode] = useState('hue')
+  const cs = useControlSize()
 
   return (
-    <div className="p-4 flex flex-col gap-3 h-full min-h-0">
-      <TopRow target={target} mode={mode} setMode={setMode} />
-      <div className="flex-1 min-h-0 flex flex-col">
+    /* AFFINITY'S ORDER (plan 30 § 14, the user's Swatches reference): the swatch pair, the pipette and
+       Opacity on one row; the view picker a full-width row under it, as the Swatches tab's palette
+       picker is; then the body, which takes its own height — the pane sizes to its content */
+    <div className="p-4 flex flex-col gap-3">
+      <TopRow target={target} />
+      <Dropdown size={cs} variant="subtle" className="w-full" ariaLabel="Color view" options={MODE_OPTIONS} value={mode} onChange={setMode} />
+      <div className="flex flex-col">
         {mode === 'hue'   && <HueMode     target={target} />}
         {mode === 'wheel' && <WheelMode   target={target} />}
         {(mode === 'hsl' || mode === 'rgb') && <SlidersMode target={target} model={mode} />}
       </div>
-      <OpacityRow />
     </div>
   )
 }
@@ -68,7 +72,7 @@ export default function ColourPanel() {
 
 const NATIVE_EYEDROP = typeof window !== 'undefined' && 'EyeDropper' in window
 
-function TopRow({ target, mode, setMode }) {
+function TopRow({ target }) {
   const cs = useControlSize()
   /* Read activePaint from the target (already clamped to a supported paint)
    * so SwatchStack's "front" indicator always matches what the picker
@@ -126,7 +130,7 @@ function TopRow({ target, mode, setMode }) {
           <Button tone="ghost" quiet size={cs} iconOnly="eyedrop" aria-label="Eyedropper" onClick={onPickEyedrop} />
         </Tooltip>
       )}
-      <Dropdown size={cs} variant="subtle" className="ml-auto w-[110px]" ariaLabel="Color view" options={MODE_OPTIONS} value={mode} onChange={setMode} />
+      <OpacityField />
     </div>
   )
 }
@@ -145,9 +149,10 @@ function HueMode({ target }) {
   const onSV  = (s, v) => setHex(colord({ h: hsv.h, s, v }).toHex())
 
   return (
-    <div className="flex flex-col gap-3 w-full h-full min-h-0">
+    <div className="flex flex-col gap-3 w-full">
       <HueStrip hue={hsv.h} onChange={onHue} />
-      <div className="flex-1 min-h-0 rounded-[2px] overflow-hidden">
+      {/* a real 2D square, not a strip (plan 30 § 14: "why can't I drag vertically") */}
+      <div className="h-40 rounded-[2px] overflow-hidden">
         <SBSquare hue={hsv.h} sat={hsv.s} val={hsv.v} onChange={onSV} />
       </div>
     </div>
@@ -205,7 +210,7 @@ function SliderRow({ label, hint, max, value, onChange }) {
   )
 }
 
-function OpacityRow() {
+function OpacityField() {
   const { selectedId, layers, canvasFillOpacity, setCanvasFillOpacity } = useComposeState()
 
   const isCanvas = selectedId === 'canvas'
@@ -230,11 +235,15 @@ function OpacityRow() {
       ? (v) => edit.setProp('opacity', v / 100)
       : setLocalOpacity
 
-  /* "100" is three digits — the readout was a 6-char box (spec R6.1, the user's 14) */
+  /* AFFINITY'S `Opacity: 100 %` (plan 30 § 14): the header row's right end, a stepper, not a slider
+     row at the pane's foot. Typed values clamp to 0–100. */
+  const cs = useControlSize()
+  const set = (e) => { const v = Math.round(Number(e.target.value)); if (Number.isFinite(v)) onChange(Math.max(0, Math.min(100, v))) }
   return (
-    <SettingsRow label="Opacity" align="fill" labelWidth={RAIL_LABEL_W}>
-      <Slider min={0} max={100} value={value} onChange={onChange} displayWidth={3} className="flex-1" />
-    </SettingsRow>
+    <label className="ml-auto flex items-center gap-2">
+      <span className="kol-helper-10 text-meta">Opacity</span>
+      <Stepper size={cs} min={0} max={100} value={value} onChange={set} className="w-[64px]" aria-label="Opacity" />
+    </label>
   )
 }
 

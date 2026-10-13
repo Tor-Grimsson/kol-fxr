@@ -96,14 +96,16 @@ export default function ToolPalette() {
     /* ONE lock rule (audit B2/B8, 2026-10-09): a locked layer refuses every transform — flip,
        rotate, nudge, delete, duplicate — not half of them. `canXform` carries it. The fold's
        trigger re-runs the last-picked turn. */
+    /* THE FOLD OPENS WHATEVER APPLIES (plan 30 § 12, kol-component 0.253.0): `disabled` on the fold
+       disarms only its trigger's action; each row greys itself, never hidden */
     { kind: 'split', id: 'rotate-fold', label: 'Rotate', action: true, disabled: !canXform, variants: [
-      { id: 'rotate-left', icon: 'rotate-left', label: 'Rotate 90° left' },
-      { id: 'rotate-right', icon: 'rotate-right', label: 'Rotate 90° right' },
-      { id: 'flip-horizontal', icon: 'flip-horizontal', label: 'Flip horizontal', shortcut: key('flip-h') },
-      { id: 'flip-vertical', icon: 'flip-vertical', label: 'Flip vertical', shortcut: key('flip-v') },
+      { id: 'rotate-left', icon: 'rotate-left', label: 'Rotate 90° left', disabled: !canXform },
+      { id: 'rotate-right', icon: 'rotate-right', label: 'Rotate 90° right', disabled: !canXform },
+      { id: 'flip-horizontal', icon: 'flip-horizontal', label: 'Flip horizontal', shortcut: key('flip-h'), disabled: !canXform },
+      { id: 'flip-vertical', icon: 'flip-vertical', label: 'Flip vertical', shortcut: key('flip-v'), disabled: !canXform },
     ] },
     DIVIDER,
-    { kind: 'split', id: 'boolean-fold', label: 'Boolean', action: true, variants: BOOLEANS, disabled: !canBool },
+    { kind: 'split', id: 'boolean-fold', label: 'Boolean', action: true, variants: BOOLEANS.map((b) => ({ ...b, disabled: !canBool })), disabled: !canBool },
     DIVIDER,
     { kind: 'action', id: 'image', icon: 'image', label: 'Insert image' },
     { kind: 'action', id: 'crop', icon: 'crop', label: 'Crop image', disabled: selectedLayer?.type !== 'photo' || selectedLayer?.locked },

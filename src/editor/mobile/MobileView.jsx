@@ -51,7 +51,7 @@ function EntryScreen({ onGenerate, onEffects, chromes }) {
         {chromes ? (
           <div className="flex flex-col gap-2">
             <span className="kol-eyebrow text-body">Select chrome</span>
-            <span className="kol-mono-16 text-emphasis">Effexor FXR</span>
+            <span className="kol-mono-16 text-emphasis">FXR</span>
           </div>
         ) : (
           <span className="kol-eyebrow text-body">{modeById('randomiser').label}</span>

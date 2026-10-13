@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { LabeledControlSection, SettingsRow, SettingsSwitch, useDragResize } from '@kolkrabbi/kol-component'
 import './styles/kol-editor.css'
 import { panelsForSlot } from './state/panels'
+import { seedWorkspace, useWorkspace } from './state/workspace'
+import { PaneContext } from './shell/panels/PaneHeader'
 import { useComposeState } from './compose/state'
 import { DisplaySettingsDrawer } from '../settings/AppSettings'
 import MenuTop from './shell/MenuTop'
@@ -69,11 +71,39 @@ function RailGrab({ side, railRef }) {
   return <div {...grabProps} />
 }
 
+/* THE WORKSPACE'S RAIL BODY (plan 30 § 9): a pane with an `id` renders where the workspace record
+ * puts it — either rail, in its order, collapsed or not — wrapped so its header's grip and `⌄`
+ * know which pane they are; the drop line shows where a dragged pane will land. Id-less panes keep
+ * their slot. */
+function RailBody({ side, panels }) {
+  const { ws, over } = useWorkspace()
+  const byId = new Map(panels.filter((p) => p.id && p.slot.endsWith('.body')).map((p) => [p.id, p]))
+  const loose = panelsForSlot(panels, `${side}.body`).filter((p) => !p.id)
+  const ids = (ws[side] ?? []).filter((id) => byId.has(id))
+  const line = (i) => over?.side === side && over.index === i && <div key={`drop-${i}`} className="kol-pane-drop" aria-hidden />
+  return (
+    <div className="kol-editor-rail-body" data-rail-side={side}>
+      {ids.map((id, i) => {
+        const { Component } = byId.get(id)
+        return [
+          line(i),
+          <div key={id} className="kol-pane" data-pane-id={id} data-collapsed={ws.collapsed[id] ? 'true' : undefined}>
+            <PaneContext.Provider value={id}><Component /></PaneContext.Provider>
+          </div>,
+        ]
+      })}
+      {line(ids.length)}
+      {loose.map(({ Component }, i) => <Component key={`loose-${i}`} />)}
+    </div>
+  )
+}
+
 function Rail({ side, panels, resizable }) {
   const ref = useRef(null)
   const header = panelsForSlot(panels, `${side}.header`)
   const body   = panelsForSlot(panels, `${side}.body`)
   const footer = panelsForSlot(panels, `${side}.footer`)
+  const workspace = (panels ?? []).some((p) => p.id)
   return (
     <aside ref={ref} className={`kol-editor-${side}`}>
       {resizable && <RailGrab side={side} railRef={ref} />}
@@ -82,9 +112,11 @@ function Rail({ side, panels, resizable }) {
           {header.map(({ Component }, i) => <Component key={i} />)}
         </div>
       )}
-      <div className="kol-editor-rail-body">
-        {body.map(({ Component }, i) => <Component key={i} />)}
-      </div>
+      {workspace ? <RailBody side={side} panels={panels} /> : (
+        <div className="kol-editor-rail-body">
+          {body.map(({ Component }, i) => <Component key={i} />)}
+        </div>
+      )}
       {footer.length > 0 && (
         <div className="kol-editor-rail-footer">
           {footer.map(({ Component }, i) => <Component key={i} />)}
@@ -96,6 +128,7 @@ function Rail({ side, panels, resizable }) {
 
 export default function EditorShell({ registry }) {
   useLabelColumns()
+  seedWorkspace(registry?.panels ?? [])
   const Canvas = registry?.canvas ?? null
   /* The topbar is registry-driven like the rails, defaulting to MenuTop so
    * the compose registry (which declares no topbar) is untouched. Labs mode

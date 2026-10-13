@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { TabsRow } from '@kolkrabbi/kol-component'
 import { useComposeState } from '../../compose/state'
 import { findLayerDeep } from '../../compose/helpers'
 import InspectorRail from '../../compose/InspectorRail'
 import ParametersPanel from '../../compose/inspectors/ParametersPanel'
 import { pack } from '../../packs'
 import { useOpenTab } from '../openTab'
+import PaneHeader from './PaneHeader'
 import PatternPanel from '../../compose/inspectors/PatternPanel'
 
 /* Effects is the effects pack's tab (editor/packs.js) — offered only when it is registered. */
@@ -64,9 +64,7 @@ export default function SelectionPalettePanel() {
     <div className="kol-compose-rail">
       {/* The tab row holds tabs only (spec R2.2, R3.3 — the user's 20): the ⋯ menu and the trash
         * that rode it moved to the toolbar, the Tools menu, the context menu and the Layers footer. */}
-      <div className="pl-3 pr-2 border-b border-oq-08">
-        <TabsRow tabs={tabs.map((t) => ({ id: t, label: t }))} value={active} onChange={setTab} />
-      </div>
+      <PaneHeader tabs={tabs.map((t) => ({ id: t, label: t }))} value={active} onChange={setTab} />
       <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable]">
         {active === 'Inspector'  && <InspectorRail />}
         {active === 'Parameters' && <ParametersPanel />}

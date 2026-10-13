@@ -54,11 +54,14 @@ _(none yet — ownership, deferral and context notes land in `archive/`)_
 
 Tickets this ledger does **not** govern — each row names the destination ledger
 that does. The **Remainder** is this repo's to do; the state is theirs to report.
-Thirty-nine went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
+Forty-two went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
 last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/INDEX.md`).
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [SplitToolButtonFoldAlwaysOpens](outbox/SplitToolButtonFoldAlwaysOpens.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.253.0 | none — adopted 2026-10-13: 0.253.0 pinned, per-row `disabled`, walked |
+| 🟢 | [SelectionOverlayLabelUpright](outbox/SelectionOverlayLabelUpright.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.253.0 | none — adopted 2026-10-13: 0.253.0 pinned, walked |
+| 🟢 | [SelectionOverlayLabelClearsRotateHandle](outbox/SelectionOverlayLabelClearsRotateHandle.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.255.0 | none — adopted 2026-10-13: 0.255.0 pinned, walked at 180° |
 | 🟢 | [MenuDropdownNestFlyout](outbox/MenuDropdownNestFlyout.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.252.0 | none — adopted 2026-10-13: 0.252.0 pinned, walked |
 | 🟢 | [MenuDropdownItemBlockRow](outbox/MenuDropdownItemBlockRow.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.252.0 | none — adopted 2026-10-13: 0.252.0 pinned, walked |
 | 🟢 | [ShellSearchOverlayActionKeepsOpen](outbox/ShellSearchOverlayActionKeepsOpen.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.252.0 | none — adopted 2026-10-13: 0.252.0 pinned, walked |
@@ -122,6 +125,10 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-13 | **`SelectionOverlayLabelClearsRotateHandle` adopted** — kol-component 0.255.0 pinned, walked at 180° |
+| 2026-10-13 | **`SelectionOverlayLabelClearsRotateHandle` returned 🟢** — kol-component 0.255.0; adoption waits on the publish |
+| 2026-10-13 | **Two returned 🟢 and adopted** — `SplitToolButtonFoldAlwaysOpens` · `SelectionOverlayLabelUpright` as kol-component 0.253.0; **one filed** — `SelectionOverlayLabelClearsRotateHandle` (found adopting) |
+| 2026-10-13 | **Two filed into kol-ds-ui** — plan 30 §§ 12–13 (`SplitToolButtonFoldAlwaysOpens` · `SelectionOverlayLabelUpright`); receipts in `outbox/` |
 | 2026-10-13 | **All four adopted** — kol-component 0.252.0 pinned; `MenuFlyout` retired to `_tmp/`, StepPicker on `keepOpen`, Color view `ariaLabel`; walked on `vite preview`, 0 errors |
 | 2026-10-13 | **All four returned 🟢** — kol-ds-ui closed `MenuDropdownNestFlyout` · `MenuDropdownItemBlockRow` · `ShellSearchOverlayActionKeepsOpen` · `DropdownAriaLabel` as kol-component 0.252.0; adoption waits on the publish |
 | 2026-10-13 | **Four filed into kol-ds-ui** — plan 17 #16–19 (`MenuDropdownNestFlyout` · `MenuDropdownItemBlockRow` · `ShellSearchOverlayActionKeepsOpen` · `DropdownAriaLabel`); receipts in `outbox/` |

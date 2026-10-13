@@ -82,8 +82,11 @@ function ZoomProbe() {
   return null
 }
 
-/* the band outside the frame that selects the canvas, in screen px */
-const FRAME_EDGE = 8
+/* the band outside the frame that selects the canvas, in screen px — 16, not 8 (plan 30 § 7: "make
+   the margin of click larger") */
+const FRAME_EDGE = 16
+/* the slop around the frame's ratio label, which selects the canvas too (plan 30 § 7) */
+const LABEL_SLOP = 8
 const NO_GUIDES = { h: [], v: [] }
 
 /* The selected path's segment under a virtual point, within `tol` virtual px — the Pen's
@@ -591,6 +594,18 @@ export default function CanvasArea() {
       }
     }
 
+    /* THE RATIO LABEL IS THE FRAME'S HANDLE (plan 30 § 7, the user: "especially around the aspect
+     * number 4:5"; Figma's frame title): a press on the DS frame's `4:5` label, 8px around it,
+     * selects the canvas. Only here — on empty stage, so a layer under the label still wins. */
+    const label = stageRef.current?.closest('[data-canvas-frame]')?.querySelector(':scope > span')
+    const lr = label?.getBoundingClientRect()
+    if (lr && e.clientX >= lr.left - LABEL_SLOP && e.clientX <= lr.right + LABEL_SLOP
+      && e.clientY >= lr.top - LABEL_SLOP && e.clientY <= lr.bottom + LABEL_SLOP) {
+      e.preventDefault()
+      selectCanvas()
+      return
+    }
+
     /* Empty stage with the Select tool — start a marquee. Tiny drags
      * (≤ 4 vpx) commit as a click-deselect on pointerup. Shift-marquee
      * adds to the existing selection. */
@@ -602,7 +617,7 @@ export default function CanvasArea() {
       startVX: vx, startVY: vy,
       vx, vy, vw: 0, vh: 0,
     })
-  }, [tool, layers, selectedLayer, selectedIds, select, toggleSelection, beginTransaction, clientToVirtual, getScale, finishPath, linePlacement, addLayer, setTool])
+  }, [tool, layers, selectedLayer, selectedIds, select, selectCanvas, toggleSelection, beginTransaction, clientToVirtual, getScale, finishPath, linePlacement, addLayer, setTool])
 
   /* Window listeners while dragging. */
   useEffect(() => {

@@ -113,7 +113,7 @@ const KEY_ORDER = ['/', ...NAV_ITEMS.map((n) => n.path), SETTINGS_PATH]
 const CHROME_PATHS = new Set(['/editor', '/labs', '/morph', '/randomiser'])
 
 const APP = {
-  name: 'Effexor FXR',
+  name: 'FXR',
   subtitle: 'Pick a chrome. All three run the same engine.',
   logomark: logomarkUrl,
   about: (

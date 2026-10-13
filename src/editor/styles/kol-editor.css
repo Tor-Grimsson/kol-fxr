@@ -439,7 +439,42 @@
    rotate cursor (spec R8.2) — CanvasArea sets the variable from compose/cursors.js. */
 [data-handle="ROT"] { cursor: var(--kol-cursor-rotate, grab) !important; }
 
-/* THE ZOOM READOUT MOVED TO THE STATUS BAR (spec R1.2): while one is mounted, the DS viewport's
-   own zoom chip (the button in its bottom-right chip row; the fps chip beside it stays) hides.
-   Reaches the DS markup until `Canvas showZoomChip` lands (plan 17 #5). */
-.kol-editor-canvas-column:has(.kol-editor-statusbar) main.kol-editor-canvas [class~="bottom-3"][class~="right-3"] > button { display: none; }
+/* THE ZOOM READOUT IS THE TITLE LINE'S (spec R1.2, plan 30 § 5): while it is mounted, the DS
+   viewport's own zoom chip (the button in its bottom-right chip row; the fps chip beside it stays)
+   hides. Labs has no title line and keeps the chip. Reaches the DS markup until `Canvas showZoomChip`
+   lands (plan 17 #5). */
+.kol-editor-canvas-column:has(.kol-editor-doctitle) main.kol-editor-canvas [class~="bottom-3"][class~="right-3"] > button { display: none; }
+
+/* THE MENU BAR'S PANELS — the reference look (plan 30 § 4; the user's macOS + Firefox screenshots):
+   a panel DARKER than the bar it drops from (surface-secondary is lighter than the bar in dark, so
+   the edge read as a cut), a hairline and the DS popover's own shadow, rows in the sans at full ink,
+   26px tall. The flyouts are DOM children of the panel (`[role="menu"]`), so one scope reaches every
+   level. Local until it lands in the DS as a MenuItem tone; the key labels stay mono. */
+.kol-editor-menu,
+.kol-editor-menu [role="menu"] {
+  background: var(--kol-surface-tertiary);
+  border: 1px solid var(--kol-oq-08);
+  border-radius: var(--kol-radius-sm);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4), 0 2px 6px -2px rgba(0, 0, 0, 0.3);
+}
+.kol-editor-menu .kol-menu-btn {
+  font-family: var(--kol-font-family-sans);
+  font-size: 13px;
+  letter-spacing: 0;
+  color: var(--kol-fg-emphasis);
+  height: 26px;
+}
+
+/* THE WORKSPACE'S PANES (plan 30 § 9). A collapsed pane is its header and nothing else: the pane
+   wrapper reaches past the pane's own root (each pane draws its own markup) to hide every child but
+   the header, and lets go of the root's fixed / flex height. The drop line is where a dragged pane
+   lands. The right rail's lone inspector used to fill by growing; it still does, inside its pane. */
+.kol-pane { display: flex; flex-direction: column; min-height: 0; }
+.kol-pane:has(.kol-compose-rail--inspector):not([data-collapsed]),
+.kol-pane:has(.kol-compose-rail--inspector):not([data-collapsed]) > * { flex: 1 1 auto; min-height: 0; }
+.kol-pane[data-collapsed] > * { height: auto !important; flex: 0 0 auto !important; }
+.kol-pane[data-collapsed] > * > :not(.kol-pane-header) { display: none !important; }
+.kol-pane-drop { height: 2px; margin: -1px 0; background: var(--kol-accent-primary); position: relative; z-index: 1; }
+/* the pane header's chips sit 6px in, not the button rung's 12 — four tabs (Layers · Assets · History ·
+   Navigator) plus the grip and the ⌄ have to fit the rail, as Affinity's do */
+.kol-pane-header [role="tab"] { padding-inline: 6px; }

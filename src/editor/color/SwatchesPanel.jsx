@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Dropdown } from '@kolkrabbi/kol-component'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { Button, Dropdown, SearchInput, Tooltip } from '@kolkrabbi/kol-component'
 import { ColorSwatch } from '@kolkrabbi/kol-component'
 import { resolveCssVar } from './cssVar'
 import { useControlSize } from '../params/controlSize'
@@ -17,7 +17,8 @@ import { useControlSize } from '../params/controlSize'
  *   5. Absolutes (white + black)
  *
  * The dropdown switches between palettes — AC is the default; "Standard"
- * is a basic web-safe fallback for kicking off without brand context.
+ * is a basic web-safe fallback for kicking off without brand context; "Custom" is the user's own
+ * (the + beside the picker adds the live colour to it).
  */
 
 const FG_STOPS    = ['01', '02', '04', '08', '12', '16', '24', '32', '40', '48', '64', '80', '88', '96']
@@ -37,12 +38,39 @@ const STANDARD_SWATCHES = [
 const PALETTES = [
   { value: 'ac',       label: 'AC'       },
   { value: 'standard', label: 'Standard' },
+  { value: 'custom',   label: 'Custom'   },
 ]
 
-export function SwatchesBody({ onPick }) {
+/* AFFINITY'S SWATCHES TAB (plan 30 § 15, the user's reference): Recent, the palette picker with
+ * add-swatch and the four fixed chips, the grid, Search. Recent is this session's last eight picks;
+ * Custom is the user's own palette, kept across sessions. */
+const CUSTOM_KEY = 'kol.editor.swatches'
+const RECENT_MAX = 8
+const FIXED = [
+  { hex: null,      name: 'None'  },
+  { hex: '#000000', name: 'Black' },
+  { hex: '#808080', name: 'Grey'  },
+  { hex: '#FFFFFF', name: 'White' },
+]
+let recent = []
+let custom = (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_KEY)) ?? [] } catch { return [] } })()
+const subs = new Set()
+const emit = () => subs.forEach((f) => f())
+const pushRecent = (hex) => { if (!hex) return; recent = [hex, ...recent.filter((h) => h !== hex)].slice(0, RECENT_MAX); emit() }
+const addCustom = (hex) => {
+  if (!hex || custom.includes(hex)) return
+  custom = [...custom, hex]
+  try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom)) } catch { /* quota / private mode */ }
+  emit()
+}
+const useSwatchStore = () => useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f) }, () => recent + '|' + custom)
+
+export function SwatchesBody({ onPick, currentHex }) {
   const [palette, setPalette] = useState('ac')
+  const [query, setQuery]     = useState('')
   const [tick, setTick]       = useState(0)
   const cs = useControlSize()
+  useSwatchStore()
 
   /* Re-resolve when the document theme shifts (kol-system rebrand events). */
   useEffect(() => {
@@ -51,43 +79,63 @@ export function SwatchesBody({ onPick }) {
     return () => window.removeEventListener('kol:theme-change', onTheme)
   }, [])
 
+  /* `{ hex, name }` — the name is what Search reads beside the hex */
   const swatches = useMemo(() => {
     if (palette === 'ac') {
-      const fg    = FG_STOPS.map((s) => resolveCssVar(`--kol-fg-${s}`))
-      const red   = RED_STOPS.map((s) => resolveCssVar(`--kol-color-red-${s}`))
-      const cream = CREAM_STOPS.map((s) => resolveCssVar(`--kol-color-cream-${s}`))
-      const grey  = GREY_STOPS.map((s) => resolveCssVar(`--grey-${s}`))
-      return [...fg, ...red, ...cream, ...grey, '#FFFFFF', '#000000'].filter(Boolean)
+      const bank = (stops, v, label) => stops.map((st) => ({ hex: resolveCssVar(v(st)), name: `${label} ${st}` }))
+      return [
+        ...bank(FG_STOPS, (st) => `--kol-fg-${st}`, 'fg'),
+        ...bank(RED_STOPS, (st) => `--kol-color-red-${st}`, 'red'),
+        ...bank(CREAM_STOPS, (st) => `--kol-color-cream-${st}`, 'cream'),
+        ...bank(GREY_STOPS, (st) => `--grey-${st}`, 'grey'),
+        { hex: '#FFFFFF', name: 'white' }, { hex: '#000000', name: 'black' },
+      ].filter((x) => x.hex)
     }
-    return STANDARD_SWATCHES
-  }, [palette, tick])
+    if (palette === 'custom') return custom.map((hex) => ({ hex, name: hex }))
+    return STANDARD_SWATCHES.map((hex) => ({ hex, name: hex }))
+  }, [palette, tick, custom]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* Grid is fixed at 8 cols × 6 rows. Swatches beyond the 48 slots are
-   * dropped; cells stretch vertically to fill the available panel height. */
-  const visible = swatches.slice(0, 48)
+  const q = query.trim().toLowerCase()
+  const shown = q ? swatches.filter((x) => x.name.toLowerCase().includes(q) || x.hex.toLowerCase().includes(q)) : swatches
+  const pick = (hex) => { pushRecent(hex); onPick?.(hex) }
 
   return (
-    <div className="p-4 flex flex-col gap-4 h-full min-h-0">
-      <Dropdown
-        variant="subtle"
-        size={cs}
-        options={PALETTES}
-        value={palette}
-        onChange={setPalette}
-        className="w-full"
-      />
-      <div className="grid grid-cols-8 grid-rows-6 gap-1 flex-1 min-h-0">
-        {visible.map((hex, i) => (
+    <div className="p-4 flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <span className="kol-helper-10 text-meta shrink-0">Recent</span>
+        <div className="flex-1 min-w-0 h-5 flex items-center gap-1 rounded-[2px] bg-oq-04 px-0.5">
+          {recent.map((hex) => (
+            <ColorSwatch key={hex} hex={hex} size={16} radius="tight" frame={false} title={hex} onClick={() => pick(hex)} />
+          ))}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Dropdown variant="subtle" size={cs} options={PALETTES} value={palette} onChange={setPalette} className="flex-1 min-w-0" />
+        <Tooltip label="Add swatch">
+          <Button tone="ghost" quiet size={cs} iconOnly="plus" aria-label="Add swatch" disabled={!currentHex}
+            onClick={() => { addCustom(currentHex); setPalette('custom') }} />
+        </Tooltip>
+        {FIXED.map((f) => (
+          <ColorSwatch key={f.name} hex={f.hex ?? undefined} showTransparent={!f.hex} size={16} radius="tight" title={f.name} onClick={() => pick(f.hex)} />
+        ))}
+      </div>
+      <div className="grid grid-cols-8 gap-1">
+        {shown.map(({ hex, name }, i) => (
           <ColorSwatch
             key={`${hex}-${i}`}
             hex={hex}
-            size="stretch"
+            size="fill"
             radius="tight"
             frame={false}
-            onClick={onPick ? () => onPick(hex) : undefined}
+            title={name}
+            onClick={() => pick(hex)}
           />
         ))}
       </div>
+      {palette === 'custom' && custom.length === 0 && (
+        <span className="kol-helper-10 text-meta">Add the current colour with +</span>
+      )}
+      <SearchInput size={cs} value={query} onChange={(e) => setQuery(e.target.value)} onClear={() => setQuery('')} placeholder="Search" />
     </div>
   )
 }
