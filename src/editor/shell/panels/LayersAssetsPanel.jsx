@@ -3,9 +3,12 @@ import { useState } from 'react'
 import { LayerStackBody, AddLayerButton, LayerActions } from '../../compose/LayerStack'
 import AssetsBody from '../../compose/AssetsBody'
 import HistoryPanel from '../../compose/HistoryPanel'
+import NavigatorPanel from '../NavigatorPanel'
+import { useOpenTab } from '../openTab'
 
 /* History joins as the third tab (G6) — the undo stack beside the layers it rewinds */
-const TABS = ['Layers', 'Assets', 'History']
+/* Navigator joins beside History (plan 24 § 7, restored by plan 29 § 2 — Affinity groups them) */
+const TABS = ['Layers', 'Assets', 'History', 'Navigator']
 
 /**
  * LayersAssetsPanel — left.body. Two tabs (Layers · Assets) sharing one
@@ -16,6 +19,7 @@ const TABS = ['Layers', 'Assets', 'History']
  */
 export default function LayersAssetsPanel() {
   const [tab, setTab] = useState('Layers')
+  useOpenTab(TABS, setTab)
 
   return (
     <div className="kol-compose-rail border-b border-oq-08">
@@ -39,6 +43,7 @@ export default function LayersAssetsPanel() {
         )}
         {tab === 'Assets' && <AssetsBody />}
         {tab === 'History' && <HistoryPanel />}
+        {tab === 'Navigator' && <NavigatorPanel />}
       </div>
       {tab === 'Layers' && <LayerActions />}
     </div>

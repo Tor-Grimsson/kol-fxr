@@ -20,7 +20,7 @@ import { currentView } from '../mode'
 export default function FilesDialogHost() {
   const { open, focusName } = useFilesDialog()
   const { loadPreset, setCurrentPresetId, setCurrentPresetName } = useComposeState()
-  const { onLoadSettings, onSaveSettings, buildSavedSpec } = useComposeFile()
+  const { onLoadSettings, onSaveSettings, buildSavedSpec, onSave } = useComposeFile()
   const { addItem } = useGeneratorLibrary()
 
   /* ⌘O / Ctrl+O — the Files overlay from any chrome (plan 08). Lives here, with the dialog, so every
@@ -30,13 +30,16 @@ export default function FilesDialogHost() {
       /* ⌘S / Ctrl+S — Save patch (user, 2026-10-08), labs + morph + the randomiser: the dialog opens on
        * its name field and Save current writes a NEW file each time, so rolls collect as morph steps */
       if (matchCombo(e, 'Mod+S') && ['labs', 'randomiser'].includes(currentView())) { e.preventDefault(); openFiles({ focusName: true }); return }
+      /* the editor's File › Save ⌘S and Save as… ⇧⌘S (plan 28) — Save as opens the dialog on its name */
+      if (currentView() === 'editor' && matchCombo(e, 'Mod+Shift+S')) { e.preventDefault(); openFiles({ focusName: true }); return }
+      if (currentView() === 'editor' && matchCombo(e, 'Mod+S')) { e.preventDefault(); onSave(); return }
       if (!matchCombo(e, 'Mod+O')) return
       e.preventDefault()
       if (open) closeFiles(); else openFiles()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open])
+  }, [open, onSave])
 
   return (
     <FilesDialog

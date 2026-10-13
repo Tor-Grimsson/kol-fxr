@@ -4,18 +4,18 @@
 // function of time, so they are core. The clock's CONTROLS are (TransportBar — editor review #1,
 // 2026-09-27): a core without motion shows no time controls.
 import { registerPack } from '../editor/packs'
-import { kineticPresetById, presetComp } from '../kinetic/presets'
+import { kineticPresetById, presetComp, KINETIC_TREE, KINETIC_PRESETS } from '../kinetic/presets'
 import KineticType from '../kinetic/KineticType'
 import { loadFonts, warmFontCss, kineticFontCss } from '../kinetic/fonts'
 import KineticPanel from '../editor/compose/inspectors/KineticPanel'
-import TimelineDock from '../editor/params/TimelineDock'
+import TimelineDock, { useTimelineUp } from '../editor/params/TimelineDock'
 import TransportFab from '../editor/params/TransportFab'
 import TransportBar from '../editor/params/TransportBar'
 
 export const motion = {
   layerTypes: ['kinetic'],
-  kineticPresetById, presetComp, KineticType, loadFonts, warmFontCss, kineticFontCss,
-  KineticPanel, TimelineDock, TransportBar, TransportFab,
+  kineticPresetById, presetComp, KINETIC_TREE, KINETIC_PRESETS, KineticType, loadFonts, warmFontCss, kineticFontCss,
+  KineticPanel, TimelineDock, useTimelineUp, TransportBar, TransportFab,
 }
 
 registerPack('motion', motion)

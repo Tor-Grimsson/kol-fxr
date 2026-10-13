@@ -91,6 +91,8 @@ export const SHORTCUTS = [
   { id: 'show-shortcuts', combo: '?',     label: 'Show / hide shortcuts',   section: 'View', hidden: true }, /* the convention everywhere else (audit A12) */
   /* Bound in FilesDialogHost, where the dialog lives (passive here, like `,`). Mod+O, not O: O is the Ellipse tool. */
   { id: 'open-files',     combo: 'Mod+O', label: 'Files',                   section: 'View', passive: true },
+  { id: 'save',           combo: 'Mod+S', label: 'Save',                    section: 'View', passive: true, views: ['editor'] },
+  { id: 'save-as',        combo: 'Mod+Shift+S', label: 'Save as…',          section: 'View', passive: true, views: ['editor'] },
   { id: 'save-patch',     combo: 'Mod+S', label: 'Save patch',              section: 'View', passive: true, views: ['labs', 'randomiser'] },
   /* The settings DRAWER, not the `/settings` page (that is the rail's ⌥7).
    * Bound in `EditorShell.jsx`, where the drawer lives — `passive` here for the

@@ -7,13 +7,13 @@ import { useControlSize } from '../params/controlSize'
  * SegmentedToggle variant="filled" (0.36.0). STATELESS one-shot actions →
  * value={null}. A single selected layer aligns to the CANVAS, ≥2 to their
  * common bbox (state.alignSelected). */
-const H_OPTS = [
+export const H_OPTS = [
   { value: 'start',  label: <Icon name="align-horizontal-left" size={16} />, ariaLabel: 'Align left' },
   { value: 'center', label: <Icon name="align-horizontal-center" size={16} />, ariaLabel: 'Align horizontal center' },
   { value: 'end',    label: <Icon name="align-horizontal-right" size={16} />, ariaLabel: 'Align right' },
   { value: 'distribute', label: <Icon name="space-evenly-horizontal" size={16} />, ariaLabel: 'Distribute horizontally' },
 ]
-const V_OPTS = [
+export const V_OPTS = [
   { value: 'start',  label: <Icon name="align-vertical-top" size={16} />, ariaLabel: 'Align top' },
   { value: 'center', label: <Icon name="align-vertical-center" size={16} />, ariaLabel: 'Align vertical center' },
   { value: 'end',    label: <Icon name="align-vertical-bottom" size={16} />, ariaLabel: 'Align bottom' },

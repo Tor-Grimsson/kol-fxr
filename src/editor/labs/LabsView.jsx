@@ -548,7 +548,12 @@ export default function LabsView() {
      steps are module state and survive the hop either way. Runs after UrlIntents (a child), so a
      morph file opened on `/morph` keeps the steps it loaded. */
   const onMorph = /\/morph\/?$/.test(typeof window === 'undefined' ? '' : window.location.pathname)
-  useEffect(() => { setMorph(onMorph ? { active: true } : { active: false, editing: null }) }, [onMorph])
+  /* leaving labs ends the morph surface (plan 28 § 17) — the flag is module state, and the editor's
+     timeline dock read a stale `active` as "keep the dock up" */
+  useEffect(() => {
+    setMorph(onMorph ? { active: true } : { active: false, editing: null })
+    return () => setMorph({ active: false, editing: null })
+  }, [onMorph])
   return (
     <EditorProviders draftKey={LABS_DRAFT_KEY}>
       <LabsBody />

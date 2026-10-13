@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { ToolPalette as DsToolPalette } from '@kolkrabbi/kol-component'
 import { TOOL_META, useTool } from '../../state/tools'
 import { useComposeState, COVER_TYPES, CANVAS_W, CANVAS_H } from '../../compose/state'
@@ -47,6 +47,13 @@ export default function ToolPalette() {
 
   /* Insert image — a picked file becomes a photo layer, contained to 720px and centred. */
   const fileRef = useRef(null)
+  /* Layer › New › Photo… (plan 28) opens the same picker — dispatched inside the menu click, so the
+     input still has the user's activation */
+  useEffect(() => {
+    const on = () => fileRef.current?.click()
+    window.addEventListener('kol:insert-image', on)
+    return () => window.removeEventListener('kol:insert-image', on)
+  }, [])
   const onPickImage = (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''  /* allow re-picking the same file */

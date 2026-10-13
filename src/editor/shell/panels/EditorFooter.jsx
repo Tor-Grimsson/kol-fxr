@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Dropdown, LabeledControlSection, SegmentedToggle, FullscreenOverlay, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
 import { proxied, isVideoType } from '../../library/mediaLibrary'
 import { useTransport } from '../../params/transport'
@@ -13,6 +13,8 @@ import { saveClip } from '../../lib/clipStore'
 import { ensureWebcam } from '../../lib/webcam'
 import { ASPECTS } from '../aspects'
 import BatchExportModal from './BatchExportModal'
+import { useOpenTab } from '../openTab'
+import { currentView } from '../../mode'
 import { useControlSize, stripClamp } from '../../params/controlSize'
 import { Icon } from '@kolkrabbi/kol-icons'
 import MediaPickerDialog from '../../library/MediaPickerDialog'
@@ -43,6 +45,8 @@ const TABS = [
  * where it has the whole width. That takes the transport row out of the
  * drawer's width budget, so the drawer is the desktop rail's 264 again. */
 const TABS_TOUCH = TABS.filter((t) => t.value !== 'transport')
+const FOOTER_TABS = TABS.map((t) => t.label)
+const noTimeline = () => false
 
 /* Tailwind v4 doesn't scan node_modules, so an ARBITRARY value used only inside
  * a package (`h-[26px]`) never gets generated and the toggle collapses. Naming
@@ -195,11 +199,18 @@ export default function EditorFooter() {
    * Transport tab, the touch ▶ sheet, the collapsed dock's ▶ — only exist when the motion pack is
    * loaded. `/core` has no motion and shows no time controls. */
   const TransportBar = pack('motion')?.TransportBar ?? null
-  const tabs = (touch || !TransportBar) ? TABS_TOUCH : TABS
+  /* THE EDITOR SHOWS TRANSPORT ONLY WITH THE TIMELINE (plan 29 § 9, the user: "transport doesnt need
+   * to show by default, just with the timeline"): the tab joins while the dock is up. Labs keeps it
+   * — its stage loop plays on the transport whether or not a track exists. */
+  const timelineUp = (pack('motion')?.useTimelineUp ?? noTimeline)()
+  const showTransport = !!TransportBar && !touch && (currentView() !== 'editor' || timelineUp)
+  const tabs = showTransport ? TABS : TABS_TOUCH
   /* ON TOUCH THE FOOTER IS ONE ROW UNTIL A TAB IS OPENED (2026-10-05): the rail is a sheet half
    * the display high there, and Output's eight controls standing open took all of it. No tab is
    * lit at rest; a tap opens one and the same tap closes it. */
-  const [tab, setTab] = useState(touch ? null : (TransportBar ? 'transport' : 'output'))
+  const [tab, setTab] = useState(touch ? null : (showTransport ? 'transport' : 'output'))
+  /* the dock went away under an open Transport tab — fall back to Output */
+  useEffect(() => { if (tab === 'transport' && !showTransport && !touch) setTab('output') }, [tab, showTransport, touch])
   const [pngScale, setPngScale] = useState(1)
   const [batchOpen, setBatchOpen] = useState(false)
   const [recording, setRecording] = useState(false)
@@ -217,6 +228,14 @@ export default function EditorFooter() {
    * rail teardown) — onRecordStop reads the hook-stable recorder ref, so the
    * closure is never stale. */
   useEffect(() => () => { onRecordStop() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Window › Transport · Output · File and File › Batch export… (plan 28) */
+  useOpenTab(FOOTER_TABS, useCallback((t) => setTab(t.toLowerCase()), []))
+  useEffect(() => {
+    const on = () => setBatchOpen(true)
+    window.addEventListener('kol:open-batch-export', on)
+    return () => window.removeEventListener('kol:open-batch-export', on)
+  }, [])
 
   const toggleRecord = async () => {
     if (recording) { await onRecordStop(); setRecording(false); return }

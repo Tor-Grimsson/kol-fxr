@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { colord } from 'colord'
 import { Slider } from '@kolkrabbi/kol-component'
 import { Button, SettingsRow, Tooltip } from '@kolkrabbi/kol-component'
-import { SegmentedToggle } from '@kolkrabbi/kol-component'
+import { Dropdown } from '@kolkrabbi/kol-component'
 import { SwatchStack, EyedropPick } from '@kolkrabbi/kol-component'
 import { HueStrip, SBSquare, WheelTriangle } from '@kolkrabbi/kol-component'
 import { useColorTarget } from './useColorTarget'
@@ -12,17 +12,20 @@ import { findLayerDeep } from '../compose/helpers'
 import { pickFromCanvas } from './canvasEyedropper'
 import { useControlSize, RAIL_LABEL_W } from '../params/controlSize'
 
+/* ONE VIEW PICKER (plan 29 § 12): Affinity's `RGB ▾` top-right beside the swatches — the user's
+ * reference. The old Hue · Wheel · Sliders strip and the HSL/RGB strip under Sliders fold into it. */
 const MODE_OPTIONS = [
-  { value: 'hue',     label: 'Hue'     },
-  { value: 'wheel',   label: 'Wheel'   },
-  { value: 'sliders', label: 'Sliders' },
+  { value: 'hue',   label: 'Hue'   },
+  { value: 'wheel', label: 'Wheel' },
+  { value: 'hsl',   label: 'HSL'   },
+  { value: 'rgb',   label: 'RGB'   },
 ]
 
 /**
  * ColourPanel — Hue / Wheel / Sliders modes, all live-bound to the active
  * color target (canvas fill or selected layer's color).
  *
- * Mode picker (top-right) switches the body. Each mode reads/writes the same
+ * View picker (a dropdown top-right, beside the swatches) switches the body. Each mode reads/writes the same
  * underlying color via `useColorTarget` and the local opacity state drives
  * the layer's `opacity` (or canvas fill opacity).
  */
@@ -36,17 +39,14 @@ export function ColourBody() {
    * app-level paint state always exists). No "no target" fallback needed. */
   const target = useColorTarget({ history: 'coalesce' })
   const [mode, setMode] = useState('hue')
-  const cs = useControlSize()
 
   return (
     <div className="p-4 flex flex-col gap-3 h-full min-h-0">
-      {/* the mode is a strip inside the pane, full width (spec R3.2) — it was a 110px dropdown */}
-      <SegmentedToggle tone="sunken" size={cs} className="w-full" ariaLabel="Color mode" value={mode} onChange={setMode} options={MODE_OPTIONS} />
-      <TopRow target={target} />
+      <TopRow target={target} mode={mode} setMode={setMode} />
       <div className="flex-1 min-h-0 flex flex-col">
-        {mode === 'hue'     && <HueMode     target={target} />}
-        {mode === 'wheel'   && <WheelMode   target={target} />}
-        {mode === 'sliders' && <SlidersMode target={target} />}
+        {mode === 'hue'   && <HueMode     target={target} />}
+        {mode === 'wheel' && <WheelMode   target={target} />}
+        {(mode === 'hsl' || mode === 'rgb') && <SlidersMode target={target} model={mode} />}
       </div>
       <OpacityRow />
     </div>
@@ -68,7 +68,7 @@ export default function ColourPanel() {
 
 const NATIVE_EYEDROP = typeof window !== 'undefined' && 'EyeDropper' in window
 
-function TopRow({ target }) {
+function TopRow({ target, mode, setMode }) {
   const cs = useControlSize()
   /* Read activePaint from the target (already clamped to a supported paint)
    * so SwatchStack's "front" indicator always matches what the picker
@@ -126,6 +126,7 @@ function TopRow({ target }) {
           <Button tone="ghost" quiet size={cs} iconOnly="eyedrop" aria-label="Eyedropper" onClick={onPickEyedrop} />
         </Tooltip>
       )}
+      <Dropdown size={cs} variant="subtle" className="ml-auto w-[110px]" ariaLabel="Color view" options={MODE_OPTIONS} value={mode} onChange={setMode} />
     </div>
   )
 }
@@ -169,8 +170,7 @@ function WheelMode({ target }) {
   )
 }
 
-function SlidersMode({ target }) {
-  const [model, setModel] = useState('hsl')
+function SlidersMode({ target, model }) {
   const c = colord(target.hex)
   const setHex = (next) => target.onChange(next.toUpperCase())
 
@@ -178,7 +178,6 @@ function SlidersMode({ target }) {
     const { r, g, b } = c.toRgb()
     return (
       <div className="flex flex-col gap-3">
-        <ModelToggle model={model} setModel={setModel} />
         <SliderRow label="R" hint={`${r}`} max={255} value={r} onChange={(v) => setHex(colord({ r: v, g, b }).toHex())} />
         <SliderRow label="G" hint={`${g}`} max={255} value={g} onChange={(v) => setHex(colord({ r, g: v, b }).toHex())} />
         <SliderRow label="B" hint={`${b}`} max={255} value={b} onChange={(v) => setHex(colord({ r, g, b: v }).toHex())} />
@@ -189,21 +188,11 @@ function SlidersMode({ target }) {
   const { h, s, l } = c.toHsl()
   return (
     <div className="flex flex-col gap-3">
-      <ModelToggle model={model} setModel={setModel} />
       <SliderRow label="H" hint={`${Math.round(h)}°`} max={360} value={Math.round(h)} onChange={(v) => setHex(colord({ h: v, s, l }).toHex())} />
       <SliderRow label="S" hint={`${Math.round(s)}%`} max={100} value={Math.round(s)} onChange={(v) => setHex(colord({ h, s: v, l }).toHex())} />
       <SliderRow label="L" hint={`${Math.round(l)}%`} max={100} value={Math.round(l)} onChange={(v) => setHex(colord({ h, s, l: v }).toHex())} />
     </div>
   )
-}
-
-const MODEL_OPTIONS = [
-  { value: 'hsl', label: 'HSL' },
-  { value: 'rgb', label: 'RGB' },
-]
-function ModelToggle({ model, setModel }) {
-  const cs = useControlSize()
-  return <SegmentedToggle tone="sunken" size={cs} className="w-full" value={model} onChange={setModel} options={MODEL_OPTIONS} />
 }
 
 /* the rail's one row (spec R5.1): uppercase label in the 112 column, the slider fills, its

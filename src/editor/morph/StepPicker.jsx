@@ -68,23 +68,37 @@ export default function StepPicker() {
     return { rows, make }
   }, [open, only, stageOk, layer])
 
+  /* CATEGORIES (shadcn's ⌘K as the aim): the empty field lists the stage and My files, then one
+   * row per generator — a click opens that generator's presets instead of one endless list. The
+   * query still searches every row. The category and back rows are `keepOpen` (kol-component
+   * 0.252.0), so a drill stays in the overlay and its highlight returns to the top row. */
+  const [cat, setCat] = useState(null)
+  const suggestions = useMemo(() => {
+    if (cat) return [{ id: 'back', label: 'All categories', icon: 'arrow-left', group: cat, keepOpen: true }, ...rows.filter((r) => r.id.startsWith('preset:') && r.group === cat)]
+    const counts = new Map()
+    for (const r of rows) if (r.id.startsWith('preset:')) counts.set(r.group, (counts.get(r.group) ?? 0) + 1)
+    const cats = [...counts].map(([g, n]) => ({ id: `cat:${g}`, label: g, icon: 'arrow-right', group: 'Categories', hint: `${n}`, cat: g, keepOpen: true }))
+    return [...rows.filter((r) => !r.id.startsWith('preset:')), ...cats]
+  }, [rows, cat])
+
   if (!open) return null
   const needle = query.trim().toLowerCase()
   const results = needle ? rows.filter((r) => [r.label, r.group, r.hint].some((s) => s && s.toLowerCase().includes(needle))) : []
 
   const onSelect = (row) => {
+    if (row.keepOpen) { setCat(row.cat ?? null); return }
     const step = make.get(row.id)?.()
     if (!step) return
     if (morph.steps.length === 0) setOnly('loop', { loopGroup: step.loopGroup, presetId: step.presetId, presetLabel: step.presetLabel, loopId: step.loopId, ...step.params })
     addStep(step)
   }
-  const onClose = () => { setMorph({ picker: null }); setQuery('') }
+  const onClose = () => { setMorph({ picker: null }); setQuery(''); setCat(null) }
 
   return (
     <ShellSearchOverlay
       open
       onClose={onClose}
-      suggestions={rows}
+      suggestions={suggestions}
       results={results}
       query={query}
       onQueryChange={setQuery}

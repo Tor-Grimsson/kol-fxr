@@ -5,6 +5,7 @@ import { findLayerDeep } from '../../compose/helpers'
 import InspectorRail from '../../compose/InspectorRail'
 import ParametersPanel from '../../compose/inspectors/ParametersPanel'
 import { pack } from '../../packs'
+import { useOpenTab } from '../openTab'
 import PatternPanel from '../../compose/inspectors/PatternPanel'
 
 /* Effects is the effects pack's tab (editor/packs.js) — offered only when it is registered. */
@@ -42,6 +43,8 @@ export default function SelectionPalettePanel() {
   useEffect(() => {
     if (selectedId && selectedId !== 'canvas') setTab('Inspector')
   }, [selectedId])
+
+  useOpenTab(tabs, setTab)
 
   useEffect(() => {
     const openParams  = () => setTab('Parameters')

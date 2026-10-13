@@ -54,11 +54,15 @@ _(none yet — ownership, deferral and context notes land in `archive/`)_
 
 Tickets this ledger does **not** govern — each row names the destination ledger
 that does. The **Remainder** is this repo's to do; the state is theirs to report.
-Thirty-five went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
+Thirty-nine went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
 last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/INDEX.md`).
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [MenuDropdownNestFlyout](outbox/MenuDropdownNestFlyout.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.252.0 | none — adopted 2026-10-13: 0.252.0 pinned, walked |
+| 🟢 | [MenuDropdownItemBlockRow](outbox/MenuDropdownItemBlockRow.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.252.0 | none — adopted 2026-10-13: 0.252.0 pinned, walked |
+| 🟢 | [ShellSearchOverlayActionKeepsOpen](outbox/ShellSearchOverlayActionKeepsOpen.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.252.0 | none — adopted 2026-10-13: 0.252.0 pinned, walked |
+| 🟢 | [DropdownAriaLabel](outbox/DropdownAriaLabel.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.252.0 | none — adopted 2026-10-13: 0.252.0 pinned, walked |
 | 🟢 | [SegmentedSunkenNoBorder](outbox/SegmentedSunkenNoBorder.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-09 — kol-theme 0.171.0 | none — adopted 2026-10-09: kol-theme 0.171.0 pinned |
 | 🟢 | [HubWalkthroughEscape](outbox/HubWalkthroughEscape.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-09 — kol-shell 0.63.0 (audit A5) | none — adopted 2026-10-09: shell 0.63.0 pinned |
 | 🟢 | [EditorTransformGlyphs](outbox/EditorTransformGlyphs.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-09 — kol-icons 0.34.0, the nine Transform glyphs redrawn (review #14) | none — adopted 2026-10-09: icons 0.34.0 pinned |
@@ -118,6 +122,9 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-13 | **All four adopted** — kol-component 0.252.0 pinned; `MenuFlyout` retired to `_tmp/`, StepPicker on `keepOpen`, Color view `ariaLabel`; walked on `vite preview`, 0 errors |
+| 2026-10-13 | **All four returned 🟢** — kol-ds-ui closed `MenuDropdownNestFlyout` · `MenuDropdownItemBlockRow` · `ShellSearchOverlayActionKeepsOpen` · `DropdownAriaLabel` as kol-component 0.252.0; adoption waits on the publish |
+| 2026-10-13 | **Four filed into kol-ds-ui** — plan 17 #16–19 (`MenuDropdownNestFlyout` · `MenuDropdownItemBlockRow` · `ShellSearchOverlayActionKeepsOpen` · `DropdownAriaLabel`); receipts in `outbox/` |
 | 2026-10-09 | **`SegmentedSunkenNoBorder` filed into kol-ds-ui** — plan 17 item 3, the sunken strip's invisible border; receipt in `outbox/` |
 | 2026-10-09 | **`HubWalkthroughEscape` filed into kol-ds-ui** — audit A5, the Hub's carousel; receipt in `outbox/` |
 | 2026-10-09 | **`EditorTransformGlyphs` + `ButtonPrimaryHoverDeeper` + `HubSettingsHeaderAt390` filed into kol-ds-ui** — plan 20 § 8 (review #14 · #15 · audit A13); receipts in `outbox/` |

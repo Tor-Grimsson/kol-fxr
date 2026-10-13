@@ -10,6 +10,7 @@ import { resolveLayersDeep, makeSmoothingState } from '../params/resolve'
 import { transport } from '../params/transport'
 import { downloadBlob } from '../lib/download'
 import { PRESET_SIZES } from '../shell/aspects'
+import { markSaved, docOf } from './savedMark'
 import { makeZip } from '../lib/zipStore'
 import { atFullRes } from '../lib/previewScale'
 
@@ -86,13 +87,14 @@ const buildLayersSvg = (args) => buildLayersSvgRaw({ ...args, layers: inlineSrcs
 const hasKineticLayer = (ls) => (ls ?? []).some((l) => l.type === 'kinetic' || (l.type === 'group' && hasKineticLayer(l.children)))
 
 export function useComposeFile() {
+  const composeState = useComposeState()
   const {
     layers, palette, aspect, canvasW, canvasH,
     colors, poolId, modeId, locks,
     currentPresetId, currentPresetName,
     setCurrentPresetId, setCurrentPresetName,
     loadPreset,
-  } = useComposeState()
+  } = composeState
   const { addItem, updateItem } = useGeneratorLibrary()
   const modal = useModal()
 
@@ -133,6 +135,8 @@ export function useComposeFile() {
   }
   /* the spec plus its thumbnail — every save goes through this */
   const buildSavedSpec = async (name) => {
+    /* every save goes through here — the status bar's `*` clears against this (plan 29 § 1) */
+    markSaved(docOf(composeState))
     const thumb = await captureThumb()
     return { ...buildSpec(name), ...(thumb ? { thumb } : {}) }
   }

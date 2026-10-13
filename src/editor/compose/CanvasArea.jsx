@@ -1299,7 +1299,10 @@ export default function CanvasArea() {
       /* Single attr check — anything inside the editor shell keeps
        * selection. New rails / panels are covered automatically by being
        * mounted inside `<EditorShell data-editor-keep-selection>`. */
-      if (e.target.closest?.('[data-editor-keep-selection]')) return
+      /* …and so does a floating panel (menus, dropdowns): they portal to <body>, outside the shell,
+       * and a press in one deselected before its row's click — every selection verb in the menu bar
+       * ran on nothing (plan 28). */
+      if (e.target.closest?.('[data-editor-keep-selection], .kol-popover-float')) return
       select(null)
     }
     document.addEventListener('mousedown', onDocDown)
@@ -1335,8 +1338,14 @@ export default function CanvasArea() {
 
       /* the editor's answer only — `R` is the rectangle here, Reset in labs and the randomiser */
       const shortcut = matchAny(e, undefined, 'editor')
-      if (!shortcut) return
+      if (shortcut) run(shortcut, e)
+    }
 
+    /* THE MENU BAR RUNS THE SAME VERBS (plan 28): `kol:command` with a keymap id goes through this
+       one switch, so a menu row and its key share every guard (locks, canvas selection, counts). */
+    const onCommand = (ev) => run({ id: ev.detail?.id }, { preventDefault() {} })
+
+    const run = (shortcut, e) => {
       const layer = selectedLayer
 
       switch (shortcut.id) {
@@ -1489,7 +1498,11 @@ export default function CanvasArea() {
       }
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('kol:command', onCommand)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('kol:command', onCommand)
+    }
   }, [
     selectedLayer, selectedIds, isPositionedSel, layers,
     select, removeLayer, deleteSelected, updateLayer, nudgeEdit, duplicateLayer, toggleLayer, toggleLayerLock,

@@ -4,6 +4,7 @@ import { useComposeState } from '../compose/state'
 import { labelForLayer } from '../compose/labels'
 import { keysFor } from '../morph/buildMorph'
 import { setMorph, useMorph } from '../morph/morphStore'
+import { useTimelinePinned } from './timelinePinned'
 import { EASINGS, EASING_OPTIONS } from './easing'
 import { isBinding } from './resolve'
 import { useTransport } from './transport'
@@ -424,10 +425,22 @@ function DockGrab({ onDrag, onEnd, onReset }) {
   )
 }
 
+/* Is the dock up? — the one gate (plan 29 § 9): a track exists, the Morph rail is up, or Window ›
+ * Timeline pins it. The dock and the editor footer's Transport tab both read it, so the transport
+ * shows exactly when the clock it drives is on screen. */
+export function useTimelineUp() {
+  const { layers } = useComposeState()
+  const morph = useMorph()
+  const pinned = useTimelinePinned()
+  const hasTrack = useMemo(() => collectTracks(layers).length > 0, [layers])
+  return hasTrack || !!morph.active || pinned
+}
+
 export default function TimelineDock() {
   const { layers, updateLayer } = useComposeState()
   const { t, seek, loopSeconds } = useTransport()
   const morph = useMorph()
+  const pinned = useTimelinePinned()
   const collected = useMemo(() => collectTracks(layers), [layers])
   /* ON THE MORPH RAIL THE DOCK IS ALWAYS UP (the user, 2026-10-09: "show timeline when you enter morph
      regardless of slot empty or not") — until a morph is built (two steps) its lane is an empty header */
@@ -440,7 +453,8 @@ export default function TimelineDock() {
   const base = useRef(null)
   useEffect(() => { try { if (dockH) localStorage.setItem(DOCK_KEY, String(dockH)); else localStorage.removeItem(DOCK_KEY) } catch { /* private mode */ } }, [dockH])
 
-  if (tracks.length === 0) return null
+  /* Window › Timeline pins the dock up with no lanes (plan 28 § 17) */
+  if (tracks.length === 0 && !pinned) return null
 
   const writeKeys = (track, nextKeys) => {
     const sorted = [...nextKeys].sort((a, b) => a.t - b.t)
