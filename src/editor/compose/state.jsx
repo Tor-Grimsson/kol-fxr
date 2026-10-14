@@ -425,6 +425,8 @@ const ALL_LAYER_TYPES = [
    * Generative types nor Effects (para-type now; interfaces later). Rides
    * the loop render vehicle (loopGroup/presetId/loopId + flat params). */
   { id: 'misc',       label: 'Misc' },
+  /* Affinity's Add Layer — an empty container to drop layers into (plan 32 § 2b), on the group we have */
+  { id: 'group',      label: 'Empty layer' },
 ]
 
 /* The pack each non-core type needs (editor/packs.js) — a type whose pack is absent is not offered. */
@@ -486,6 +488,7 @@ const layerDefaults = (type, vh = CANVAS_H) => {
     case 'text':       return placed(600, 120, { ...TEXT_DEFAULTS, text: 'New text', color: 'palette:dark' })
     /* path geometry comes from the pen tool via `extras`; these are just
      * safe fallbacks so a bare addLayer('path') never yields undefined nodes. */
+    case 'group':      return fullCanvas({ children: [], name: 'Layer' })
     case 'path':       return { nodes: [], closed: false, x: 0, y: 0, w: 1, h: 1, color: null, stroke: 'palette:dark', strokeWidth: 2 }
     default:           return {}
   }

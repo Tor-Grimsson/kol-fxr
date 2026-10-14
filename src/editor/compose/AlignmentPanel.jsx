@@ -20,13 +20,18 @@ export const V_OPTS = [
   { value: 'distribute', label: <Icon name="space-evenly-vertical" size={16} />, ariaLabel: 'Distribute vertically' },
 ]
 
+const ALIGN_H = H_OPTS.filter((o) => o.value !== 'distribute')
+const ALIGN_V = V_OPTS.filter((o) => o.value !== 'distribute')
+
 export default function AlignmentPanel() {
   const { alignSelected } = useComposeState()
   const cs = useControlSize()
   return (
     <div className="grid grid-cols-2 gap-2">
-      <SegmentedToggle tone="sunken" size={cs} ariaLabel="Horizontal alignment" value={null} options={H_OPTS} onChange={(m) => alignSelected('h', m)} />
-      <SegmentedToggle tone="sunken" size={cs} ariaLabel="Vertical alignment" value={null} options={V_OPTS} onChange={(m) => alignSelected('v', m)} />
+      {/* three aligns a strip (plan 34 § 3 — four overflowed the rail and clipped); distribute lives in
+          Layer › Align, which still reads the full H_OPTS / V_OPTS */}
+      <SegmentedToggle tone="sunken" size={cs} ariaLabel="Horizontal alignment" value={null} options={ALIGN_H} onChange={(m) => alignSelected('h', m)} className="w-full" />
+      <SegmentedToggle tone="sunken" size={cs} ariaLabel="Vertical alignment" value={null} options={ALIGN_V} onChange={(m) => alignSelected('v', m)} className="w-full" />
     </div>
   )
 }

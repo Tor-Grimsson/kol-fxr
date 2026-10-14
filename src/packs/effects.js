@@ -5,10 +5,10 @@ import { FILTERS, filterById } from '../filters'
 import { makeSweep } from '../filters/sweeps'
 import { runChain, invalidateSource, stillOf } from '../filters/fxCore'
 import EffectsPanel from '../editor/compose/inspectors/EffectsPanel'
-import { effectCategories } from '../editor/compose/inspectors/effectCategories'
+import { effectCategories, liveFilterGroups, liveFilterLabel } from '../editor/compose/inspectors/effectCategories'
 
 export const effects = {
-  FILTERS, filterById, makeSweep, runChain, invalidateSource, stillOf, effectCategories, EffectsPanel,
+  FILTERS, filterById, makeSweep, runChain, invalidateSource, stillOf, effectCategories, liveFilterGroups, liveFilterLabel, EffectsPanel,
   /* GPU tiers stay lazy — loaded when a chain first needs them */
   loadPixiPipeline: () => import('../filters/pixi/pipeline.js'),
   loadGlHost: () => import('../filters/gl/host.js'),

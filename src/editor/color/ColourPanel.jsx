@@ -44,11 +44,12 @@ export function ColourBody() {
   return (
     /* AFFINITY'S ORDER (plan 30 § 14, the user's Swatches reference): the swatch pair, the pipette and
        Opacity on one row; the view picker a full-width row under it, as the Swatches tab's palette
-       picker is; then the body, which takes its own height — the pane sizes to its content */
-    <div className="p-4 flex flex-col gap-3">
+       picker is; then the body — the pane sizes to its content, and a dragged height (plan 31 § 8)
+       lands in the square */
+    <div className="p-4 flex flex-col gap-3 flex-1 min-h-0">
       <TopRow target={target} />
       <Dropdown size={cs} variant="subtle" className="w-full" ariaLabel="Color view" options={MODE_OPTIONS} value={mode} onChange={setMode} />
-      <div className="flex flex-col">
+      <div className="flex flex-col flex-1 min-h-0">
         {mode === 'hue'   && <HueMode     target={target} />}
         {mode === 'wheel' && <WheelMode   target={target} />}
         {(mode === 'hsl' || mode === 'rgb') && <SlidersMode target={target} model={mode} />}
@@ -149,10 +150,11 @@ function HueMode({ target }) {
   const onSV  = (s, v) => setHex(colord({ h: hsv.h, s, v }).toHex())
 
   return (
-    <div className="flex flex-col gap-3 w-full">
+    <div className="flex flex-col gap-3 w-full flex-1 min-h-0">
       <HueStrip hue={hsv.h} onChange={onHue} />
-      {/* a real 2D square, not a strip (plan 30 § 14: "why can't I drag vertically") */}
-      <div className="h-40 rounded-[2px] overflow-hidden">
+      {/* a real 2D square, not a strip (plan 30 § 14: "why can't I drag vertically"); 160 is the
+          floor — a taller pane goes to the square (plan 31 § 8) */}
+      <div className="flex-1 min-h-40 rounded-[2px] overflow-hidden">
         <SBSquare hue={hsv.h} sat={hsv.s} val={hsv.v} onChange={onSV} />
       </div>
     </div>

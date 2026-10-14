@@ -14,7 +14,6 @@ import { findLayerDeep } from '../compose/helpers'
 import { isBooleanable } from '../compose/boolean-ops'
 import { BOOL_OP_LABELS } from '../compose/labels'
 import { comboLabel, shortcutById } from '../state/keymap'
-import { bareChain } from '../compose/filterChain'
 import { pack } from '../packs'
 import { blendLayers, canBlend } from '../compose/blend'
 import { canMask } from '../compose/masks'
@@ -23,6 +22,8 @@ import { CASES } from '../modes/type/cuts'
 import { toggleDots, useBindDots } from '../params/dotVisibility'
 import { toggleTimelinePinned, useTimelinePinned } from '../params/timelinePinned'
 import { openTab } from './openTab'
+import { LiveFilterRows } from './LiveFilterRows'
+import { useZoom } from './zoomStore'
 import { applyWorkspace, currentWorkspaceName, resetWorkspace, saveWorkspace, useWorkspace } from '../state/workspace'
 
 /* The seam (editor/packs.js) — layer creation and effects come from the generators / effects /
@@ -30,13 +31,10 @@ import { applyWorkspace, currentWorkspaceName, resetWorkspace, saveWorkspace, us
 const gen = () => pack('generators')
 const fx = () => pack('effects')
 const motion = () => pack('motion')
-const loopById = (id) => gen()?.loopById(id) ?? null
-const filterById = (id) => fx()?.filterById(id) ?? null
 const groupById = (id) => gen().groupById(id)
 const presetsInGroup = (group) => gen()?.presetsInGroup(group) ?? []
 const presetsInSub = (group, sub) => gen()?.presetsInSub(group, sub) ?? []
 const presetParams = (preset) => gen().presetParams(preset)
-const effectCategories = (filters) => fx()?.effectCategories(filters) ?? []
 
 /**
  * MenuTop — the menu bar above the editor grid (plans 28–29, on Affinity's conventions; spec R1.1).
@@ -88,6 +86,11 @@ const openColorPane = (tab = 'Colour') => window.dispatchEvent(new CustomEvent('
 /* `kol-editor-menu` — the reference look (plan 30 § 4: darker panel, sans at full ink, 26px rows,
    hairline + shadow), scoped in kol-editor.css until it lands in the DS as a MenuItem tone */
 const PANEL = 'kol-editor-menu z-[var(--kol-z-tooltip)]'
+/* LINE TO LINE (plan 31 § 1): the panel's top border on the bar's bottom border — a 26px trigger sits
+   2.5px above the bar's 1px hairline in its 32. `offset` is kol-component's (0.256.0,
+   `MenuItemOffset` filed from here). */
+const MENU_OFFSET = 2.5
+const BAR = { size: 'sm', caret: false, panelClassName: PANEL, offset: MENU_OFFSET }
 /* an eyebrow inside a menu panel — the voice the preset lists use for their sub-buckets */
 const MenuEyebrow = ({ children }) => <div className="kol-helper-10 text-subtle px-3 pt-2 pb-1">{children}</div>
 const noTimeline = () => false
@@ -96,7 +99,7 @@ export default function MenuTop() {
   const {
     aspect, setAspect,
     view, setView,
-    layers, selectedId, selectedIds, select, updateLayer, addLayer, addFilter,
+    layers, selectedId, selectedIds, select, updateLayer, addLayer,
     flattenSelected, releaseBoolean, booleanSelected, convertShapeToPath, groupLayers, palette,
     alignSelected, flattenText,
     beginTransaction, commitTransaction,
@@ -112,6 +115,7 @@ export default function MenuTop() {
   const modal = useModal()
   const dots = useBindDots()
   const timelinePinned = useTimelinePinned()
+  const zoom = useZoom()
   const workspace = useWorkspace()
   const workspaceName = currentWorkspaceName(workspace)
   const onSaveWorkspace = async () => {
@@ -143,24 +147,6 @@ export default function MenuTop() {
   const editable = !!layer && !layer.locked
   const positioned = sel.some((l) => typeof l.x === 'number' && !l.locked)
   const textLayer = layer?.type === 'text' && !layer.locked ? layer : null
-
-  /* Effects — ADD a filter stage to the selected layer's chain and jump to the Effects tab. Engine
-   * (GL) filters need a pixel source: photo layers AND 2d loop layers get the full catalog, other
-   * positioned layers the canvas set; engine (GL) loops take the canvas + pixi tiers but never a GL
-   * engine stage. One engine stage max. */
-  const fxEngineLoop = layer?.type === 'loop' && loopById(layer.loopId)?.kind === 'engine'
-  const fxTarget = layer && ['shape', 'text', 'pattern', 'path', 'loop', 'misc', 'photo'].includes(layer.type) ? layer : null
-  const fxChain = fxTarget ? bareChain(fxTarget) : []
-  const fxHasEngine = fxChain.some((s) => filterById(s.id)?.kind === 'engine')
-  const fxEngineHost = fxTarget && !fxEngineLoop && (fxTarget.type === 'photo' || fxTarget.type === 'loop' || fxTarget.type === 'misc')
-  /* with no target the whole catalog shows, greyed */
-  const fxOptions = (fx()?.FILTERS ?? []).filter((f) => !fxTarget || f.kind !== 'engine' || (fxEngineHost && !fxHasEngine))
-  const fxInChain = (id) => fxChain.some((s) => s.id === id)
-  const applyEffect = (f) => {
-    if (!fxTarget) return
-    addFilter(fxTarget.id, f.id)
-    window.dispatchEvent(new CustomEvent('kol:open-effects'))
-  }
 
   /* Generative — the app hierarchy (METHOD > TYPE > CATEGORY > PRESET) over the loop registry.
    * Picking a preset inserts a loop layer carrying it. */
@@ -253,15 +239,17 @@ export default function MenuTop() {
   const kinetic = motion()
   const paratype = gen() ? presetsInGroup('paratype') : []
 
+  /* THE BAR'S WASH is the panel's (plan 31 § 1 — the user: "MAKE IT DARKER"): bar and open menu read
+     as one piece, macOS's */
   return (
-    <div className="kol-editor-topbar flex items-center gap-1 px-4 h-8 border-b border-oq-08">
+    <div className="kol-editor-topbar flex items-center gap-1 px-4 h-8 bg-surface-tertiary border-b border-oq-08">
       {/* THE LOGO — the Home door (plan 30 § 1) */}
       <button type="button" aria-label="Home" title="Home" onClick={() => navigateTo('/')}
         className="inline-flex items-center mr-1 text-body hover:text-emphasis transition-colors">
         <Logomark svgUrl={logomarkUrl} size={16} />
       </button>
       {/* THE APP MENU — the name holds Home, the chromes and Settings (plan 29 § 5; `APP.name`) */}
-      <MenuItem label="FXR" size="sm" caret={false} panelClassName={PANEL} buttonClassName="font-bold text-emphasis">
+      <MenuItem label="FXR" {...BAR} buttonClassName="font-bold text-emphasis">
         <div className="py-1 w-[200px]">
           <MenuDropdownItem onClick={() => navigateTo('/')}>Home</MenuDropdownItem>
           <MenuDropdownNest flyout label="Chromes">
@@ -276,7 +264,7 @@ export default function MenuTop() {
         </div>
       </MenuItem>
 
-      <MenuItem label="File" size="sm" caret={false} panelClassName={PANEL}>
+      <MenuItem label="File" {...BAR}>
         <div className="py-1 w-[240px]">
           <MenuDropdownItem onClick={onNew}>New</MenuDropdownItem>
           {/* the one place that lists what you have saved, and the only one that can rename,
@@ -338,7 +326,7 @@ export default function MenuTop() {
         </div>
       </MenuItem>
 
-      <MenuItem label="Edit" size="sm" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Edit" {...BAR}>
         <div className="py-1 w-[240px]">
           <MenuDropdownItem onClick={undo} disabled={!canUndo} shortcut={key('undo')}>Undo</MenuDropdownItem>
           <MenuDropdownItem onClick={redo} disabled={!canRedo} shortcut={key('redo')}>Redo</MenuDropdownItem>
@@ -354,7 +342,7 @@ export default function MenuTop() {
         </div>
       </MenuItem>
 
-      <MenuItem label="Layer" size="sm" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Layer" {...BAR}>
         <div className="py-1 w-[240px]">
           <MenuDropdownItem onClick={cmd('group')} disabled={sel.length < 2} shortcut={key('group')}>Group selection</MenuDropdownItem>
           <MenuDropdownItem onClick={cmd('ungroup')} disabled={layer?.type !== 'group'} shortcut={key('ungroup')}>Ungroup</MenuDropdownItem>
@@ -371,6 +359,13 @@ export default function MenuTop() {
           <MenuDropdownItem onClick={cmd('flip-h')} disabled={!positioned} shortcut={key('flip-h')}>Flip horizontal</MenuDropdownItem>
           <MenuDropdownItem onClick={cmd('flip-v')} disabled={!positioned} shortcut={key('flip-v')}>Flip vertical</MenuDropdownItem>
           <MenuDropdownDivider />
+          {/* LIVE FILTERS (plan 32 § 1; Affinity's `New Live Filter Layer ▸`, which an effect is — applied
+              to a layer, so it lives in Layer, not Tools): Blur · Sharpen · Distort · Noise · Lighting ·
+              Colors, then the labs families. Greyed, not hidden, with nothing selected; ✓ on the chain. */}
+          {fx() && <MenuDropdownNest flyout label="Live Filters"><LiveFilterRows /></MenuDropdownNest>}
+          {/* the FX button's window (plan 32 § 2) */}
+          <MenuDropdownItem onClick={() => window.dispatchEvent(new CustomEvent('kol:open-layer-effects'))} disabled={!editable}>Layer Effects…</MenuDropdownItem>
+          <MenuDropdownDivider />
           {maskSel?.isMask ? (
             <MenuDropdownItem onClick={onReleaseMask}>Release mask</MenuDropdownItem>
           ) : (
@@ -384,7 +379,7 @@ export default function MenuTop() {
 
       {/* TEXT — operations on the selected text layer (Affinity's Text menu: traits, alignment,
           case). Making text is Layer › New › Type. */}
-      <MenuItem label="Text" size="sm" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Text" {...BAR}>
         <div className="py-1 w-[240px]">
           <MenuDropdownNest flyout label="Alignment" disabled={!textLayer}>
             {[['left', 'text-align-left', 'Align text left'], ['center', 'text-align-center', 'Center text'], ['right', 'text-align-right', 'Align text right']].map(([v, icon, label]) => (
@@ -408,7 +403,7 @@ export default function MenuTop() {
         </div>
       </MenuItem>
 
-      <MenuItem label="Vector" size="sm" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Vector" {...BAR}>
         <div className="py-1 w-[240px]">
           {Object.entries(BOOL_OP_LABELS).map(([op, label]) => (
             <MenuDropdownItem key={op} onClick={() => booleanSelected(op)} disabled={!canBool}>{label}</MenuDropdownItem>
@@ -422,7 +417,7 @@ export default function MenuTop() {
 
       {/* TOOLS — everything that makes a layer, and effects (plan 29 § 7, the user's ruling: "fold
           effects and generative and type and pattern into tools"). Layer keeps the edit verbs. */}
-      <MenuItem label="Tools" size="sm" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Tools" {...BAR}>
         <div className="py-1 w-[220px]">
           {gen() && (
             <MenuDropdownNest flyout label="Generative">
@@ -476,27 +471,27 @@ export default function MenuTop() {
               </MenuDropdownNest>
             )}
           </MenuDropdownNest>
-          {/* a stage on the selected layer — the categories show greyed with nothing selected */}
-          {fx() && (
-            <MenuDropdownNest flyout label="Effects">
-              <MenuDropdownItem onClick={() => fxTarget && updateLayer(fxTarget.id, { filters: [] })} disabled={fxChain.length === 0}>None</MenuDropdownItem>
-              <MenuDropdownDivider />
-              {effectCategories(fxOptions).filter((c) => c.id !== 'other').map((c) => (
-                <MenuDropdownNest flyout key={c.id} label={c.label} disabled={!fxTarget} scroll>
-                  {c.filters.map((f) => (
-                    <MenuDropdownItem key={f.id} onClick={() => applyEffect(f)} shortcut={trail(fxInChain(f.id))}>{f.label}</MenuDropdownItem>
-                  ))}
-                </MenuDropdownNest>
-              ))}
-            </MenuDropdownNest>
-          )}
           <MenuDropdownDivider />
           <MenuDropdownItem onClick={() => window.dispatchEvent(new CustomEvent('kol:insert-image'))}>Insert image</MenuDropdownItem>
         </div>
       </MenuItem>
 
-      <MenuItem label="View" size="sm" caret={false} panelClassName={PANEL}>
+      <MenuItem label="View" {...BAR}>
         <div className="py-1 w-[260px]">
+          {/* ZOOM (plan 33; Affinity's View › Zoom, the user's reference): the steps are REAL
+              percentages — 100% is one frame px per screen px — and ✓ marks the one showing */}
+          <MenuDropdownNest flyout label="Zoom">
+            <MenuDropdownItem onClick={cmd('zoom-in')} shortcut={key('zoom-in')}>In</MenuDropdownItem>
+            <MenuDropdownItem onClick={cmd('zoom-out')} shortcut={key('zoom-out')}>Out</MenuDropdownItem>
+            <MenuDropdownItem onClick={cmd('zoom-fit')} shortcut={key('zoom-fit')}>To Fit</MenuDropdownItem>
+            <MenuDropdownItem onClick={cmd('zoom-width')} shortcut={key('zoom-width')}>To Width</MenuDropdownItem>
+            <MenuDropdownItem onClick={cmd('zoom-selection')} disabled={!sel.length} shortcut={key('zoom-selection')}>To Selection</MenuDropdownItem>
+            <MenuDropdownDivider />
+            {[[1, 'zoom-100'], [2, 'zoom-200'], [4, 'zoom-400'], [8, 'zoom-800']].map(([z, id]) => (
+              <MenuDropdownItem key={id} onClick={cmd(id)} shortcut={trail(Math.abs(zoom - z) < 0.005, key(id))}>{z * 100}%</MenuDropdownItem>
+            ))}
+          </MenuDropdownNest>
+          <MenuDropdownDivider />
           <MenuDropdownItem onClick={cmd('view-preview')} shortcut={key('view-preview')}>Preview mode</MenuDropdownItem>
           <MenuDropdownDivider />
           <MenuDropdownItem onClick={cmd('toggle-rulers')} shortcut={trail(showRulers, key('toggle-rulers'))}>Show / hide rulers</MenuDropdownItem>
@@ -513,7 +508,7 @@ export default function MenuTop() {
       </MenuItem>
 
       {/* WINDOW — each row opens its panel's tab (`kol:open-tab`; the color pane has its own event). */}
-      <MenuItem label="Window" size="sm" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Window" {...BAR}>
         <div className="py-1 w-[240px]">
           <MenuDropdownNest flyout label="Left rail">
             {['Layers', 'Assets', 'History', 'Navigator'].map((t) => <MenuDropdownItem key={t} onClick={() => openTab(t)}>{t}</MenuDropdownItem>)}
@@ -533,8 +528,9 @@ export default function MenuTop() {
           </MenuDropdownNest>
           {kinetic && <MenuDropdownItem onClick={toggleTimelinePinned} shortcut={trail(timelinePinned)}>Timeline</MenuDropdownItem>}
           <MenuDropdownDivider />
-          {/* THE WORKSPACE (plan 30 § 9; Affinity's Studio presets): the panes' arrangement — dragged by
-              their grips, collapsed by their ⌄ — saved under a name, restored, or reset to the default */}
+          {/* THE WORKSPACE (plan 30 § 9, plan 31 § 4; Affinity's Studio presets): the panes' arrangement —
+              tabs dragged by their chips, panes by their grips, collapsed by a double-click on the header,
+              sized by their bottom edge — saved under a name, restored, or reset to the default */}
           <MenuDropdownNest flyout label="Workspace">
             <MenuDropdownItem onClick={onSaveWorkspace}>Save workspace…</MenuDropdownItem>
             {Object.keys(workspace.saved).length > 0 && <MenuDropdownDivider />}
@@ -550,7 +546,7 @@ export default function MenuTop() {
         </div>
       </MenuItem>
 
-      <MenuItem label="Help" size="sm" caret={false} panelClassName={PANEL}>
+      <MenuItem label="Help" {...BAR}>
         <div className="py-1 w-[240px]">
           <MenuDropdownItem onClick={() => window.dispatchEvent(new CustomEvent('kol:show-shortcuts'))} shortcut={key('show-shortcuts')}>Show / hide shortcuts</MenuDropdownItem>
         </div>

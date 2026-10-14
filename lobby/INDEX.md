@@ -54,11 +54,16 @@ _(none yet — ownership, deferral and context notes land in `archive/`)_
 
 Tickets this ledger does **not** govern — each row names the destination ledger
 that does. The **Remainder** is this repo's to do; the state is theirs to report.
-Forty-two went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
+Forty-seven went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
 last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/INDEX.md`).
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [ViewportTouchGestures](outbox/ViewportTouchGestures.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-14 — kol-component 0.259.0 | none — adopted 2026-10-14: 0.259.0 pinned; Labs got the gestures locally (own letterbox), walked |
+| 🟢 | [CanvasViewCommands](outbox/CanvasViewCommands.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.258.0 | none — adopted 2026-10-14: 0.258.0 pinned, zoom walked |
+| 🟢 | [CanvasRulerGraduated](outbox/CanvasRulerGraduated.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.256.0 | none — adopted 2026-10-13: 0.257.0 pinned, walked |
+| 🟢 | [ToolPaletteVertical](outbox/ToolPaletteVertical.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.256.0 | none — adopted 2026-10-13: orientation="vertical" live, walked |
+| 🟢 | [MenuItemOffset](outbox/MenuItemOffset.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.256.0 | none — adopted 2026-10-13: offset 2.5, panel on the bar's line, walked |
 | 🟢 | [SplitToolButtonFoldAlwaysOpens](outbox/SplitToolButtonFoldAlwaysOpens.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.253.0 | none — adopted 2026-10-13: 0.253.0 pinned, per-row `disabled`, walked |
 | 🟢 | [SelectionOverlayLabelUpright](outbox/SelectionOverlayLabelUpright.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.253.0 | none — adopted 2026-10-13: 0.253.0 pinned, walked |
 | 🟢 | [SelectionOverlayLabelClearsRotateHandle](outbox/SelectionOverlayLabelClearsRotateHandle.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.255.0 | none — adopted 2026-10-13: 0.255.0 pinned, walked at 180° |
@@ -125,6 +130,12 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-14 | **`ViewportTouchGestures` adopted** — kol-component 0.259.0 pinned; Labs' own stage built the same gestures, walked |
+| 2026-10-14 | **`ViewportTouchGestures` filed into kol-ds-ui** — plan 35 § 2–3: two-finger pinch + pan, one-finger tap → onSpaceTap |
+| 2026-10-14 | **`CanvasViewCommands` adopted** — kol-component 0.258.0 pinned; View › Zoom walked (⌘1–⌘4 real, To Width) |
+| 2026-10-13 | **`CanvasViewCommands` filed into kol-ds-ui** — plan 33 § 3: fit from outside, fit a rect, a zoom cap in real terms |
+| 2026-10-13 | **Plan 31's three adopted** — kol-component 0.257.0 pinned; `MenuItemOffset` · `ToolPaletteVertical` · `CanvasRulerGraduated` walked on the plan 32 preview, remainders none |
+| 2026-10-13 | **Three filed into kol-ds-ui for plan 31** — `MenuItemOffset` (§ 1, the menu panel on the bar's line) · `ToolPaletteVertical` (§ 2, the tools strip) · `CanvasRulerGraduated` (§ 3, the rulers) |
 | 2026-10-13 | **`SelectionOverlayLabelClearsRotateHandle` adopted** — kol-component 0.255.0 pinned, walked at 180° |
 | 2026-10-13 | **`SelectionOverlayLabelClearsRotateHandle` returned 🟢** — kol-component 0.255.0; adoption waits on the publish |
 | 2026-10-13 | **Two returned 🟢 and adopted** — `SplitToolButtonFoldAlwaysOpens` · `SelectionOverlayLabelUpright` as kol-component 0.253.0; **one filed** — `SelectionOverlayLabelClearsRotateHandle` (found adopting) |

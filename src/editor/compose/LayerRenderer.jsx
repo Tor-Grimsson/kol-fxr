@@ -3,7 +3,7 @@ import KolLogo from '../../brand/logos/KolLogo'
 import TypeBlock from '../../components/styleguide/TypeBlock'
 import { buildPatternSvg } from '../modes/pattern/render'
 import { getShapeSvg } from '../modes/pattern/shapes'
-import { resolveColor, COVER_TYPES, useComposeState } from './state'
+import { resolveColor, COVER_TYPES, CANVAS_W, CANVAS_H, useComposeState } from './state'
 import { useTool } from '../state/tools'
 import { shapeOutlineD, drawsAsOutline } from './shape-math'
 import { applyVectorFx } from './vectorEffects'
@@ -23,6 +23,9 @@ import { pickCutFor, seedFromBlend } from '../modes/type/axisRandom'
 import { layerFamily, familyCssFor, isOutlineFamily, ensureFamilyLoaded } from '../modes/type/families'
 import { paintAlpha } from './paint'
 import { usePreviewDpr } from '../lib/previewScale'
+import { hasLayerEffects, effectsFilter, effectsFilterId } from './layerEffects'
+import { hasPaintFill, paintBackground } from './paintFill'
+import { canvasOutline } from './masks'
 
 /* The seam (editor/packs.js) — loop/misc layers render through the generators pack, kinetic
  * through motion, filter chains through effects. A layer whose pack is absent renders nothing;
@@ -99,6 +102,53 @@ export default function LayerRenderer({ layer: rawLayer, palette }) {
     clipPath: layer._clipD ? `path('${layer._clipD}')` : undefined,
   }
 
+  /* LAYER EFFECTS (plan 32 § 2) — one SVG filter beside the layer, worn through CSS `filter`; the
+     element's own box is the filter's user space (origin 0,0) */
+  const fx = hasLayerEffects(layer)
+  if (fx) layerStyle.filter = `url(#${effectsFilterId(layer)})`
+  /* PAINT FILLS (plan 34 § 2) — a gradient / pattern / image / video fill wraps the layer */
+  const body = hasPaintFill(layer) && PAINT_FILL_TYPES.has(layer.type)
+    ? <PaintFillWrap layer={layer} palette={palette} layerStyle={layerStyle} />
+    : renderLayerBody(layer, palette, layerStyle)
+  if (!fx) return body
+  const markup = effectsFilter(layer, { w: layer.w ?? CANVAS_W, h: layer.h ?? CANVAS_H })
+  return (
+    <>
+      <svg width="0" height="0" aria-hidden style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+        <defs dangerouslySetInnerHTML={{ __html: markup }} />
+      </svg>
+      {body}
+    </>
+  )
+}
+
+/* PAINT FILLS (plan 34 § 2; Figma's paint picker). The wrapper takes the layer's box and its style
+ * (transform, opacity, blend, effects filter, mask clip); inside it the paint draws first — a CSS
+ * background or a <video> — clipped to the shape's outline, then the layer itself at 0,0 with no fill,
+ * so its stroke sits on top. Text wears the paint through `background-clip: text`, its own ink clear.
+ * ponytail: shapes, paths and text only — a bool's outline is computed elsewhere; video on text later. */
+const PAINT_FILL_TYPES = new Set(['shape', 'path', 'text'])
+function PaintFillWrap({ layer, palette, layerStyle }) {
+  const fill = layer.fill
+  const local = { ...layer, x: 0, y: 0 }
+  const isText = layer.type === 'text'
+  const d = isText ? null : canvasOutline(local)
+  const bg = paintBackground(fill, palette)
+  const box = { position: 'absolute', inset: 0, clipPath: d ? `path('${d}')` : undefined }
+  const inner = isText ? { ...local, color: 'transparent' } : { ...local, color: null }
+  return (
+    <div style={{ position: 'absolute', left: layer.x, top: layer.y, width: layer.w, height: layer.h, ...layerStyle,
+      ...(isText ? { ...bg, WebkitBackgroundClip: 'text', backgroundClip: 'text' } : null) }}>
+      {!isText && (fill.type === 'video'
+        ? <video data-fill-video={layer.id} src={fill.src} autoPlay loop muted playsInline crossOrigin="anonymous"
+            style={{ ...box, width: '100%', height: '100%', objectFit: fill.mode === 'fit' ? 'contain' : 'cover' }} />
+        : <div style={{ ...box, ...bg }} />)}
+      {renderLayerBody(inner, palette, {})}
+    </div>
+  )
+}
+
+function renderLayerBody(layer, palette, layerStyle) {
   switch (layer.type) {
     case 'background': return <BackgroundLayer layer={layer} palette={palette} layerStyle={layerStyle} />
     case 'pattern': {

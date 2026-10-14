@@ -23,7 +23,7 @@ import LabsParams from './LabsParams'
 import { LabsSourceCard } from './LabsSourcePicker'
 import { transport } from '../params/transport'
 import { getAppSettings } from '../lib/appSettings'
-import { groupOfPreset, presetById, presetLayerPatch } from '../../loops/registry'
+import { groupOfPreset, loopById, presetById, presetLayerPatch } from '../../loops/registry'
 import { PanelHeader, PanelPills, SheetGrab, SHEET_H, SHEET_MIN } from '../components/PanelHeader'
 import LabsCatalogCard from './LabsCatalogCard'
 import { useLabsLayer } from './useLabsLayer'
@@ -122,14 +122,70 @@ function LabsStage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  /* TOUCH (plan 35; the user: "I still cant pinch zoom move with 2 fingers … one tap should start
+   * stop transport"). Labs renders its own letterbox, not the DS viewport (whose touch arrived as
+   * kol-component 0.259.0), so the stage takes the same three gestures itself: two fingers pinch
+   * about their midpoint and move the frame; a one-finger tap plays / pauses. One finger otherwise
+   * stays the sim's pointer; penrose keeps its tap (its presses are the piece). */
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const touchRef = useRef({ pts: new Map(), start: null, tap: null })
+  const viewRef = useRef({ zoom, pan }); viewRef.current = { zoom, pan }
+  const onTouchDown = (e) => {
+    if (e.pointerType !== 'touch') return
+    const t = touchRef.current
+    t.pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    t.tap = t.pts.size === 1 ? { id: e.pointerId, x: e.clientX, y: e.clientY, at: performance.now() } : null
+    if (t.pts.size === 2) {
+      const [a, b] = [...t.pts.values()]
+      const r = cellRef.current.getBoundingClientRect()
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+      const { zoom: z0, pan: p0 } = viewRef.current
+      t.start = { d: Math.hypot(a.x - b.x, a.y - b.y), cx, cy, z0, qx: (mx - cx - p0.x) / z0, qy: (my - cy - p0.y) / z0 }
+      transport.setStagePointer?.(null)
+      e.stopPropagation()
+    }
+  }
+  const onTouchMove = (e) => {
+    const t = touchRef.current
+    if (e.pointerType !== 'touch' || !t.pts.has(e.pointerId)) return
+    t.pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (t.pts.size >= 2 && t.start) {
+      e.stopPropagation()
+      const [a, b] = [...t.pts.values()], st = t.start
+      const z = clampZoom(st.z0 * (Math.hypot(a.x - b.x, a.y - b.y) / st.d))
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+      setZoom(z)
+      setPan({ x: mx - st.cx - z * st.qx, y: my - st.cy - z * st.qy })
+    }
+  }
+  const onTouchUp = (e) => {
+    const t = touchRef.current
+    if (e.pointerType !== 'touch') return
+    const tap = t.tap
+    if (tap && tap.id === e.pointerId && e.type === 'pointerup' && !t.start
+        && performance.now() - tap.at < 350 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 12) {
+      const def = layer?.type === 'loop' ? loopById(layer.loopId) : null
+      if (def?.group !== 'penrose') transport.toggle()
+    }
+    if (tap?.id === e.pointerId) t.tap = null
+    t.pts.delete(e.pointerId)
+    if (t.pts.size < 2) t.start = null
+  }
+
   return (
     <div
       ref={cellRef}
-      className="relative w-full h-full flex items-center justify-center"
+      className="relative w-full h-full flex items-center justify-center overflow-hidden touch-none"
       style={{ background: 'var(--kol-surface-secondary)' }}
-      onDoubleClick={() => setZoom(1)}
+      onDoubleClick={() => { setZoom(1); setPan({ x: 0, y: 0 }) }}
+      onPointerDownCapture={onTouchDown}
+      onPointerMoveCapture={onTouchMove}
+      onPointerUpCapture={onTouchUp}
+      onPointerCancelCapture={onTouchUp}
     >
-      <div style={{ width: `${zoom * LABS_FIT * 100}%`, height: `${zoom * LABS_FIT * 100}%` }}>
+      {/* flex: none — past 100% the frame must overflow the cell, not shrink back into it */}
+      <div style={{ flex: 'none', width: `${zoom * LABS_FIT * 100}%`, height: `${zoom * LABS_FIT * 100}%`, transform: `translate(${pan.x}px, ${pan.y}px)` }}>
         <OutputCanvas />
       </div>
       {/* an effect picked before any media: the card asks for it (2026-10-06, was three panes

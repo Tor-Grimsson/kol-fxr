@@ -119,6 +119,19 @@ export const SHORTCUTS = [
   /* Handled inside the canvas viewport (window keydown, input-guarded) —
    * documented here for the cheat sheet only. */
   { id: 'fps',            combo: 'F',     label: 'Toggle fps readout',      section: 'View', passive: true },
+  /* VIEW › ZOOM (plan 33; Affinity's rows and keys). ⌘= ⌘- ⌘0 are the DS viewport's own window keys
+     (PanZoomViewport) — passive here so they are listed and run from the menu, never bound twice.
+     ⌘1–⌘4 are real percentages (100% = one frame px per screen px). In a Chrome / Firefox TAB the
+     browser keeps ⌘1–⌘8 for its tabs; the installed app window has none, so they reach the editor. */
+  { id: 'zoom-in',        combo: 'Mod+=',       label: 'Zoom in',            section: 'View', passive: true, views: ['editor'] },
+  { id: 'zoom-out',       combo: 'Mod+-',       label: 'Zoom out',           section: 'View', passive: true, views: ['editor'] },
+  { id: 'zoom-fit',       combo: 'Mod+0',       label: 'Zoom to fit',        section: 'View', passive: true, views: ['editor'] },
+  { id: 'zoom-width',     combo: 'Mod+Alt+0',   label: 'Zoom to width',      section: 'View', views: ['editor'] },
+  { id: 'zoom-selection', combo: 'Mod+Shift+0', label: 'Zoom to selection',  section: 'View', views: ['editor'] },
+  { id: 'zoom-100',       combo: 'Mod+1',       label: 'Zoom 100%',          section: 'View', views: ['editor'] },
+  { id: 'zoom-200',       combo: 'Mod+2',       label: 'Zoom 200%',          section: 'View', views: ['editor'] },
+  { id: 'zoom-400',       combo: 'Mod+3',       label: 'Zoom 400%',          section: 'View', views: ['editor'] },
+  { id: 'zoom-800',       combo: 'Mod+4',       label: 'Zoom 800%',          section: 'View', views: ['editor'] },
   /* Labs — bound by `useLabsKeys` in labs/LabsParams.jsx, NOT by the canvas
      handler. Declared here so the cheat sheet stops showing the editor's
      answer for `R` while standing in labs. */
@@ -197,7 +210,8 @@ export function matchCombo(event, combo) {
    * same reason AppLayout's ⌥-digit map reads `Digit1`… Non-Alt combos keep
    * matching `e.key`, which is what every existing entry means. */
   if (key.length === 1) {
-    if (needsAlt) {
+    /* …and SHIFT rewrites a digit (⇧0 is `)`), so a Shift+digit combo is physical too (⇧⌘0, plan 33) */
+    if (needsAlt || (needsShift && /^[0-9]$/.test(key))) {
       const code = codeFor(key)
       return code ? event.code === code : event.key.toLowerCase() === key.toLowerCase()
     }

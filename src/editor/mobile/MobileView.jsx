@@ -7,7 +7,7 @@ import { useComposeState, CANVAS_W } from '../compose/state'
 import { PRESET_SIZES } from '../shell/aspects'
 import { transport } from '../params/transport'
 import { useTheme } from '@kolkrabbi/kol-framework'
-import { firstPresetPatch, loopById, resolveCameraKeys } from '../../loops/registry'
+import { firstPresetPatch, loopById } from '../../loops/registry'
 import { useTool } from '../state/tools'
 import LabsSourcePicker from '../labs/LabsSourcePicker'
 import { isTabletSized, goDesktop, isMobileDevice, wantsDesktop, useNarrow } from './device'
@@ -110,26 +110,33 @@ function MobileBody() {
    * any controls. Capture-phase so a second finger suspends the sim-pointer
    * forwarding (no accidental grabs mid-pinch); scale clamps 0.5–3 and
    * sticks until Start over. */
-  const [stageScale, setStageScale] = useState(1)
-  /* THE PINCH IS CONTINUOUS (plan 18 § 2; the user: "its stepped, I want variable responsive
-     pinch"). A state write per pointer move re-rendered the stage on every frame of the gesture;
-     now the live scale goes straight onto the wrapper's transform and the state is written once,
-     on release. Ceiling 3 → 4. */
+  /* PINCH ABOUT THE FINGERS + TWO-FINGER MOVE (plan 35 § 1; the user: "I still cant pinch zoom
+     move with 2 fingers"). The stage view is { s, x, y } — `translate(x,y) scale(s)`, origin 0 0 —
+     and the point under the fingers' starting midpoint stays under their current midpoint, so a
+     pinch zooms where the fingers are and moving two fingers moves the stage. Live values go
+     straight onto the transform; state is written once, on release (plan 18 § 2's rule). */
+  const [stageView, setStageView] = useState({ s: 1, x: 0, y: 0 })
   const stageRef = useRef(null)
-  const pinchRef = useRef({ pts: new Map(), startDist: 0, startScale: 1, live: 1 })
+  const pinchRef = useRef({ pts: new Map(), start: null, live: { s: 1, x: 0, y: 0 } })
   const tapRef = useRef(null)
-  const pinchDist = () => {
+  const twoFinger = () => {
     const [a, b] = [...pinchRef.current.pts.values()]
-    return Math.hypot(a.x - b.x, a.y - b.y)
+    return { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }
   }
+  const viewCss = (v) => `translate(${v.x}px, ${v.y}px) scale(${v.s})`
   const onPinchDown = (e) => {
     pinchRef.current.pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
     tapRef.current = pinchRef.current.pts.size === 1
       ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() }
       : null
     if (pinchRef.current.pts.size === 2) {
-      pinchRef.current.startDist = pinchDist()
-      pinchRef.current.startScale = stageScale
+      const r = stageRef.current?.getBoundingClientRect()
+      const g = twoFinger()
+      /* the wrapper's untransformed origin: its rect minus the current translate */
+      const ox = (r?.left ?? 0) - stageView.x, oy = (r?.top ?? 0) - stageView.y
+      pinchRef.current.start = { ...g, ox, oy, v: stageView,
+        px: (g.mx - ox - stageView.x) / stageView.s, py: (g.my - oy - stageView.y) / stageView.s }
+      pinchRef.current.live = stageView
       transport.setStagePointer(null)
       e.stopPropagation()
     }
@@ -138,25 +145,29 @@ function MobileBody() {
     const p = pinchRef.current
     if (!p.pts.has(e.pointerId)) return
     p.pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
-    if (p.pts.size >= 2 && p.startDist > 0) {
+    if (p.pts.size >= 2 && p.start) {
       e.stopPropagation()
-      p.live = Math.min(4, Math.max(0.5, p.startScale * (pinchDist() / p.startDist)))
-      if (stageRef.current) stageRef.current.style.transform = `scale(${p.live})`
+      const g = twoFinger(), st = p.start
+      const s2 = Math.min(4, Math.max(0.5, st.v.s * (g.d / st.d)))
+      p.live = { s: s2, x: g.mx - st.ox - s2 * st.px, y: g.my - st.oy - s2 * st.py }
+      if (stageRef.current) stageRef.current.style.transform = viewCss(p.live)
     }
   }
   const onPinchEnd = (e) => {
-    /* Tap = re-trigger, but only where touch has no richer meaning already:
-     * penrose presses, camera orbits and engine pointer-nudges keep theirs. */
+    /* ONE TAP PLAYS / PAUSES (plan 35 § 3; the user: "one tap should start stop transport") — the
+     * Space verb on a desk. A tap is a press that did not move, so a camera orbit or an engine
+     * nudge (both DRAGS) loses nothing; only penrose, whose presses ARE the piece, keeps its tap.
+     * (The rewind this replaced also skipped every loop with a camera map — and `vpZoom` gives
+     * nearly every loop one, so a tap did nothing almost everywhere.) Rewind is the sheet's button. */
     const tap = tapRef.current
     if (tap && tap.id === e.pointerId && e.type === 'pointerup' && screen === 'live'
-        && performance.now() - tap.t < 350 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 12
-        && active?.type === 'loop') {
-      const def = loopById(active.loopId)
-      if (def && def.group !== 'penrose' && def.kind !== 'engine' && !resolveCameraKeys(def)) transport.rewind()
+        && performance.now() - tap.t < 350 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 12) {
+      const def = active?.type === 'loop' ? loopById(active.loopId) : null
+      if (def?.group !== 'penrose') transport.toggle()
     }
     if (tap?.id === e.pointerId) tapRef.current = null
     pinchRef.current.pts.delete(e.pointerId)
-    if (pinchRef.current.pts.size < 2 && pinchRef.current.startDist > 0) { pinchRef.current.startDist = 0; setStageScale(pinchRef.current.live) }
+    if (pinchRef.current.pts.size < 2 && pinchRef.current.start) { pinchRef.current.start = null; setStageView(pinchRef.current.live) }
   }
 
   /* re-stamps a saved theme choice on mount (kol-framework's store) */
@@ -245,7 +256,7 @@ function MobileBody() {
      * clip is freed here — mobile never runs the desktop's load-time gc. */
     for (const l of [...layers]) removeLayer(l.id)
     setActiveId(null)
-    setStageScale(1)
+    setStageView({ s: 1, x: 0, y: 0 })
     setFxFlow(false)
     setScreen(start())
   }
@@ -265,7 +276,7 @@ function MobileBody() {
       <div
         ref={stageRef}
         className="absolute inset-y-0 left-0 touch-none overflow-hidden"
-        style={{ transform: `scale(${stageScale})`, right: railShown ? 'var(--kol-sidenav-w, 320px)' : 0, bottom: sheetH ?? 0 }}
+        style={{ transform: viewCss(stageView), transformOrigin: '0 0', right: railShown ? 'var(--kol-sidenav-w, 320px)' : 0, bottom: sheetH ?? 0 }}
         onPointerDownCapture={onPinchDown}
         onPointerMoveCapture={onPinchMove}
         onPointerUpCapture={onPinchEnd}

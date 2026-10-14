@@ -75,12 +75,39 @@ function fillWithAlpha(fill, alpha) {
 }
 
 /* the primitives a path can be made from (state.convertShapeToPath / shapeToPathNodes) */
-/* Publishes the viewport's zoom for the status bar (it sits outside the DS viewport). */
+/* Publishes the viewport's zoom for the title line (it sits outside the DS viewport) — the REAL
+ * percentage (plan 33): the DS zoom multiplies a frame already fitted to the viewport, so 1 there is
+ * "fitted", not 100%. The frame's layout width (`offsetWidth`, which a transform never touches) over
+ * its virtual width is the fit scale; zoom × fit is screen px per frame px — Affinity's 100% at 1. */
 function ZoomProbe() {
   const z = useContext(CanvasZoomContext)
-  useEffect(() => { setZoom(z) }, [z])
+  const [fit, setFit] = useState(1)
+  useEffect(() => {
+    const frame = document.querySelector('.kol-editor-canvas [data-canvas-frame]')
+    if (!frame) return undefined
+    const read = () => setFit(frame.offsetWidth > 0 ? frame.offsetWidth / CANVAS_VIRTUAL_W : 1)
+    read()
+    const ro = new ResizeObserver(read)
+    ro.observe(frame)
+    return () => ro.disconnect()
+  }, [])
+  useEffect(() => { setZoom(z * fit) }, [z, fit])
   return null
 }
+
+/* VIEW › ZOOM's verbs (plan 33). The DS viewport (kol-component 0.258.0, `CanvasViewCommands` filed
+ * from here) takes `kol:zoom-at` (a factor at a client point), `kol:zoom-to` { scale } (REAL — 1 is one
+ * screen px per frame px) and `kol:zoom-fit` { to: 'frame' | 'width' | rect } — clamps are real too. */
+function viewportCentre() {
+  const r = document.querySelector('.kol-editor-canvas')?.getBoundingClientRect()
+  return r ? { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 } : null
+}
+export function zoomBy(factor) {
+  const c = viewportCentre()
+  if (c) window.dispatchEvent(new CustomEvent('kol:zoom-at', { detail: { ...c, factor } }))
+}
+export const zoomToReal = (scale) => window.dispatchEvent(new CustomEvent('kol:zoom-to', { detail: { scale } }))
+export const zoomFit = (to = 'frame') => window.dispatchEvent(new CustomEvent('kol:zoom-fit', { detail: { to } }))
 
 /* the band outside the frame that selects the canvas, in screen px — 16, not 8 (plan 30 § 7: "make
    the margin of click larger") */
@@ -1405,6 +1432,26 @@ export default function CanvasArea() {
         }
 
         case 'toggle-rulers':     e.preventDefault(); toggleRulers(); return
+        /* VIEW › ZOOM (plan 33) — in / out / fit also run from the menu; their keys are the DS's */
+        case 'zoom-in':           e.preventDefault(); zoomBy(1.2); return
+        case 'zoom-out':          e.preventDefault(); zoomBy(1 / 1.2); return
+        case 'zoom-fit':          e.preventDefault(); zoomFit('frame'); return
+        case 'zoom-width':        e.preventDefault(); zoomFit('width'); return
+        case 'zoom-selection': {
+          e.preventDefault()
+          /* ponytail: top-level boxes only — a nested child's coords are its group's */
+          const boxes = (selectedIds ?? []).map((id) => layers.find((l) => l.id === id))
+            .filter((l) => l && typeof l.x === 'number' && l.w != null)
+          if (!boxes.length) return
+          const x = Math.min(...boxes.map((l) => l.x)), y = Math.min(...boxes.map((l) => l.y))
+          const r = Math.max(...boxes.map((l) => l.x + l.w)), b = Math.max(...boxes.map((l) => l.y + l.h))
+          zoomFit({ x, y, w: r - x, h: b - y })
+          return
+        }
+        case 'zoom-100':          e.preventDefault(); zoomToReal(1); return
+        case 'zoom-200':          e.preventDefault(); zoomToReal(2); return
+        case 'zoom-400':          e.preventDefault(); zoomToReal(4); return
+        case 'zoom-800':          e.preventDefault(); zoomToReal(8); return
         case 'view-preview':      e.preventDefault(); setPreview((v) => !v); return
         /* ⌘A — every top-level layer that is neither hidden nor locked (Figma's select all) */
         case 'select-all':

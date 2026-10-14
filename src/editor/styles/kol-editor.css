@@ -82,6 +82,16 @@
   flex: 1 1 auto;
   min-height: 0;
 }
+/* THE TOOLS STRIP (plan 31 § 2; Affinity's Tools): one `md` square plus gutters — 44, the swatch
+   pair's width — at the far left, full height; a registry that fills the `tools` slot gets the column */
+.kol-editor-grid[data-tools] {
+  grid-template-columns: 44px var(--_left) minmax(0, 1fr) var(--_right);
+  grid-template-areas: "tools left canvas right";
+}
+.kol-editor-tools {
+  grid-area: tools;
+  border-right: 1px solid var(--kol-oq-08);
+}
 :root[data-editor-left="collapsed"] .kol-editor-grid { --_left: var(--kol-editor-left-w-collapsed); }
 :root[data-editor-right="collapsed"] .kol-editor-grid { --_right: var(--kol-editor-right-w-collapsed); }
 /* a folded rail shows its edge only — the grab brings it back */
@@ -457,6 +467,8 @@
   border-radius: var(--kol-radius-sm);
   box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4), 0 2px 6px -2px rgba(0, 0, 0, 0.3);
 }
+/* …and the bar's own triggers wear the same face (plan 31 § 1 — the user: "I literally said SANS") */
+.kol-editor-topbar .kol-menu-btn,
 .kol-editor-menu .kol-menu-btn {
   font-family: var(--kol-font-family-sans);
   font-size: 13px;
@@ -465,16 +477,46 @@
   height: 26px;
 }
 
-/* THE WORKSPACE'S PANES (plan 30 § 9). A collapsed pane is its header and nothing else: the pane
-   wrapper reaches past the pane's own root (each pane draws its own markup) to hide every child but
-   the header, and lets go of the root's fixed / flex height. The drop line is where a dragged pane
-   lands. The right rail's lone inspector used to fill by growing; it still does, inside its pane. */
-.kol-pane { display: flex; flex-direction: column; min-height: 0; }
-.kol-pane:has(.kol-compose-rail--inspector):not([data-collapsed]),
-.kol-pane:has(.kol-compose-rail--inspector):not([data-collapsed]) > * { flex: 1 1 auto; min-height: 0; }
+/* THE WORKSPACE'S PANES (plan 30 § 9 → plan 31 §§ 6–7). A pane sizes to its content; the LAST pane
+   in a rail fills what is left and scrolls inside (the inspector's old fill, now any pane that sits
+   last); a pane with a dragged height (`data-sized`, inline `height`) keeps it. A collapsed pane is
+   its header and nothing else. The drop line is where a dragged pane or tab lands between panes; a
+   ringed header is a pane a tab will join. */
+.kol-pane { display: flex; flex-direction: column; min-height: 0; position: relative; flex: 0 0 auto; }
+.kol-pane[data-last]:not([data-collapsed]):not([data-sized]) { flex: 1 1 auto; }
+.kol-pane[data-last]:not([data-collapsed]):not([data-sized]) > * { flex: 1 1 auto; min-height: 0; }
+.kol-pane[data-sized]:not([data-collapsed]) > * { height: 100%; }
 .kol-pane[data-collapsed] > * { height: auto !important; flex: 0 0 auto !important; }
 .kol-pane[data-collapsed] > * > :not(.kol-pane-header) { display: none !important; }
 .kol-pane-drop { height: 2px; margin: -1px 0; background: var(--kol-accent-primary); position: relative; z-index: 1; }
+.kol-pane-header[data-drop] { box-shadow: inset 0 0 0 1px var(--kol-accent-primary); }
 /* the pane header's chips sit 6px in, not the button rung's 12 — four tabs (Layers · Assets · History ·
-   Navigator) plus the grip and the ⌄ have to fit the rail, as Affinity's do */
+   Navigator) plus the grip have to fit the rail, as Affinity's do */
 .kol-pane-header [role="tab"] { padding-inline: 6px; }
+/* THE PANE'S BOTTOM LINE (plan 31 § 7) wears the estate's grab pill — the timeline dock's drawing on
+   the pane's foot: hidden at rest, woken by pointer proximity (`useGrabEdge`), travelling the edge */
+.kol-pane-grab {
+  position: absolute;
+  left: 0; right: 0; bottom: -4px;
+  z-index: 2;
+  height: 8px;
+  cursor: row-resize;
+  touch-action: none;
+}
+.kol-pane-grab::before {
+  content: '';
+  position: absolute;
+  translate: -50% -50%;
+  border-radius: var(--kol-radius-full);
+  background: var(--kol-fg-64);
+  opacity: 0;
+  width: 4.5rem;
+  height: 0.125rem;
+  top: 4.5px;
+  left: clamp(2.25rem, var(--kol-rail-grab-x, 50%), calc(100% - 2.25rem));
+  transition: opacity 1800ms cubic-bezier(0.22, 1, 0.36, 1) 400ms, background-color 500ms ease;
+}
+.kol-pane-grab.is-near::before,
+.kol-pane-grab.is-dragging::before { opacity: 1; transition-delay: 40ms; }
+.kol-pane-grab.is-dragging::before { background: var(--kol-fg-96); }
+.kol-pane[data-collapsed] .kol-pane-grab { display: none; }

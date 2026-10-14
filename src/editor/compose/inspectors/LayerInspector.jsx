@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Pane from '../../components/Pane'
 import { proxied, isVideoType } from '../../library/mediaLibrary'
-import { Button, ColorSwatch, Dropdown, MenuDropdownItem, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, MenuDropdownItem, Tooltip, glyphSize } from '@kolkrabbi/kol-component'
 import { LabeledControl, SettingsRow } from '@kolkrabbi/kol-component'
 import { useControlSize, RAIL_LABEL_W } from '../../params/controlSize'
 import { PopoverPanel, usePopover } from '@kolkrabbi/kol-component'
@@ -20,6 +20,7 @@ import { pack } from '../../packs'
 import { NumberField } from './NumberField'
 import { TextSurface } from './TextPanel'
 import MediaPickerDialog from '../../library/MediaPickerDialog'
+import PaintPopover from '../../color/PaintPopover'
 
 /**
  * LayerInspector — HIGH-LEVEL surface for the selected layer (Phase 6-A):
@@ -60,20 +61,22 @@ export default function LayerInspector({ layer }) {
     <div className="flex flex-col">
       {positioned && (
         <Pane label="Transform">
-          <AlignmentPanel />
-          <div className="flex items-center gap-2">
+          {/* ONE GRID (plan 34 § 3; Figma's and Affinity's Transform): every row is two equal fields + one
+              trailing icon column, so X·W·SX·rotation start and end on the same verticals and the trailing
+              controls — the origin dots, the aspect lock — stack in one column. The lock sat inside the W·H
+              row as a third flex item and squeezed W and H narrower than X and Y. */}
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 items-center">
+            <div className="col-span-2 min-w-0"><AlignmentPanel /></div>
+            <span />
+            <PositionFields layer={layer} setProp={setProp} />
             <AnchorPicker value={anchor} onChange={setAnchor} />
-            <div className="flex-1 min-w-0"><PositionFields layer={layer} setProp={setProp} /></div>
-          </div>
-          <LayoutFields layer={layer} setProp={setProp} patch={edit.patch} anchor={anchor} />
-          {/* SHEAR (G3 — Affinity's S field): degrees along each axis, about the layer's centre */}
-          <div className="grid grid-cols-2 gap-2">
+            <LayoutFields layer={layer} setProp={setProp} patch={edit.patch} anchor={anchor} />
+            {/* SHEAR (G3 — Affinity's S field): degrees along each axis, about the layer's centre */}
             <AxisField label="SX" suffix="°" tooltip="Skew horizontal" value={Math.round(layer.skewX ?? 0)}
               onCommit={(raw) => setProp('skewX', clampSkew(raw))} />
             <AxisField label="SY" suffix="°" tooltip="Skew vertical" value={Math.round(layer.skewY ?? 0)}
               onCommit={(raw) => setProp('skewY', clampSkew(raw))} />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
+            <span />
             <div className="flex items-center gap-1 min-w-0">
               <AxisField
                 label={<Icon name="angle" size={glyphSize(cs)} />} suffix="°" tooltip="Rotation"
@@ -241,7 +244,8 @@ function AppearanceSection({ layer, setProp, edit, first }) {
         </>
       }
     >
-      <div className="grid grid-cols-2 gap-2">
+      {/* the Transform pane's grid (plan 34 § 3): opacity · radius · the corner-mode icon in the trailing column */}
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 items-center">
         {/* no Opacity / Corner radius labels — the glyph + tooltip name the field (pane rule) */}
         <Tooltip label="Opacity" triggerClassName="flex min-w-0">
           <NumberField
@@ -252,8 +256,8 @@ function AppearanceSection({ layer, setProp, edit, first }) {
           />
         </Tooltip>
         {hasRadius && (
-          <div className="flex items-center gap-1 min-w-0">
-            {Array.isArray(layer.radii) ? <span className="flex-1" /> : (
+          <>
+            {Array.isArray(layer.radii) ? <span /> : (
               <Tooltip label="Corner radius" triggerClassName="flex flex-1 min-w-0">
                 <NumberField
                   variant="property" size={cs} className="w-full min-w-0"
@@ -278,7 +282,8 @@ function AppearanceSection({ layer, setProp, edit, first }) {
                     : edit.patch({ radii: [0, 1, 2, 3].map(() => Math.round(layer.radius ?? 0)) }))} />
               </Tooltip>
             )}
-          </div>
+            {layer.type !== 'shape' && <span />}
+          </>
         )}
       </div>
       {hasRadius && Array.isArray(layer.radii) && (
@@ -298,31 +303,16 @@ function AppearanceSection({ layer, setProp, edit, first }) {
           ))}
         </div>
       )}
-      {/* FILL AND STROKE ARE SWATCHES YOU CLICK (spec R6.6, the user's 15 and 16): each focuses its
-          paint and opens the Color pane on it. The `Colour…` button that stood here opened the
+      {/* FILL AND STROKE ARE SWATCHES YOU CLICK (spec R6.6, the user's 15 and 16): each opens its
+          picker in a popover AT THE SWATCH (plan 34 § 1 — not the Color pane); Fill takes a paint type. The `Colour…` button that stood here opened the
           palette generator, not the Color pane, and is gone. A stroke with no weight reads as none. */}
       {'color' in layer && (
         <div className="flex items-center gap-2 pt-1">
-          <PaintSwatch paint="fill" label="Fill" hex={resolveColor(layer.color, palette)} none={!layer.color} />
-          <PaintSwatch paint="stroke" label="Stroke" hex={resolveColor(layer.stroke, palette)} none={!layer.stroke || !layer.strokeWidth} />
+          <PaintPopover layer={layer} palette={palette} paint="fill" label="Fill" hex={resolveColor(layer.color, palette)} none={!layer.color} />
+          <PaintPopover layer={layer} palette={palette} paint="stroke" label="Stroke" hex={resolveColor(layer.stroke, palette)} none={!layer.stroke || !layer.strokeWidth} />
         </div>
       )}
     </Pane>
-  )
-}
-
-/* One paint swatch + its label, a button: focus that paint, open the Color pane on it. */
-function PaintSwatch({ paint, label, hex, none }) {
-  const { setActivePaint } = useComposeState()
-  const open = () => {
-    setActivePaint(paint)
-    window.dispatchEvent(new CustomEvent('kol:open-color-pane', { detail: { tab: 'Colour' } }))
-  }
-  return (
-    <span className="inline-flex items-center gap-2">
-      <ColorSwatch hex={none ? undefined : (hex ?? '#FFFFFF')} size={24} showTransparent={none} onClick={open} aria-label={`${label} color`} title={label} />
-      <span className="kol-helper-10 tracking-widest text-meta">{label.toUpperCase()}</span>
-    </span>
   )
 }
 
@@ -494,11 +484,12 @@ const numOr0 = (v) => {
 /* Position section — X/Y only (the W/H half moved to the Layout section,
  * Figma split). Two equal columns, prefixes inside the boxes. */
 function PositionFields({ layer, setProp }) {
+  /* two cells of the Transform grid (plan 34 § 3) */
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <>
       <AxisField label="X" tooltip="X position" value={Math.round(layer.x)} onCommit={(raw) => setProp('x', numOr0(raw))} />
       <AxisField label="Y" tooltip="Y position" value={Math.round(layer.y)} onCommit={(raw) => setProp('y', numOr0(raw))} />
-    </div>
+    </>
   )
 }
 
@@ -547,12 +538,11 @@ function LayoutFields({ layer, setProp, patch, anchor = [0, 0] }) {
     const h = Math.max(8, numOr0(raw))
     patch(anchored(withPathScale(aspectLocked ? { w: Math.max(8, Math.round(h * aspect)), h } : { h })))
   }
+  /* three cells of the Transform grid (plan 34 § 3): W · H · the lock in the trailing column */
   return (
-    <div className="flex items-center gap-2">
-      <div className="grid grid-cols-2 gap-2 flex-1 min-w-0">
-        <AxisField label="W" tooltip="Width" value={Math.round(layer.w)} onCommit={onChangeW} />
-        <AxisField label="H" tooltip="Height" value={Math.round(layer.h)} onCommit={onChangeH} />
-      </div>
+    <>
+      <AxisField label="W" tooltip="Width" value={Math.round(layer.w)} onCommit={onChangeW} />
+      <AxisField label="H" tooltip="Height" value={Math.round(layer.h)} onCommit={onChangeH} />
       {/* Constrain proportions (editor review #6, 2026-09-27 — user: "just use a lock or something
         * more common"): a KOL Button on the inputs' rung, a lock that closes when constrained. It was
         * a raw <button> inking a corner glyph `fg` from its wrapper. */}
@@ -560,7 +550,7 @@ function LayoutFields({ layer, setProp, patch, anchor = [0, 0] }) {
         <Button tone="ghost" size={cs} iconOnly={aspectLocked ? 'lock' : 'unlock'} pressed={aspectLocked}
           aria-label={aspectLocked ? 'Unconstrain proportions' : 'Constrain proportions'} onClick={toggleLock} />
       </Tooltip>
-    </div>
+    </>
   )
 }
 

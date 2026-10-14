@@ -1,10 +1,10 @@
 import EditorShell from './EditorShell'
 import CanvasArea from './compose/CanvasArea'
-import ColorModal from './color/ColorModal'
-import LayersAssetsPanel from './shell/panels/LayersAssetsPanel'
-import SelectionPalettePanel from './shell/panels/SelectionPalettePanel'
-import ToolPalette from './shell/panels/ToolPalette'
+import { composePanes, composeTabs, useTabContext, WorkspaceEffects } from './shell/panels/tabs'
+import ToolStrip from './shell/panels/ToolStrip'
+import ActionBar from './shell/panels/ActionBar'
 import EditorFooter from './shell/panels/EditorFooter'
+import LayerEffectsWindow from './shell/LayerEffectsWindow'
 import DocTitle from './shell/DocTitle'
 import { pack } from './packs'
 
@@ -14,33 +14,38 @@ import { pack } from './packs'
  * editor's default composition, not a page, so it moved in with the package
  * (2026-09-03). The page-title hook did not come: an embed never owns the
  * host's document.title. File / Canvas / Templates menus live in
- * the topbar (rendered by EditorShell). ToolPalette sits above the canvas in
- * the canvas-column header. Left rail: Layers/Assets tab group + the
- * Transport/Output/File footer (pinned). Right rail: Palette/Inspector tab
- * group that auto-flips to Inspector on layer-select. ColorModal here is the
- * per-layer color panel (Stroke/Colour/Swatches); the palette generator is
- * the separate PaletteModal mounted by Editor.
+ * the topbar (rendered by EditorShell). The head is Affinity's (plan 31 § 2): the ACTIONS in a
+ * full-width band under the menus (`ActionBar`), the TOOLS one icon wide at the far left
+ * (`ToolStrip`), the canvas header holding only the document title. The rails are the WORKSPACE
+ * (plan 31 § 4): `panes` + `tabs` are the defaults, the record decides where each tab sits; the
+ * Transport/Output/File footer stays pinned on the left. The palette generator is the separate
+ * PaletteModal mounted by Editor.
  */
 /* The timeline dock is the motion pack's slot (editor/packs.js), present only when it is
  * registered. Built at first render, not at import — packs register as their modules load. */
-/* A body pane's `id` puts it in the workspace (plan 30 § 9): its grip drags it within and across
- * the rails, its `⌄` collapses it, Window › Workspace saves the arrangement. `order` is the default. */
 const composeRegistry = () => ({
   canvas: CanvasArea,
   resizableRails: true,
+  toolbar: ActionBar,
+  useTabContext,
+  panes: composePanes,
+  tabs: composeTabs(),
   panels: [
-    { slot: 'canvas.header', order: 0,  Component: ToolPalette },
+    { slot: 'tools',         order: 0,  Component: ToolStrip },
     /* the document's name + zoom, centred above the ruler (spec R1.2, plan 30 § 5) */
     { slot: 'canvas.header', order: 1,  Component: DocTitle },
-    { slot: 'left.body',     order: -1, id: 'color',     Component: ColorModal },
-    { slot: 'left.body',     order: 0,  id: 'layers',    Component: LayersAssetsPanel },
     { slot: 'left.footer',   order: 0,  Component: EditorFooter },
-    { slot: 'right.body',    order: 0,  id: 'selection', Component: SelectionPalettePanel },
     ...(pack('motion') ? [{ slot: 'canvas.footer', order: 0, Component: pack('motion').TimelineDock }] : []),
   ],
 })
 let registry = null
 
 export default function Compose() {
-  return <EditorShell registry={(registry ??= composeRegistry())} />
+  return (
+    <>
+      <WorkspaceEffects />
+      <LayerEffectsWindow />
+      <EditorShell registry={(registry ??= composeRegistry())} />
+    </>
+  )
 }

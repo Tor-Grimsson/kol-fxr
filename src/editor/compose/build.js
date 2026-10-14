@@ -19,6 +19,8 @@ import lockupHoriRaw  from '../../brand/logos/svg/kol-lockup-hori.svg?raw'
 import lockupVertRaw  from '../../brand/logos/svg/kol-lockup-vert.svg?raw'
 import { ASPECTS }    from '../shell/aspects'
 import { resolveColor, CANVAS_W } from './state'
+import { hasLayerEffects, effectsFilter, effectsFilterId } from './layerEffects'
+import { hasPaintFill, patternSvg } from './paintFill'
 import { applyCase } from '../modes/type/cuts'
 import { familyCssFor } from '../modes/type/families'
 import { paintAlphaExport } from './paint'
@@ -77,8 +79,14 @@ function aspectToWH(aspect, customRatio) {
   return { w: CANVAS_W, h: Math.round(CANVAS_W / ratio) }
 }
 
-function wrap(layer, body) {
+function wrap(layer, body, defs, docW = CANVAS_W, docH = CANVAS_W) {
   if (!body) return ''
+  /* LAYER EFFECTS (plan 32 § 2) — the renderer's own filter, in document space (the layer's box at x,y) */
+  let fxAttr = ''
+  if (defs && hasLayerEffects(layer)) {
+    defs.push(effectsFilter(layer, { w: layer.w ?? docW, h: layer.h ?? docH }, { x: layer.x ?? 0, y: layer.y ?? 0 }))
+    fxAttr = ` filter="url(#${effectsFilterId(layer)})"`
+  }
   const opacity   = layer.opacity ?? 1
   const blend     = layer.blend && layer.blend !== 'normal' ? layer.blend : null
   const styleAttr = blend ? ` style="mix-blend-mode: ${blend}"` : ''
@@ -100,7 +108,59 @@ function wrap(layer, body) {
       : ''
     xformAttr = ` transform="translate(${cx.toFixed(2)} ${cy.toFixed(2)})${rotPart}${flipPart} translate(${(-cx).toFixed(2)} ${(-cy).toFixed(2)})"`
   }
-  return `<g${opAttr}${styleAttr}${xformAttr}>${body}</g>`
+  return `<g${opAttr}${styleAttr}${xformAttr}${fxAttr}>${body}</g>`
+}
+
+/* PAINT FILLS (plan 34 § 2) — the gradient / pattern / image / video paint as an SVG fill on the shape's
+ * outline, drawn under the layer (whose own fill is cleared, so its stroke sits on top). The video
+ * exports its current frame. ponytail: text keeps its solid colour in export. */
+const paintless = (layer) => (hasPaintFill(layer) ? { ...layer, color: null } : layer)
+let paintSeq = 0
+function paintFillSvg(layer, palette, defs) {
+  if (!hasPaintFill(layer)) return ''
+  const d = canvasOutline(layer)
+  if (!d) return ''
+  const f = layer.fill
+  const id = `pf-${++paintSeq}`
+  const x = layer.x ?? 0, y = layer.y ?? 0, w = layer.w ?? 0, h = layer.h ?? 0
+  if (f.type === 'gradient' && f.kind !== 'conical') {
+    const a = resolveColor(f.from, palette) ?? '#000000', b = resolveColor(f.to, palette) ?? '#FFFFFF'
+    const stops = `<stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/>`
+    defs.push(f.kind === 'linear' || !f.kind
+      ? `<linearGradient id="${id}" gradientTransform="rotate(${Number(f.angle) || 0} 0.5 0.5)">${stops}</linearGradient>`
+      : `<radialGradient id="${id}"${f.kind === 'radial' ? ` gradientUnits="userSpaceOnUse" cx="${x + w / 2}" cy="${y + h / 2}" r="${Math.min(w, h) / 2}"` : ''}>${stops}</radialGradient>`)
+    return `<path d="${d}" fill="url(#${id})"/>`
+  }
+  let href = null, pw = w, ph = h, par = 'xMidYMid slice'
+  if (f.type === 'pattern') {
+    const svg = patternSvg(f, palette)
+    if (!svg) return ''
+    href = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+    pw = ph = f.tile ?? 64; par = 'none'
+  } else if (f.type === 'image') {
+    href = f.src
+    if (f.mode === 'fit') par = 'xMidYMid meet'
+    if (f.mode === 'tile') { pw = w * (f.tile ?? 25) / 100; ph = pw; par = 'xMidYMid slice' }
+  } else if (f.type === 'video' || f.kind === 'conical') {
+    /* a frame of the live element: the video, or a conical gradient drawn by canvas */
+    if (typeof document === 'undefined') return ''
+    const c = document.createElement('canvas'); c.width = Math.max(2, Math.round(w)); c.height = Math.max(2, Math.round(h))
+    const g = c.getContext('2d')
+    if (f.type === 'video') {
+      const v = document.querySelector(`video[data-fill-video="${layer.id}"]`)
+      if (!v || !v.videoWidth) return ''
+      const k = (f.mode === 'fit' ? Math.min : Math.max)(c.width / v.videoWidth, c.height / v.videoHeight)
+      g.drawImage(v, (c.width - v.videoWidth * k) / 2, (c.height - v.videoHeight * k) / 2, v.videoWidth * k, v.videoHeight * k)
+    } else {
+      const grad = g.createConicGradient(((Number(f.angle) || 0) - 90) * Math.PI / 180, c.width / 2, c.height / 2)
+      grad.addColorStop(0, resolveColor(f.from, palette) ?? '#000000'); grad.addColorStop(1, resolveColor(f.to, palette) ?? '#FFFFFF')
+      g.fillStyle = grad; g.fillRect(0, 0, c.width, c.height)
+    }
+    href = c.toDataURL('image/png'); par = 'none'
+  }
+  if (!href) return ''
+  defs.push(`<pattern id="${id}" patternUnits="userSpaceOnUse" x="${x}" y="${y}" width="${pw}" height="${ph}"><image href="${escapeXml(href)}" width="${pw}" height="${ph}" preserveAspectRatio="${par}"/></pattern>`)
+  return `<path d="${d}" fill="url(#${id})"/>`
 }
 
 function backgroundLayerSvg(layer, palette, w, h) {
@@ -491,7 +551,7 @@ export function layerToSvg(layer, palette, w, h, idx, defs, snapScale = 2) {
     const live = document.querySelector(`canvas[data-layer-id="${layer.id}"]`)
     if (live) {
       const body = `<image href="${escapeXml(live.toDataURL('image/png'))}" x="${(layer.x ?? 0).toFixed(2)}" y="${(layer.y ?? 0).toFixed(2)}" width="${(layer.w ?? 0).toFixed(2)}" height="${(layer.h ?? 0).toFixed(2)}"/>`
-      return wrap(layer, body)
+      return wrap(layer, body, defs, w, h)
     }
   }
   let body = ''
@@ -503,8 +563,8 @@ export function layerToSvg(layer, palette, w, h, idx, defs, snapScale = 2) {
       break
     }
     case 'photo':      body = photoLayerSvg(layer, w, h, idx, defs, snapScale); break
-    case 'shape':      body = shapeLayerSvg(layer, palette); break
-    case 'path':       body = pathLayerSvg(layer, palette); break
+    case 'shape':      body = paintFillSvg(layer, palette, defs) + shapeLayerSvg(paintless(layer), palette); break
+    case 'path':       body = paintFillSvg(layer, palette, defs) + pathLayerSvg(paintless(layer), palette); break
     case 'bool':       body = boolLayerSvg(layer, palette); break
     case 'text':       body = textLayerSvg(layer, palette); break
     case 'group':      body = groupLayerSvg(layer, palette, w, h, idx, defs, snapScale); break
@@ -514,7 +574,7 @@ export function layerToSvg(layer, palette, w, h, idx, defs, snapScale = 2) {
     default: break
   }
   if (!body) return ''
-  return wrap(layer, body)
+  return wrap(layer, body, defs, w, h)
 }
 
 export function buildLayersSvg({ layers, palette, aspect = '1:1', customRatio = null, canvasW = null, canvasH = null, rasterScale = 1 }) {

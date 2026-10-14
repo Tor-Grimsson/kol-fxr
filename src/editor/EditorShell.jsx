@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { LabeledControlSection, SettingsRow, SettingsSwitch, useDragResize } from '@kolkrabbi/kol-component'
+import { Button, LabeledControlSection, SettingsRow, SettingsSwitch, useDragResize } from '@kolkrabbi/kol-component'
 import './styles/kol-editor.css'
 import { panelsForSlot } from './state/panels'
 import { seedWorkspace, useWorkspace } from './state/workspace'
 import { PaneContext } from './shell/panels/PaneHeader'
+import Pane from './shell/panels/Pane'
 import { useComposeState } from './compose/state'
 import { DisplaySettingsDrawer } from '../settings/AppSettings'
 import MenuTop from './shell/MenuTop'
@@ -71,39 +72,49 @@ function RailGrab({ side, railRef }) {
   return <div {...grabProps} />
 }
 
-/* THE WORKSPACE'S RAIL BODY (plan 30 § 9): a pane with an `id` renders where the workspace record
- * puts it — either rail, in its order, collapsed or not — wrapped so its header's grip and `⌄`
- * know which pane they are; the drop line shows where a dragged pane will land. Id-less panes keep
- * their slot. */
-function RailBody({ side, panels }) {
+/* THE WORKSPACE'S RAIL BODY (plan 30 § 9 → plan 31 § 6): the record's panes, in order, each a `Pane`
+ * over whatever tabs sit in it — wrapped so its header's grip and chips know which pane they are,
+ * carrying its collapse and its dragged height; the drop line shows where a dragged pane or tab
+ * will land between panes (a drop INTO a pane rings its header). Slot panels keep their slot. */
+function RailBody({ side, panels, ctx }) {
   const { ws, over } = useWorkspace()
-  const byId = new Map(panels.filter((p) => p.id && p.slot.endsWith('.body')).map((p) => [p.id, p]))
-  const loose = panelsForSlot(panels, `${side}.body`).filter((p) => !p.id)
-  const ids = (ws[side] ?? []).filter((id) => byId.has(id))
-  const line = (i) => over?.side === side && over.index === i && <div key={`drop-${i}`} className="kol-pane-drop" aria-hidden />
+  const loose = panelsForSlot(panels, `${side}.body`)
+  const panes = ws[side] ?? []
+  const line = (i) => over?.side === side && over.pane == null && over.index === i && <div key={`drop-${i}`} className="kol-pane-drop" aria-hidden />
   return (
     <div className="kol-editor-rail-body" data-rail-side={side}>
-      {ids.map((id, i) => {
-        const { Component } = byId.get(id)
-        return [
-          line(i),
-          <div key={id} className="kol-pane" data-pane-id={id} data-collapsed={ws.collapsed[id] ? 'true' : undefined}>
-            <PaneContext.Provider value={id}><Component /></PaneContext.Provider>
-          </div>,
-        ]
-      })}
-      {line(ids.length)}
+      {panes.map((p, i) => [
+        line(i),
+        <div key={p.id} className="kol-pane" data-pane-id={p.id}
+          data-collapsed={ws.collapsed[p.id] ? 'true' : undefined}
+          data-sized={ws.heights[p.id] ? 'true' : undefined}
+          data-last={i === panes.length - 1 ? 'true' : undefined}
+          style={ws.heights[p.id] ? { height: ws.heights[p.id], flex: '0 0 auto' } : undefined}>
+          <PaneContext.Provider value={p.id}><Pane pane={p} ctx={ctx} /></PaneContext.Provider>
+        </div>,
+      ])}
+      {line(panes.length)}
       {loose.map(({ Component }, i) => <Component key={`loose-${i}`} />)}
     </div>
   )
 }
 
-function Rail({ side, panels, resizable }) {
+/* the chip that follows the pointer while a tab drags (plan 31 § 5) */
+function TabGhost() {
+  const { drag } = useWorkspace()
+  if (!drag) return null
+  return (
+    <div className="fixed z-[var(--kol-z-tooltip)] pointer-events-none" style={{ left: drag.x + 8, top: drag.y - 12 }} aria-hidden>
+      <Button variant="tab" size="sm" pressed>{drag.label}</Button>
+    </div>
+  )
+}
+
+function Rail({ side, panels, resizable, workspace, ctx }) {
   const ref = useRef(null)
   const header = panelsForSlot(panels, `${side}.header`)
   const body   = panelsForSlot(panels, `${side}.body`)
   const footer = panelsForSlot(panels, `${side}.footer`)
-  const workspace = (panels ?? []).some((p) => p.id)
   return (
     <aside ref={ref} className={`kol-editor-${side}`}>
       {resizable && <RailGrab side={side} railRef={ref} />}
@@ -112,7 +123,7 @@ function Rail({ side, panels, resizable }) {
           {header.map(({ Component }, i) => <Component key={i} />)}
         </div>
       )}
-      {workspace ? <RailBody side={side} panels={panels} /> : (
+      {workspace ? <RailBody side={side} panels={panels} ctx={ctx} /> : (
         <div className="kol-editor-rail-body">
           {body.map(({ Component }, i) => <Component key={i} />)}
         </div>
@@ -126,14 +137,25 @@ function Rail({ side, panels, resizable }) {
   )
 }
 
+const NO_CTX = {}
+const useNoCtx = () => NO_CTX
+
 export default function EditorShell({ registry }) {
   useLabelColumns()
-  seedWorkspace(registry?.panels ?? [])
+  seedWorkspace(registry?.panes ?? [], registry?.tabs ?? [])
+  const workspace = (registry?.tabs ?? []).length > 0
+  /* what the tabs' `when` gates read (the compose registry's hook; labs has none) */
+  const ctx = (registry?.useTabContext ?? useNoCtx)()
   const Canvas = registry?.canvas ?? null
   /* The topbar is registry-driven like the rails, defaulting to MenuTop so
    * the compose registry (which declares no topbar) is untouched. Labs mode
    * swaps in its own reduced bar — plan.md Phase 11.4. */
   const Topbar = registry?.topbar ?? MenuTop
+  /* THE HEAD (plan 31 § 2; Affinity's): the menu bar, then a full-width band for the ACTIONS
+   * (`registry.toolbar`), then the columns — the TOOLS one icon wide at the far left (slot `tools`),
+   * the rails, the canvas. Labs declares neither and keeps its chrome. */
+  const Toolbar = registry?.toolbar ?? null
+  const tools = panelsForSlot(registry?.panels, 'tools')
   const canvasHeader = panelsForSlot(registry?.panels, 'canvas.header')
   const canvasFooter = panelsForSlot(registry?.panels, 'canvas.footer')
   /* `canvas.overlay` floats OVER the canvas (plan 15 § 2 — the phone's play button); the main is
@@ -147,8 +169,18 @@ export default function EditorShell({ registry }) {
   return (
     <div className="kol-editor-shell" data-editor-keep-selection>
       <Topbar />
-      <div className="kol-editor-grid">
-        <Rail side="left"  panels={registry?.panels} resizable={registry?.resizableRails} />
+      {Toolbar && (
+        <div className="kol-editor-toolbar flex items-center h-10 px-2 bg-surface-tertiary border-b border-oq-08 shrink-0">
+          <Toolbar />
+        </div>
+      )}
+      <div className="kol-editor-grid" data-tools={tools.length ? 'true' : undefined}>
+        {tools.length > 0 && (
+          <aside className="kol-editor-tools flex flex-col items-center min-h-0">
+            {tools.map(({ Component }, i) => <Component key={i} />)}
+          </aside>
+        )}
+        <Rail side="left"  panels={registry?.panels} resizable={registry?.resizableRails} workspace={workspace} ctx={ctx} />
         <div className="kol-editor-canvas-column">
           {canvasHeader.length > 0 && (
             <div className="kol-editor-canvas-header">
@@ -165,8 +197,9 @@ export default function EditorShell({ registry }) {
             </div>
           )}
         </div>
-        <Rail side="right" panels={registry?.panels} resizable={registry?.resizableRails} />
+        <Rail side="right" panels={registry?.panels} resizable={registry?.resizableRails} workspace={workspace} ctx={ctx} />
       </div>
+      <TabGhost />
       <ShortcutsOverlay />
       <SettingsDrawerHost />
     </div>
