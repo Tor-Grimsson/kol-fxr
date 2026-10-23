@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AppHub, useNavHidden } from '@kolkrabbi/kol-shell'
-import { ActionButton, Button, Dropdown, ModalProvider, useModal, useContextMenu, formatSize } from '@kolkrabbi/kol-component'
+import { Button, Dropdown, ModalProvider, useModal } from '@kolkrabbi/kol-component'
 import { ThemeToggle } from '@kolkrabbi/kol-framework'
 import logomarkUrl from '@kolkrabbi/kol-brand/svg/favicon-01.svg?url'
 import NewFileDialog, { openNewFile } from './components/NewFileDialog'
-import { FileThumb, FilePlate, FileMenu, storedVerbs, chromeOf, bytesOf, downloadFile, FILE_TONE, fileDate } from './components/FileCard'
+import { storedVerbs, chromeOf, bytesOf, downloadFile } from './components/FileCard'
 import { pickMedia } from './editor/library/mediaPick'
 import { proxied, isVideoType } from './editor/library/mediaLibrary'
 /* The rail-extras store moved into the package with labs (0.4.0): labs WRITES
@@ -289,7 +289,6 @@ export default function AppLayout() {
   const [, setTick] = useState(0)
   const bump = () => setTick((n) => n + 1)
   /* the file cards' one menu (the approved file card, 2026-10-22) — Home writes storage directly */
-  const fileMenu = useContextMenu()
   const fileVerbs = (p) => storedVerbs('preset', p.id, bump)
 
   /* ⌥1…⌥7 — the rail top to bottom, HOME included. See the docblock for why
@@ -320,7 +319,6 @@ export default function AppLayout() {
     <ModalProvider>
     <RailSignIn handlerRef={signInRef} />
     <NewFileDialog />
-    <FileMenu menu={fileMenu} verbsFor={fileVerbs} />
     {/* the explorer media.kolkrabbi.io runs, over the three stores (the client lists its buckets) */}
     <MediaPickerDialog open={mediaOpen} accept={['image', 'video']} onClose={() => setMediaOpen(false)} onSelect={onMediaPick} />
     <AppHub
@@ -344,21 +342,19 @@ export default function AppLayout() {
         filtersTitle: session ? 'All Files' : 'All Chromes',
         /* GRID, signed in or not (the user, 2026-10-09: "it should always default to grid mode") */
         defaultLayout: 'grid',
-        /* A FILE is the approved file card (2026-10-22, same as Library): the DS `file` card and row,
-           download on the cover, the size, cog over trash, the same menu on right-click. A chrome card
-           (signed out, RECENT) keeps its picture card. */
+        /* A FILE is the approved file card (2026-10-22, same as Library): the DS `app` card and row
+           (0.291.0) — download on the cover, the size, cog over trash, the page's one menu on
+           right-click. A chrome card (signed out, RECENT) keeps its picture card. */
         toCard: (c) => (c.file ? {
           key: c.name,
-          variant: 'file',
-          tone: FILE_TONE,
+          variant: 'app',
           title: c.title,
-          date: fileDate(stampOf(c.file)),
-          size: formatSize(bytesOf(c.file)),
-          media: <FileThumb src={c.file.thumb} alt={c.title} />,
-          control: <ActionButton chrome="media" icon="download" confirmIcon="check" label="Download" confirmLabel="Downloaded" onAction={() => downloadFile(c.file)} />,
-          actions: <FilePlate item={c.file} verbs={fileVerbs(c.file)} onSettings={(e) => fileMenu.openAt(e, c.file)} />,
+          date: stampOf(c.file),
+          size: bytesOf(c.file),
+          media: c.file.thumb,
+          verbs: fileVerbs(c.file),
+          download: () => downloadFile(c.file),
           onClick: () => openFile(c.file),
-          onContextMenu: (e) => fileMenu.openAt(e, c.file),
         } : {
           key: c.name,
           title: c.title,

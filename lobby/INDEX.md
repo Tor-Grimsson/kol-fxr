@@ -35,6 +35,7 @@ Parking, declaring stale, reopening and any design decision stay the **user's ca
 
 | | Entry | About | Staged | State |
 |---|---|---|---|---|
+| 🟢 | [FxrLibraryOnAppPreset](done/FxrLibraryOnAppPreset.md) | bump kol-component 0.291.0 · kol-shell 0.75.0; Library on `CatalogPage preset="app"`, Home file cards `variant: "app"`; FileCard.jsx parts retire | 2026-10-23 | 🟢 `closed` 2026-10-23 — 0.291.0 · 0.75.0 pinned, Library + Home on the `app` card, parts to `_tmp/2026-10-23-filecard-app-variant/`; walked `/library` on `vite preview`: menu, duplicate, delete confirm, 0 console messages |
 | 🟢 | [color-pass-one-palette-for-every-layer](done/color-pass-one-palette-for-every-layer.md) | One palette store + resolver every layer reads: link to editor swatches or not, amount, roles or rotation, relationship generator (OKLCH), lock/load/save, mapping by property; the Color roll rolls a palette, not N random hexes | 2026-10-22 | 🟢 `closed` 2026-10-22 — plan 37 W5: one store + resolver on kol-component colorMath, palette Color roll, editor Palette tab + Labs rail Palette row, mapping by property on the Flow loops; walked desk + 390 on `vite preview`, 0 console messages |
 | 🟢 | [effects-intake-motion-references-2026-10](done/effects-intake-motion-references-2026-10.md) | Eight motion references judged: a shared field core (streamlines + glyph instancer) for three of them, letter-gap kinetic type, slice + zoom-wave filter, Voronoi pulse; order proposed, user's call | 2026-10-22 | 🟢 `closed` 2026-10-22 — plan 37 W6: field core, E1–E6 built and walked at desk (Flow · Letter Gap · Slice wave · Riso), E7/E8 parked with reasons; walked desk + 390 on `vite preview`, 0 console messages — at 390 thin streamlines read dashed (a 1080 canvas shown at ~290px), output solid |
 
@@ -56,11 +57,12 @@ _(none yet — ownership, deferral and context notes land in `archive/`)_
 
 Tickets this ledger does **not** govern — each row names the destination ledger
 that does. The **Remainder** is this repo's to do; the state is theirs to report.
-Fifty-one went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
+Fifty-two went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
 last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/INDEX.md`).
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [CatalogAppVariant](outbox/CatalogAppVariant.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` — kol-component 0.291.0 · kol-shell 0.75.0 | none — adopted 2026-10-23 (`FxrLibraryOnAppPreset`) |
 | 🟢 | [FileCardTitleClearsActions](outbox/FileCardTitleClearsActions.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-22 — kol-component 0.290.0 | none — adopted 2026-10-22: 0.290.0 pinned, long title stops before the cog (Home, `vite preview`) |
 | 🟢 | [ContentCardRowTone](outbox/ContentCardRowTone.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-22 — kol-component 0.288.0 | none — adopted 2026-10-22: `tone="secondary"` on the file card and row (`FILE_TONE`, Home + Library) |
 | 🟢 | [MenuRowSidePadding](outbox/MenuRowSidePadding.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-22 — kol-component 0.288.0 | none — adopted 2026-10-22: 0.290.0 pinned |
@@ -136,6 +138,9 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-23 | **`FxrLibraryOnAppPreset` closed · `CatalogAppVariant` adopted** — Library + Home on the DS `app` card (kol-component 0.291.0 · kol-shell 0.75.0) |
+| 2026-10-23 | **`FxrLibraryOnAppPreset` filed from kol-ds-ui** — bump kol-component 0.291.0 · kol-shell 0.75.0; Library on `CatalogPage preset="app"`, Home file cards `variant: "app"`; FileCard.jsx parts retire |
+| 2026-10-23 | **`CatalogAppVariant` filed into kol-ds-ui** — the approved file card as an `app` variant + `CatalogPage preset="app"`, answering fxr, mirror, monitor |
 | 2026-10-22 | **Both inbox tickets closed** — `color-pass-one-palette-for-every-layer` · `effects-intake-motion-references-2026-10`, resolutions appended, moved to `done/` (plan 37 W5 · W6) |
 | 2026-10-22 | **Four receipts adopted** — kol-component 0.290.0: `MenuRowSidePadding` · `ContentCardRowTone` (tone on file card + row) · `FileCardTitleClearsActions` · `DevSectionHeader`; walked on `vite preview` |
 | 2026-10-22 | **`FileCardTitleClearsActions` filed into kol-ds-ui** — long titles truncate before the plate actions |
