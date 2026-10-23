@@ -11,18 +11,22 @@ import { useGeneratorLibrary } from '../library/LibraryProvider'
 import { loopById } from '../../loops/registry'
 
 /**
- * PaletteBody — the color pane's Palette tab (plan 37 § 5.4, user ruling 2026-10-22: *"it goes in a
- * panel … also callable from topbar"*). One palette on the W5 engine (`palette.js`, kol-component's
- * harmonies under a seeded roll): pick a relationship, roll, lock the roles you keep, load any saved
- * palette (themes · swatches · library), save it to the library, apply it to the selected generator.
- * A role swatch pressed paints the active color target, the same as Swatches.
+ * PaletteBody — the body of the Color Modes window (`ColorModesWindow`, plan 39 § 4.1; it was the colour
+ * pane's Palette tab in plan 37). One palette on the W5 engine (`palette.js`, kol-component's
+ * harmonies under a seeded roll, generated in OKLCH): pick a relationship, roll, lock the roles you
+ * keep, load any saved palette (themes · swatches · library), save it to the library, apply it to the
+ * selected generator or to the document palette. A role swatch pressed paints the active color
+ * target, the same as Swatches.
  */
 const ROLE_LABELS = { bg: 'Background', fg: 'Ink', accent: 'Accent', dim: 'Dim', warm: 'Warm' }
+/* the document palette's slots (Primary · Secondary · Light · Dark · Accent · BG) each take the role
+   that means the same thing; Light has no role and keeps its colour */
+const DOC_SLOT_ROLE = { 0: 'fg', 1: 'warm', 3: 'dim', 4: 'accent', 5: 'bg' }
 
 export function PaletteBody() {
   const cs = useControlSize()
   const target = useColorTarget()
-  const { layers, selectedId, updateLayer } = useComposeState()
+  const { layers, selectedId, updateLayer, setColorAt } = useComposeState()
   const { library, addItem } = useGeneratorLibrary()
   const [relation, setRelation] = useState('analogous')
   const [palette, setPalette] = useState(() => rollPalette(mulberry32(randomSeed()), 'analogous'))
@@ -49,6 +53,7 @@ export function PaletteBody() {
     const patch = Object.fromEntries(schema.filter((p) => p.type === 'color').map((p) => [p.key, next[p.key]]))
     updateLayer(layer.id, patch)
   }
+  const applyDocument = () => Object.entries(DOC_SLOT_ROLE).forEach(([i, r]) => setColorAt(Number(i), palette.roles[r]))
 
   return (
     <div className="p-4 flex flex-col gap-4">
@@ -75,9 +80,10 @@ export function PaletteBody() {
       <Dropdown size={cs} tone="sunken" aria-label="Load palette" value=""
         options={[{ value: '', label: 'Load palette…' }, ...saved.map((p) => ({ value: p.id, label: p.name }))]} onChange={(v) => v && load(v)} />
 
+      <Button tone="grey" size={cs} onClick={() => addItem('palette', { name: palette.name === 'Rolled' ? `${RELATIONS.find((x) => x.id === palette.relation)?.label ?? 'Palette'}` : palette.name, colors: palette.colors })}>Save</Button>
       <div className="flex gap-2">
-        <Button tone="grey" size={cs} className="flex-1" onClick={() => addItem('palette', { name: palette.name === 'Rolled' ? `${RELATIONS.find((x) => x.id === palette.relation)?.label ?? 'Palette'}` : palette.name, colors: palette.colors })}>Save</Button>
         <Button tone="grey" size={cs} className="flex-1" disabled={!schema} onClick={apply}>Apply to layer</Button>
+        <Button tone="grey" size={cs} className="flex-1" onClick={applyDocument}>Apply to document</Button>
       </div>
     </div>
   )

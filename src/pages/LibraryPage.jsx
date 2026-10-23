@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Button, EmptyState, usePlaceholders } from '@kolkrabbi/kol-component'
-import { chromeOf, bytesOf, downloadFile } from '../components/FileCard'
+import { bytesOf, downloadFile } from '../components/FileCard'
 import { CatalogPage } from '@kolkrabbi/kol-shell'
 import { openNewFile } from '../components/NewFileDialog'
 import {
@@ -24,8 +23,8 @@ import {
  * THE PROVIDER IS MOUNTED HERE. `Editor.jsx` mounts its own inside the compose
  * stack; this page is outside every chrome, so it wraps itself.
  *
- * A PRESET OPENS on a click — in its chrome, by `?open=` (Home's route, plan 08); the chrome loads it.
- * Palettes, patterns and type have no chrome of their own and do not open. Rename · duplicate · delete
+ * Your files (the `preset` slot) list on Home, not here (plan 39). Palettes, patterns and type have no
+ * chrome of their own and do not open on a click. Rename · duplicate · delete
  * are store work, on the cog, the trash and right-click (the approved file card, 2026-10-22).
  */
 
@@ -36,14 +35,16 @@ const SLOT_LABELS = {
   type: 'Type',
 }
 
-/* Slot order is presentation, not the store's — Type first (user, 2026-08-27). */
-const SLOT_ORDER = ['type', 'preset', 'palette', 'pattern']
+/* Slot order is presentation, not the store's — Type first (user, 2026-08-27). The `preset` slot is your
+   FILES and lists on Home, not here (plan 39, user 2026-10-23: *"Library is saved presets … you can set
+   different chrome saves in library that you wouldnt in USER HOME"*) — Library is the chrome saves. */
+const SLOT_ORDER = ['type', 'palette', 'pattern']
 
 /* ponytail: the one check. SLOT_ORDER is hand-typed against the provider's
    SLOT_KEYS, so a fifth slot added there would silently never render a tab.
    Dev-only — a warn, not a throw; a missing tab is not worth a white screen. */
 if (import.meta.env.DEV) {
-  const missing = LIBRARY_SLOT_KEYS.filter((k) => !SLOT_ORDER.includes(k))
+  const missing = LIBRARY_SLOT_KEYS.filter((k) => k !== 'preset' && !SLOT_ORDER.includes(k))
   if (missing.length) console.warn('LibraryPage: slots with no tab —', missing)
 }
 
@@ -71,6 +72,20 @@ const tagOf = (slot, item) => {
   return item.family ?? 'Type'
 }
 
+/* A CHROME SAVE'S COVER (plan 39): a palette is its colours, a type save its own text in its face; a pattern keeps the
+   placeholder until it carries a thumb */
+const hexOf = (c) => (typeof c === 'string' ? c : c?.hex)
+const coverOf = (item) => {
+  if (item.thumb) return item.thumb
+  if (item.slot === 'palette' && item.colors?.length) {
+    return <div className="size-full flex">{item.colors.map(hexOf).filter(Boolean).map((c, i) => <div key={i} className="flex-1" style={{ background: c }} />)}</div>
+  }
+  if (item.slot === 'type' && item.text) {
+    return <div className="size-full flex items-center justify-center p-4 text-[32px] leading-tight text-center text-emphasis overflow-hidden" style={{ fontFamily: item.family, fontWeight: item.weight, fontStyle: item.italic ? 'italic' : undefined }}>{item.text}</div>
+  }
+  return undefined
+}
+
 const VIEWS = [
   { value: 'recent', label: 'RECENT' },
   { value: 'saved', label: 'SAVED' },
@@ -79,7 +94,6 @@ const VIEWS = [
 
 function LibraryBody() {
   const { library, removeItem, renameItem, duplicateItem } = useGeneratorLibrary()
-  const navigate = useNavigate()
   /* the provider's verbs for one item — the DS `app` card asks before it acts */
   const verbsFor = (item) => ({
     rename: (name) => renameItem(item.slot, item.id, name),
@@ -123,21 +137,19 @@ function LibraryBody() {
       view={view}
       onViewChange={setView}
       /* THE APPROVED FILE CARD (2026-10-22), the DS's since 0.291.0 (CatalogAppVariant): `preset="app"`
-         draws download on the cover, the size, cog over trash and the one menu on right-click. A preset
-         opens in its chrome on a click; palettes, patterns and type have no chrome to open in. */
+         draws download on the cover, the size, cog over trash and the one menu on right-click. Nothing here
+         opens on a click — palettes, patterns and type have no chrome to open in. */
       preset="app"
       toCard={(item) => {
         if (item.placeholder) return { key: item.id, title: item.name, detail: 'Placeholder' }
-        const open = item.slot === 'preset' ? () => navigate(`/${chromeOf(item)}?open=${encodeURIComponent(item.id)}`) : () => {}
         return {
           key: item.id,
           title: item.name || `Untitled ${SLOT_LABELS[item.slot].slice(0, -1).toLowerCase()}`,
           date: item.updatedAt ?? item.savedAt,
           size: bytesOf(item),
-          media: item.thumb,
+          media: coverOf(item),
           verbs: verbsFor(item),
           download: () => downloadFile(item),
-          onClick: open,
         }
       }}
       actions={

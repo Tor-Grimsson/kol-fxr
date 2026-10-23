@@ -12,7 +12,7 @@
        in kol-editor.css). kol-brand-color.css stays: its hue-ramp tokens are
        load-bearing (palette pools resolve them at runtime).
      - A scoped preflight substitute under .kol-design-editor (the root class
-       index.jsx stamps; PaletteModal's body-portal root carries it too),
+       index.jsx stamps; the overlay windows' body-portal roots carry it too),
        declared in layer(base) so it sits exactly where preflight would:
        below the utilities layer and below every unlayered DS rule.
    ═══════════════════════════════════════════════════════════════════════ */

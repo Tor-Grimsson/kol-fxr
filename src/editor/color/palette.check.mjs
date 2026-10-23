@@ -4,7 +4,7 @@
 import { createServer } from 'vite'
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error', ssr: { noExternal: [/^@kolkrabbi\//] }, optimizeDeps: { noDiscovery: true, include: [] } })
 const load = (p) => vite.ssrLoadModule(new URL(p, import.meta.url).pathname)
-const { rollPalette, RELATIONS } = await load('./palette.js')
+const { rollPalette, RELATIONS, okL } = await load('./palette.js')
 const { mulberry32, randomizeSchema } = await load('../lib/rng.js')
 const { themeParams } = await load('../../loops/theme.js')
 const { THEMES, resolveTheme } = await load('../../loops/lib/themes.js')
@@ -13,6 +13,14 @@ const ok = (c, m) => { if (!c) bad.push(m) }
 
 ok(JSON.stringify(rollPalette(mulberry32(7))) === JSON.stringify(rollPalette(mulberry32(7))), 'same seed, different palette')
 for (const r of RELATIONS) ok(rollPalette(mulberry32(3), r.id).colors.every((c) => /^#[0-9a-f]{6}$/i.test(c)), `${r.id}: a colour is not hex`)
+
+/* OKLCH (plan 39 § 4.3): an accent reads at one lightness whatever its hue — within the roll's L band,
+   less a little where the gamut cut chroma */
+for (let seed = 1; seed <= 60; seed++) for (const r of RELATIONS) {
+  const p = rollPalette(mulberry32(seed), r.id)
+  const L = okL(p.roles.accent)
+  ok(L > 0.6 && L < 0.72, `seed ${seed} ${r.id}: accent OKLab L ${L.toFixed(3)} outside 0.60–0.72`)
+}
 
 const schema = [{ key: 'a', type: 'color', role: 'bg' }, { key: 'b', type: 'color' }, { key: 'c', type: 'color' }]
 const pal = rollPalette(mulberry32(11))

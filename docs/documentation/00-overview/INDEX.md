@@ -118,7 +118,7 @@ Where to start reading, per subsystem (full table in `.kol/llm-context/AGENT-CON
 | `src/editor/library/` | The saved library — `LibraryProvider`, the Files dialog, the D1 sync (`libraryApi`, `mergeRemote`, `libraryOps`), `OpenFromUrl`. |
 | `src/editor/morph/` | The Morph tab — a morph file's steps, the two-door picker, the builder (`buildMorph`). |
 | `src/components/NewFileDialog.jsx` | New File's four doors — Editor · Labs · Randomiser · Morph. |
-| `src/editor/Editor.jsx` | Provider stack (library/tool/compose/palette/pattern/type) + Compose + PaletteModal. |
+| `src/editor/Editor.jsx` | Provider stack (library/tool/compose/palette/pattern/type) + Compose + ColorModesWindow (the palette generator). |
 | `src/loops/taxonomy.js` | `GENERATIVE_TREE` / `MISC_TREE` / `PICKER_TREE` — the TYPE level as data. |
 | `src/editor/compose/state.jsx` | Layer state, `LAYER_TYPES`, boolean / reparent / flatten actions. |
 | `src/editor/compose/CanvasArea.jsx` | Pointer router — tool gestures + keymap. |

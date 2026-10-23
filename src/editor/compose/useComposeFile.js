@@ -448,5 +448,7 @@ export function useComposeFile() {
     /* the live frame as a spec — FilesDialog saves through it, so the dialog
      * never has to know what a frame is made of */
     buildSpec, buildSavedSpec,
+    /* the frame as a small cover — UrlIntents backfills a pre-cover file with it (plan 39 § 3.1) */
+    captureThumb,
   }
 }

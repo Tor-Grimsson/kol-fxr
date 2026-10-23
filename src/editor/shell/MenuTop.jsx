@@ -1,4 +1,5 @@
 import { Icon } from '@kolkrabbi/kol-icons'
+import { openColorModes } from '../color/ColorModesWindow'
 import { useCallback, useEffect } from 'react'
 import { MenuItem, MenuDropdownItem, MenuDropdownDivider, MenuDropdownNest, useModal } from '@kolkrabbi/kol-component'
 import { useNavHidden } from '@kolkrabbi/kol-shell'
@@ -348,7 +349,7 @@ export default function MenuTop() {
           <MenuDropdownDivider />
           <MenuDropdownItem onClick={cmd('eyedrop')} shortcut={key('eyedrop')}>Eyedropper</MenuDropdownItem>
           <MenuDropdownItem onClick={() => openColorPane()}>Color</MenuDropdownItem>
-          <MenuDropdownItem onClick={() => openColorPane('Palette')}>Color Modes</MenuDropdownItem>
+          <MenuDropdownItem onClick={openColorModes}>Color Modes</MenuDropdownItem>
         </div>
       </MenuItem>
 
@@ -481,8 +482,8 @@ export default function MenuTop() {
               </MenuDropdownNest>
             )}
           </MenuDropdownNest>
-          {/* the color modes tool (plan 37 § 5.4) — a tool like the rest, it opens its tab in the color pane */}
-          <MenuDropdownItem onClick={() => openColorPane('Palette')}>Color Modes</MenuDropdownItem>
+          {/* the color modes tool (plan 39 § 4.1) — a tool window, like the rest of Tools */}
+          <MenuDropdownItem onClick={openColorModes}>Color Modes</MenuDropdownItem>
           <MenuDropdownDivider />
           <MenuDropdownItem onClick={() => window.dispatchEvent(new CustomEvent('kol:insert-image'))}>Insert image</MenuDropdownItem>
         </div>
@@ -525,9 +526,11 @@ export default function MenuTop() {
           <MenuDropdownNest flyout label="Left rail">
             {['Layers', 'Assets', 'History', 'Navigator'].map((t) => <MenuDropdownItem key={t} onClick={() => openTab(t)}>{t}</MenuDropdownItem>)}
             <MenuDropdownDivider />
-            {[['Stroke', 'Stroke'], ['Colour', 'Color'], ['Swatches', 'Swatches'], ['Palette', 'Color Modes']].map(([id, label]) => (
+            {[['Stroke', 'Stroke'], ['Colour', 'Color'], ['Swatches', 'Swatches']].map(([id, label]) => (
               <MenuDropdownItem key={id} onClick={() => openColorPane(id)}>{label}</MenuDropdownItem>
             ))}
+            {/* a tool window, not a pane tab (plan 39 § 4.1) */}
+            <MenuDropdownItem onClick={openColorModes}>Color Modes</MenuDropdownItem>
             <MenuDropdownDivider />
             {/* the footer comes up with the timeline (plan 30 § 6): with it down, a row pins the
                 timeline and opens its tab */}

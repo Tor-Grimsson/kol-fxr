@@ -416,6 +416,17 @@ export function GeneratorLibraryProvider({ children }) {
     if (it) push({ op: 'put', kind: slot, item: it })
   }, [push])
 
+  /* COVER BACKFILL (plan 39 § 3.1) — the thumb only, for a file saved before covers existed. Like a
+   * rename it cannot fail validation and leaves `savedAt`/`updatedAt` alone, so the file keeps its
+   * place in RECENT. */
+  const setThumb = useCallback((slot, id, thumb) => {
+    if (!SLOT_KEYS.includes(slot) || !id || typeof thumb !== 'string') return
+    const put = (arr) => arr.map((it) => (it.id === id ? { ...it, thumb } : it))
+    setLibrary((prev) => ({ ...prev, [slot]: put(prev[slot] ?? []) }))
+    const it = put(libRef.current[slot] ?? []).find((x) => x.id === id)
+    if (it) push({ op: 'put', kind: slot, item: it })
+  }, [push])
+
   /* DUPLICATE — a real copy under a new id, `<name> copy`, saved NOW. Returns
    * the new id so the caller can select what it just made. The copy is taken
    * from the stored item rather than rebuilt from the editor, so duplicating
@@ -452,6 +463,7 @@ export function GeneratorLibraryProvider({ children }) {
     removeItem,
     updateItem,
     renameItem,
+    setThumb,
     duplicateItem,
     clearSlot,
     clearAll,

@@ -6,7 +6,6 @@ import NavigatorPanel from '../NavigatorPanel'
 import { StrokeBody } from '../../color/StrokePanel'
 import { ColourBody } from '../../color/ColourPanel'
 import { SwatchesBody } from '../../color/SwatchesPanel'
-import { PaletteBody } from '../../color/PaletteBody'
 import { useColorTarget } from '../../color/useColorTarget'
 import InspectorRail from '../../compose/InspectorRail'
 import ParametersPanel from '../../compose/inspectors/ParametersPanel'
@@ -64,8 +63,7 @@ export const composeTabs = () => [
   { tab: 'Stroke',     label: 'Stroke',     pane: 'color',     order: 0, Component: StrokeBody },
   { tab: 'Colour',     label: 'Color',      pane: 'color',     order: 1, Component: ColourBody },
   { tab: 'Swatches',   label: 'Swatches',   pane: 'color',     order: 2, Component: SwatchesTab },
-  /* the palette engine's surface (plan 37 § 5.4) — relationship · roll · lock · load · save · apply */
-  { tab: 'Palette',    label: 'Color Modes',    pane: 'color',     order: 3, Component: PaletteBody },
+  /* Color Modes is a tool window now, not a tab here (plan 39 § 4.1 — `color/ColorModesWindow`) */
   { tab: 'Inspector',  label: 'Inspector',  pane: 'selection', order: 0, Component: InspectorRail },
   { tab: 'Parameters', label: 'Parameters', pane: 'selection', order: 1, Component: ParametersPanel },
   ...(pack('effects') ? [{ tab: 'Effects', label: 'Effects', pane: 'selection', order: 2, Component: EffectsTab }] : []),

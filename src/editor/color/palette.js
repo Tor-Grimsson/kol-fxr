@@ -1,4 +1,4 @@
-import { HARMONIES, harmonyColors, hexToHsl, hslToHex } from '@kolkrabbi/kol-component'
+import { HARMONIES, harmonyColors, hexToHsl } from '@kolkrabbi/kol-component'
 import { THEMES } from '../../loops/lib/themes.js'
 
 /**
@@ -51,6 +51,32 @@ export function allPalettes(library = {}) {
   ]
 }
 
+/* OKLCH → hex (plan 39 § 4.3 — the roll generates in OKLCH so equal L reads as equal lightness across
+   hues, which HSL does not: an HSL yellow and blue at the same L are nowhere near each other). Björn
+   Ottosson's OKLab matrices; out-of-gamut colours keep L and h and give up chroma until they fit. */
+const toLinear = (L, C, h) => {
+  const a = C * Math.cos((h * Math.PI) / 180), b = C * Math.sin((h * Math.PI) / 180)
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
+  const s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3
+  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s]
+}
+const inGamut = (rgb) => rgb.every((v) => v >= -1e-4 && v <= 1 + 1e-4)
+export function oklchToHex(L, C, h) {
+  let lo = 0, hi = C, rgb = toLinear(L, C, h)
+  if (!inGamut(rgb)) { for (let i = 0; i < 20; i++) { const mid = (lo + hi) / 2; if (inGamut(toLinear(L, mid, h))) lo = mid; else hi = mid } rgb = toLinear(L, lo, h) }
+  const enc = (v) => { const x = Math.min(1, Math.max(0, v)); return Math.round(255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055)) }
+  return '#' + rgb.map((v) => enc(v).toString(16).padStart(2, '0')).join('')
+}
+/* a hex's OKLab lightness — what the check measures the roll by */
+export function okL(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+  const l = Math.cbrt(0.4122214708 * r + 0.5363015620 * g + 0.0514770613 * b)
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+  return 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
+}
+
 /* WCAG relative luminance — the contrast check warns, never enforces (ticket § Wiring 4) */
 const lum = (hex) => {
   const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
@@ -60,26 +86,27 @@ export const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) 
 
 /**
  * Roll a palette from a seeded rng — the same rng gives the same palette (plan 37 § 5.5). The hues
- * come from the DS harmony; FXR adds the spread: a ground near black or white, an ink on the far
- * side of it, accents at the base's own saturation.
+ * come from the DS harmony; FXR adds the spread, IN OKLCH (plan 39 § 4.3): a ground near black or
+ * white, an ink on the far side of it, accents at one perceived lightness whatever their hue.
+ * Stored as hex.
  */
 export function rollPalette(rng, relation) {
   const rel = relation ?? RELATIONS[Math.floor(rng() * RELATIONS.length)].id
   const hue = rng() * 360
-  const s = 45 + rng() * 40
-  const l = 48 + rng() * 14
+  const C = 0.09 + rng() * 0.1
+  const L = 0.62 + rng() * 0.08
   const dark = rng() < 0.7
   let hues
   if (rel === 'monochromatic') hues = Array(5).fill(hue)
   else if (rel === 'random') hues = Array.from({ length: 5 }, () => rng() * 360)
-  else hues = harmonyColors(hue, rel, { saturation: s, lightness: l }).map((hex) => hexToHsl(hex).h)
+  else hues = harmonyColors(hue, rel, { saturation: 70, lightness: 55 }).map((hex) => hexToHsl(hex).h)
   const [h0, h1, h2, h3, h4] = hues
   const roles = {
-    bg: hslToHex(h0, s * 0.35, dark ? 6 + rng() * 6 : 92 + rng() * 5),
-    fg: hslToHex(h1 ?? h0, s * 0.25, dark ? 90 + rng() * 6 : 8 + rng() * 6),
-    accent: hslToHex(h2 ?? h0, s, l),
-    dim: hslToHex(h3 ?? h0, s * 0.6, dark ? 30 + rng() * 10 : 62 + rng() * 10),
-    warm: hslToHex(h4 ?? h0, s, dark ? l + 12 : l - 12),
+    bg: oklchToHex(dark ? 0.14 + rng() * 0.05 : 0.95 + rng() * 0.03, C * 0.25, h0),
+    fg: oklchToHex(dark ? 0.93 + rng() * 0.04 : 0.2 + rng() * 0.05, C * 0.2, h1 ?? h0),
+    accent: oklchToHex(L, C, h2 ?? h0),
+    dim: oklchToHex(dark ? 0.4 + rng() * 0.06 : 0.74 + rng() * 0.06, C * 0.6, h3 ?? h0),
+    warm: oklchToHex(dark ? L + 0.1 : L - 0.1, C, h4 ?? h0),
   }
   const colors = ROLES.map((r) => roles[r])
   return { id: 'rolled', name: 'Rolled', source: 'generated', relation: rel, roles, colors, contrastOk: contrast(roles.bg, roles.fg) >= 4.5 }

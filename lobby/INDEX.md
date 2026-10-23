@@ -62,6 +62,7 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [AppCardNoHoverFill](outbox/AppCardNoHoverFill.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` — kol-component 0.293.0 | none — adopted 2026-10-23 (plan 39 § 2.1) |
 | 🟢 | [CatalogAppVariant](outbox/CatalogAppVariant.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` — kol-component 0.291.0 · kol-shell 0.75.0 | none — adopted 2026-10-23 (`FxrLibraryOnAppPreset`) |
 | 🟢 | [FileCardTitleClearsActions](outbox/FileCardTitleClearsActions.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-22 — kol-component 0.290.0 | none — adopted 2026-10-22: 0.290.0 pinned, long title stops before the cog (Home, `vite preview`) |
 | 🟢 | [ContentCardRowTone](outbox/ContentCardRowTone.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-22 — kol-component 0.288.0 | none — adopted 2026-10-22: `tone="secondary"` on the file card and row (`FILE_TONE`, Home + Library) |
@@ -138,6 +139,8 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-23 | **`AppCardNoHoverFill` adopted** — kol-component 0.293.0; no hover fill measured on Home |
+| 2026-10-23 | **`AppCardNoHoverFill` filed into kol-ds-ui** — no hover fill on a clickable `app` card/row |
 | 2026-10-23 | **`FxrLibraryOnAppPreset` closed · `CatalogAppVariant` adopted** — Library + Home on the DS `app` card (kol-component 0.291.0 · kol-shell 0.75.0) |
 | 2026-10-23 | **`FxrLibraryOnAppPreset` filed from kol-ds-ui** — bump kol-component 0.291.0 · kol-shell 0.75.0; Library on `CatalogPage preset="app"`, Home file cards `variant: "app"`; FileCard.jsx parts retire |
 | 2026-10-23 | **`CatalogAppVariant` filed into kol-ds-ui** — the approved file card as an `app` variant + `CatalogPage preset="app"`, answering fxr, mirror, monitor |

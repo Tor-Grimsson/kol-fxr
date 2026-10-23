@@ -36,13 +36,12 @@ import MediaPickerDialog from './editor/library/MediaPickerDialog'
  * Settings is the Hub's `HubSettings` — the page kol-shell rebuilt FROM this
  * repo's own, so every feature it had is a prop here: the sections as data,
  * the gear's drawer over the same sections, the chrome picker, the OPTIONS /
- * SHORTCUTS pair. Home is the Hub's `HubHome` — RECENT = the three chromes,
- * SAVED = the library's presets read through `loadLibrary()` (design-editor
- * 0.22.0, `library-reader-for-a-hub-home`) on every render, so the shell tier
- * mounts no library provider: one above `AppHub` would go stale beside the
- * editor's own in the same tab. A saved card's cover is the file's own `thumb`
- * (captured at save since 2026-10-09); a file without one is `media: false`
- * (kol-component 0.210.0: no cover, no slot), never the dashed MISSING plate.
+ * SHORTCUTS pair. Home is the Hub's `HubHome` — the user's (plan 39): RECENT =
+ * a blank start + your newest files, SAVED = your files, read through
+ * `loadLibrary()` on every render, so the shell tier mounts no library provider:
+ * one above `AppHub` would go stale beside the editor's own in the same tab. A
+ * file's cover is its own `thumb` (captured at save since 2026-10-09, backfilled
+ * once for older files — plan 39 § 3.1).
  *
  * EVERYTHING SITS UNDER THE RAIL (user ruling 2026-08-27). `\` hides it
  * (H is the editor's layer-visibility key) and the rail comes back on every
@@ -137,16 +136,11 @@ const CHROME_PICKS = [
   { value: 'randomiser', label: 'Randomiser' },
 ]
 
-/* HOME'S TWO SETS. RECENT = the chromes, the starting points; `name`/`title` are
-   what the page's search reads, the card media a photo of the chrome
-   (`public/previews/chromes/<id>.png`). SAVED = the library's presets — no load
-   path outside the editor (LibraryPage's ruling), so their cards are static and
-   the library page is where they are managed. */
-const CHROMES = [
-  ...MODES.map((m) => ({ name: m.id, title: m.label, detail: m.blurb })),
-  /* Morph is the labs chrome with the Morph rail open — a card, not a MODE (the user, 2026-10-09) */
-  { name: 'morph', title: 'Morph', detail: 'Step into step — shape, blend or crossfade between generators.', path: '/morph', mode: 'labs' },
-]
+/* HOME IS THE USER'S (plan 39, user 2026-10-23: *"HOME IS THE START THE USER HOME... Library is saved
+   presets"*), monitor's and mirror's shape: RECENT = one blank start, then your newest files; SAVED = your
+   files. Signed in or not — signed out is a user with a local library, sign-in only syncs it. The blank
+   start opens New File's four doors. */
+const BLANK_START = { name: 'new-file', title: 'New File', detail: 'Editor · Labs · Randomiser · Morph', blank: true }
 
 const fmtDate = (ms) =>
   new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -158,9 +152,6 @@ const savedCards = () => (loadLibrary().preset ?? []).map((p) => ({
   detail: `${p.layers?.length ?? 0} layers · ${p.aspect ?? '1:1'} · ${fmtDate(stampOf(p))}`,
   file: p,
 }))
-/* SIGNED IN, HOME IS YOUR FILES (plan 08, user 2026-10-08: "chrome type isn't a file"). RECENT =
-   the last 12 saved, newest first; SAVED = all of them. Signed out, Home is exactly as before —
-   the chromes on RECENT. */
 const RECENT_FILES = 12
 const recentFiles = () => savedCards().sort((a, b) => stampOf(b.file) - stampOf(a.file)).slice(0, RECENT_FILES)
 
@@ -336,18 +327,22 @@ export default function AppLayout() {
       onNavigate={onNavigate}
       settingsPath={SETTINGS_PATH}
       home={{
-        items: (view) => (session
-          ? (view === 'recent' ? recentFiles() : savedCards())
-          : (view === 'recent' ? CHROMES : savedCards())),
-        filtersTitle: session ? 'All Files' : 'All Chromes',
-        /* GRID, signed in or not (the user, 2026-10-09: "it should always default to grid mode") */
+        items: (view) => (view === 'recent' ? [BLANK_START, ...recentFiles()] : savedCards()),
+        filtersTitle: 'All Files',
+        /* GRID always (the user, 2026-10-09: "it should always default to grid mode") */
         defaultLayout: 'grid',
-        /* A FILE is the approved file card (2026-10-22, same as Library): the DS `app` card and row
-           (0.291.0) — download on the cover, the size, cog over trash, the page's one menu on
-           right-click. A chrome card (signed out, RECENT) keeps its picture card. */
-        toCard: (c) => (c.file ? {
+        /* the DS `app` card and row (monitor's and mirror's Home); HubHome hard-sets rowVariant="file",
+           so the row is named back. A file carries its verbs; the blank start carries none. */
+        preset: 'app',
+        rowVariant: 'app',
+        toCard: (c) => (c.blank ? {
           key: c.name,
-          variant: 'app',
+          title: c.title,
+          meta: c.detail,
+          media: '/previews/chromes/editor.png',
+          onClick: openNewFile,
+        } : {
+          key: c.name,
           title: c.title,
           date: stampOf(c.file),
           size: bytesOf(c.file),
@@ -355,12 +350,6 @@ export default function AppLayout() {
           verbs: fileVerbs(c.file),
           download: () => downloadFile(c.file),
           onClick: () => openFile(c.file),
-        } : {
-          key: c.name,
-          title: c.title,
-          detail: c.detail,
-          media: <img src={`/previews/chromes/${c.name}.png`} alt={c.title} />,
-          onClick: () => (c.path ? (setMode(c.mode), navigate(c.path)) : enter(c.name)),
         }),
         /* New File → the four doors (plan 09) */
         actions: <Button tone="grey" size="md" onClick={openNewFile}>New File</Button>,

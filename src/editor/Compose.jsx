@@ -18,8 +18,8 @@ import { pack } from './packs'
  * full-width band under the menus (`ActionBar`), the TOOLS one icon wide at the far left
  * (`ToolStrip`), the canvas header holding only the document title. The rails are the WORKSPACE
  * (plan 31 § 4): `panes` + `tabs` are the defaults, the record decides where each tab sits; the
- * Transport/Output/File footer stays pinned on the left. The palette generator is the separate
- * PaletteModal mounted by Editor.
+ * Transport/Output/File footer stays pinned on the left. The palette generator is the Color Modes
+ * window mounted by Editor.
  */
 /* The timeline dock is the motion pack's slot (editor/packs.js), present only when it is
  * registered. Built at first render, not at import — packs register as their modules load. */
