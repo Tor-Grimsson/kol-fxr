@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AppHub, useNavHidden } from '@kolkrabbi/kol-shell'
-import { Button, Dropdown, MenuItem, MenuDropdownItem, ModalProvider, useModal } from '@kolkrabbi/kol-component'
-import { Icon } from '@kolkrabbi/kol-icons'
+import { ActionButton, Button, Dropdown, ModalProvider, useModal, useContextMenu, formatSize } from '@kolkrabbi/kol-component'
 import { ThemeToggle } from '@kolkrabbi/kol-framework'
 import logomarkUrl from '@kolkrabbi/kol-brand/svg/favicon-01.svg?url'
 import NewFileDialog, { openNewFile } from './components/NewFileDialog'
+import { FileThumb, FilePlate, FileMenu, storedVerbs, chromeOf, bytesOf, downloadFile, FILE_TONE, fileDate } from './components/FileCard'
 import { pickMedia } from './editor/library/mediaPick'
 import { proxied, isVideoType } from './editor/library/mediaLibrary'
 /* The rail-extras store moved into the package with labs (0.4.0): labs WRITES
@@ -20,7 +20,6 @@ import {
   MODES, setMode, withView, loadLibrary,
   isMobileDevice, wantsDesktop,
   getLibraryApi, useLibrarySession, signInLibrary, signOutLibrary, UnauthorizedError,
-  renameStored, duplicateStored, removeStored,
 } from './index.jsx'
 import MediaPickerDialog from './editor/library/MediaPickerDialog'
 
@@ -52,7 +51,8 @@ import MediaPickerDialog from './editor/library/MediaPickerDialog'
  * it exactly as they do the desktop rail. The Hub's default is the phone BAR;
  * the drawer stays because the 2026-10-05 phone work was built and measured
  * against it. `railSections="enter"` is the user's 2026-10-06 ruling for labs'
- * rail: a section row enters its children under a Back row instead of folding.
+ * rail: a section row enters its children under a Back row instead of folding —
+ * and since plan 37 the section that enters is Labs itself; its five fold inside.
  *
  * THE KEYS, split by route — read in kol-shell 0.62.0 and design-editor 0.21.0:
  *
@@ -163,9 +163,6 @@ const savedCards = () => (loadLibrary().preset ?? []).map((p) => ({
    the chromes on RECENT. */
 const RECENT_FILES = 12
 const recentFiles = () => savedCards().sort((a, b) => stampOf(b.file) - stampOf(a.file)).slice(0, RECENT_FILES)
-/* where a file opens: its stored `mode` (plan 09 — labs · editor · morph, a morph opens in labs);
-   files from before carry none and keep the guess — a single generator layer is a labs file */
-const chromeOf = (p) => (p.mode === 'morph' ? 'morph' : p.mode === 'labs' ? 'labs' : p.mode === 'editor' ? 'editor' : (Array.isArray(p.layers) && p.layers.length === 1 && p.layers[0]?.type === 'loop' ? 'labs' : 'editor'))
 
 /* The tour's copy is the chromes' own one-liners (the New File doors, the Home cards) — one
    source, nothing invented here (audit A3 replaced the "Placeholder." steps, 2026-10-09).
@@ -207,42 +204,6 @@ function RailSignIn({ handlerRef }) {
     }
   }
   return null
-}
-
-/* A file card's three verbs (plan 08) — the Files dialog's, on Home. Under the shell's ModalProvider,
-   so the rename prompt and the delete confirm are the KOL dialogs. */
-function FileActions({ file, onChange, menu = false }) {
-  const modal = useModal()
-  const stop = (fn) => (e) => { e.stopPropagation(); fn() }
-  const rename = async () => {
-    const name = await modal.prompt('Rename:', file.name ?? '')
-    if (name == null || !name.trim() || name.trim() === file.name) return
-    renameStored('preset', file.id, name.trim()); onChange()
-  }
-  const duplicate = () => { duplicateStored('preset', file.id); onChange() }
-  const remove = async () => {
-    const ok = await modal.confirm(`Delete “${file.name || 'Untitled preset'}”?`, { okLabel: 'Delete' })
-    if (!ok) return
-    removeStored('preset', file.id); onChange()
-  }
-  /* THE GRID CARD TAKES ONE `···` (plan 26 § 12): three glyphs drawn over the title made a click on the
-     name hit Rename — which is why Home opened as a list. One trigger, the three verbs in its menu. */
-  if (menu) return (
-    <span onClick={(e) => e.stopPropagation()}>
-      <MenuItem label={<Icon name="more" size={16} />} caret={false} size="sm" align="end" buttonClassName="px-1" panelClassName="z-[var(--kol-z-tooltip)]">
-        <MenuDropdownItem iconLeft="edit" onClick={rename}>Rename</MenuDropdownItem>
-        <MenuDropdownItem iconLeft="copy" onClick={duplicate}>Duplicate</MenuDropdownItem>
-        <MenuDropdownItem iconLeft="trash" onClick={remove}>Delete</MenuDropdownItem>
-      </MenuItem>
-    </span>
-  )
-  return (
-    <span className="flex items-center gap-1">
-      <Button tone="ghost" quiet size="sm" iconOnly="edit" aria-label="Rename" onClick={stop(rename)} />
-      <Button tone="ghost" quiet size="sm" iconOnly="copy" aria-label="Duplicate" onClick={stop(duplicate)} />
-      <Button tone="ghost" quiet size="sm" iconOnly="trash" aria-label="Delete" onClick={stop(remove)} />
-    </span>
-  )
 }
 
 /* Publishes `--fxr-rail` — the rail's width, or 0 when hidden or absent — so a
@@ -327,6 +288,9 @@ export default function AppLayout() {
   /* Home's file verbs write storage directly (no provider at the shell tier); a tick re-reads it */
   const [, setTick] = useState(0)
   const bump = () => setTick((n) => n + 1)
+  /* the file cards' one menu (the approved file card, 2026-10-22) — Home writes storage directly */
+  const fileMenu = useContextMenu()
+  const fileVerbs = (p) => storedVerbs('preset', p.id, bump)
 
   /* ⌥1…⌥7 — the rail top to bottom, HOME included. See the docblock for why
      this is local rather than AppShell's `navKeys`. */
@@ -356,17 +320,19 @@ export default function AppLayout() {
     <ModalProvider>
     <RailSignIn handlerRef={signInRef} />
     <NewFileDialog />
+    <FileMenu menu={fileMenu} verbsFor={fileVerbs} />
     {/* the explorer media.kolkrabbi.io runs, over the three stores (the client lists its buckets) */}
     <MediaPickerDialog open={mediaOpen} accept={['image', 'video']} onClose={() => setMediaOpen(false)} onSelect={onMediaPick} />
     <AppHub
       app={APP}
-      /* Labs' category rows sit DIRECTLY UNDER Labs, not after the whole nav —
-         they belong to that destination, and appending them put them below
-         Randomiser. `KEY_ORDER` is derived from NAV_ITEMS, not from this, so
-         ⌥-digit is unaffected by where they land. */
-      /* …and only on `/labs`: the same chrome serves `/morph`, whose rail is the Morph rail */
+      /* LABS IS A LEVEL (plan 37 § 7.2, user 2026-10-22: "when you press labs you should enter that
+         level and the sub categories should expand collapse"). On `/labs` the Labs row carries its five
+         sections as `sub`, so under `railSections: 'enter'` pressing it enters a ← Labs level; inside,
+         NavRail renders each section as a plain RailItem with no `onEnter`, so they FOLD in place with
+         their groups indented. Only on `/labs` — `/morph` is the same chrome with the Morph rail.
+         `KEY_ORDER` is derived from NAV_ITEMS, so ⌥-digit is unaffected. */
       items={extras.items.length && location.pathname.startsWith('/labs')
-        ? NAV_ITEMS.flatMap((n) => (n.path === '/labs' ? [n, ...extras.items] : [n]))
+        ? NAV_ITEMS.map((n) => (n.path === '/labs' ? { ...n, sub: extras.items } : n))
         : NAV_ITEMS}
       currentPath={location.pathname}
       onNavigate={onNavigate}
@@ -376,17 +342,23 @@ export default function AppLayout() {
           ? (view === 'recent' ? recentFiles() : savedCards())
           : (view === 'recent' ? CHROMES : savedCards())),
         filtersTitle: session ? 'All Files' : 'All Chromes',
-        /* GRID, signed in or not (the user, 2026-10-09: "it should always default to grid mode") — the
-           verbs ride the grid as one `···` menu, the list keeps its three glyphs */
+        /* GRID, signed in or not (the user, 2026-10-09: "it should always default to grid mode") */
         defaultLayout: 'grid',
-        toCard: (c, { layout }) => (c.file ? {
+        /* A FILE is the approved file card (2026-10-22, same as Library): the DS `file` card and row,
+           download on the cover, the size, cog over trash, the same menu on right-click. A chrome card
+           (signed out, RECENT) keeps its picture card. */
+        toCard: (c) => (c.file ? {
           key: c.name,
+          variant: 'file',
+          tone: FILE_TONE,
           title: c.title,
-          detail: c.detail,
-          /* the save's own thumbnail (plan 26 § 9) — a file saved before thumbs (2026-10-09) has none */
-          media: c.file.thumb ? <img src={c.file.thumb} alt={c.title} className="size-full object-cover" /> : false,
+          date: fileDate(stampOf(c.file)),
+          size: formatSize(bytesOf(c.file)),
+          media: <FileThumb src={c.file.thumb} alt={c.title} />,
+          control: <ActionButton chrome="media" icon="download" confirmIcon="check" label="Download" confirmLabel="Downloaded" onAction={() => downloadFile(c.file)} />,
+          actions: <FilePlate item={c.file} verbs={fileVerbs(c.file)} onSettings={(e) => fileMenu.openAt(e, c.file)} />,
           onClick: () => openFile(c.file),
-          actions: <FileActions file={c.file} onChange={bump} menu={layout !== 'list'} />,
+          onContextMenu: (e) => fileMenu.openAt(e, c.file),
         } : {
           key: c.name,
           title: c.title,

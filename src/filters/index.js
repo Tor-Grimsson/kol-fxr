@@ -34,6 +34,7 @@ import ascii from './fxAscii.js'
 import halftoneDither from './fxHalftoneDither.js'
 import bitmap from './fxBitmap.js'
 import { EFFECTS_FX } from './fxEffects.js'
+import { SLICER_FX } from './fxSlicer.js'
 import { GL_FILTERS } from './gl/catalog.js'
 import { PIXI_FILTERS } from './pixi/defs.js'
 
@@ -48,6 +49,8 @@ export const FILTERS = [
   /* HALFTONE trio — labs radar Dither/ASCII (+ shared sweep rig, sweeps.js)
      and optic Bitmap (photo-luma halftone field) */
   ascii, halftoneDither, bitmap,
+  /* the image slicer (plan 37 § 6.6) — the zoom-wave grid and the two-ink riso screens */
+  ...SLICER_FX,
   /* Effects canvas tier — labs pages/effects engine/canvasEffects.js over lib/imagefilters.js */
   ...EFFECTS_FX,
   /* GL engine filters — synths / distortion / lens (labs radar); lazy engines */

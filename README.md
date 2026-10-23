@@ -1,65 +1,30 @@
-# @kolkrabbi/design-editor
+# FXR
 
-The Kolkrabbi design editor as an embeddable React component — a DOM/SVG
-vector + generative compositor (canvas, layers, palette/pattern/type
-generators, kinetic type, boolean geometry, image export).
+A design compositor — frames, layers and vector tools, with generative, kinetic-type and effects layers on one engine.
 
-Consumes the published `@kolkrabbi/kol-*` design system as peer dependencies.
+**Live:** [fxr.kolkrabbi.io](https://fxr.kolkrabbi.io)
 
-**Live:** [editor.kolkrabbi.io](https://editor.kolkrabbi.io)
+A React 19 + Vite + Tailwind 4 app. It consumes the published `@kolkrabbi/kol-*` design system from npm and publishes nothing itself.
 
-## Install
+## Run
 
-```sh
-npm install @kolkrabbi/design-editor
-```
+| Command | What it does |
+|---|---|
+| `pnpm dev` | the app and its D1 Worker (`api/`) together — Sign in works |
+| `pnpm dev:app` | the app alone — no API, the library stays local |
+| `pnpm build` | the production build into `dist/` |
+| `pnpm preview` | serve the built `dist/` |
+| `pnpm icons` | regenerate the touch icons and share image from `public/touch-icons/apple-touch-icon-dark.svg` |
+| `pnpm api:deploy` | deploy the Worker |
 
-Peer dependencies (install if you don't already have them):
+## Hosting
 
-```sh
-npm install react react-dom react-router-dom \
-  @kolkrabbi/kol-component @kolkrabbi/kol-framework \
-  @kolkrabbi/kol-theme @kolkrabbi/kol-icons
-```
+Media loads **same-origin** on purpose: the CDN sends no CORS headers, and a cross-origin image taints the canvas and breaks filters and export. `vercel.json` rewrites `/media/*` to the media bucket; any other host needs the same proxy. Fonts ship in `public/fonts/`.
 
-## Usage
+## Docs
 
-```jsx
-import { DesignEditor } from '@kolkrabbi/design-editor'
-import '@kolkrabbi/design-editor/style.css'
-
-export default function EditorPage() {
-  return <DesignEditor mediaProxyBase="/media/" />
-}
-```
-
-The editor mounts wherever you place it and owns no route — it runs on an
-internal `MemoryRouter`, so it never touches the host app's URL bar.
-
-## Host requirements
-
-The editor loads media and fonts **same-origin** on purpose: the Kolkrabbi
-CDN sends no CORS headers, so a cross-origin image load taints the canvas and
-breaks photo filters and export. Your host must proxy two paths:
-
-| Path | Proxy target | Why |
-|---|---|---|
-| `/media/*` | `https://media.kolkrabbi.io/*` | image/video sources for filters + export |
-| `/fonts/*` | the bundled `dist/fonts/*` | `@font-face` (JetBrains Mono etc.) for text/morph render |
-
-Point `mediaProxyBase` at whatever path you proxy (`/media/` is the default).
-On Vercel, that's a `vercel.json` rewrite; any static host has an equivalent.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `mediaProxyBase` | `string` | `/media/` | Same-origin path your host proxies to the media CDN. |
-
-## Build
-
-- `pnpm build` — build the standalone app (deploy target, not published).
-- `pnpm dev` — run the standalone editor locally.
+- `docs/` — the subject documentation (start at `docs/documentation/INDEX.md`).
+- `.kol/llm-context/` — architecture and current state for agents.
 
 ## License
 

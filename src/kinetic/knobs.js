@@ -98,9 +98,9 @@ const cpKnob = (pt, axis) => ({
 
 export const KINETIC_KNOBS = [
   // ── Style ──
-  { key: 'bg', label: 'Background', tab: 'style', type: 'color', noRandom: true,
+  { key: 'bg', label: 'Background', tab: 'style', type: 'color', role: 'bg', noRandom: true,
     get: (c) => c.bg, set: (c, v) => ({ ...c, bg: v }) },
-  { key: 'fill', label: 'Fill', tab: 'style', type: 'color', noRandom: true,
+  { key: 'fill', label: 'Fill', tab: 'style', type: 'color', role: 'fg', noRandom: true,
     get: (c, i = 0) => inst(c, i)?.fill, set: (c, v, i = 0) => patchInst(c, { fill: v }, i) },
   { key: 'font', label: 'Font', tab: 'style', type: 'select', options: FONT_OPTIONS, noRandom: true,
     get: (c, i = 0) => inst(c, i)?.font,

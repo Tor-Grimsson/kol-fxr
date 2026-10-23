@@ -1,4 +1,5 @@
-import { Canvas as DsCanvas, CanvasZoomContext, CANVAS_VIRTUAL_W, CANVAS_DEFAULTS as DS_CANVAS_DEFAULTS, CanvasFrame, useFps } from '@kolkrabbi/kol-component'
+/* the canvas is the editor's own since plan 37 § 8.10 (`./CanvasView`, taken in from kol-component) */
+import BaseCanvas, { CanvasZoomContext, CANVAS_VIRTUAL_W, CANVAS_DEFAULTS as BASE_CANVAS_DEFAULTS, CanvasFrame, useFps } from './CanvasView'
 import { ASPECTS } from './aspects'
 import { transport } from '../params/transport'
 import { pack } from '../packs'
@@ -15,14 +16,14 @@ import { pack } from '../packs'
 export { CanvasZoomContext, CANVAS_VIRTUAL_W, CanvasFrame, useFps }
 
 /* The type mode's per-frame defaults (data values, not frame chrome). */
-export const CANVAS_DEFAULTS = { ...DS_CANVAS_DEFAULTS, bgColor: '#0E0E11' }
+export const CANVAS_DEFAULTS = { ...BASE_CANVAS_DEFAULTS, bgColor: '#0E0E11' }
 
 /* Oversized so practical panning never reveals an edge */
 const GRID = <div className="kol-grid-bg absolute" style={{ left: '-200%', top: '-200%', width: '500%', height: '500%' }} />
 
 export default function Canvas({ showGrid = true, showRulers = true, ...props }) {
   return (
-    <DsCanvas
+    <BaseCanvas
       aspects={ASPECTS}
       backdrop={showGrid ? GRID : undefined}
       rulers={showRulers}

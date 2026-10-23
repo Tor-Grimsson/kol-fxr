@@ -153,7 +153,7 @@ export default function LabsSourcePicker({ layer }) {
 export function LabsSourceCard({ layer, title, onBack }) {
   useSheetChrome(onBack)
   return (
-    <div className="fixed inset-y-0 right-0 left-[var(--fxr-rail,0px)] kol-overlay-scrim flex flex-col items-center overflow-y-auto p-6" style={{ zIndex: 'var(--kol-z-modal)' }}>
+    <div className="fixed inset-y-0 right-0 left-[var(--fxr-rail,0px)] kol-overlay-scrim flex flex-col items-center overflow-y-auto p-6" style={{ zIndex: 'calc(var(--kol-z-sticky) - 2)' }} /* under the nav drawer's scrim (sticky − 1) — on a phone the drawer opens OVER this chooser (plan 37 § 7.3) */>
       <div className="my-auto w-full max-w-sm rounded p-8 flex flex-col gap-6" style={{ background: 'var(--kol-surface-primary)' }}>
         <div className="flex flex-col gap-2">
           <span className="kol-eyebrow text-body">{title}</span>

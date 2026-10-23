@@ -2,7 +2,7 @@
 title: Scoped Randomize
 type: reference
 status: active
-updated: 2026-07-08
+updated: 2026-10-22
 description: The seeded, binding-safe, category-preserving randomize architecture — rng.js primitives, rolls.jsx scope derivation, and the Randomize-all + per-scope wiring in ParametersPanel.
 tags:
   - project/kol-fxr
@@ -47,10 +47,12 @@ One shared implementation, ported from labs, behind every randomize surface in t
 |---|---|
 | `mulberry32(seed)` | Deterministic `0..1` PRNG. Same seed → same sequence. |
 | `randomSeed()` | A fresh integer seed (`Math.random() * 1e9`). |
-| `randomizeSchema(params, rng)` | Rolls a value object from a declarative schema. **Skips `noRandom`.** Per type: `range` → min..max snapped to step · `select` → one option · `toggle`/`boolean` → coin flip · `color` → random hex. Anything else is left out (caller keeps its current value). |
+| `randomizeSchema(params, rng)` | Rolls a value object from a declarative schema. **Skips `noRandom`.** Per type: `range` → min..max snapped to step · `select` → one option · `toggle`/`boolean` → coin flip · `color` → a colour of **one palette** rolled for the whole call (`rollPalette`, `src/editor/color/palette.js` — kol-component's harmonies under the seeded rng): a param with a `role` takes that role, an un-roled one the palette's colours in turn, so a roll gives related colours, never N random hexes (plan 37 § 5.5). Anything else is left out (caller keeps its current value). |
 | `mergeRoll(current, rolled)` | Merges the rolled patch over current values but **skips any current value that is a binding** — a non-null object (not array), or an array of keyframe objects. Plain values get replaced; bound values are preserved. |
 
 `randomizeSchema` honouring `noRandom` and `mergeRoll` preserving bindings are the two guarantees the whole surface rests on.
+
+**The palette** (`src/editor/color/palette.js`, plan 37 W5) is one shape — `{ id, name, colors, roles: { bg, fg, accent, dim, warm }, source }` — for themes, editor swatches and library palettes alike (`allPalettes`). `themeParams()` (`loops/theme.js`) is its resolver with a theme as the palette; `resolvePalette(params, schema, palette, { rotate })` recolours by role and, with `rotate`, the rest in turn. Two surfaces: the editor's **Color Modes** tool (`PaletteBody.jsx`, a tab in the colour pane — relationship · roll · lock · load · save · apply to layer; Tools › Color Modes, Edit › Color Modes, Window › Left rail › Color Modes) and Labs' settings-rail **Palette** row (relationship + Roll, `LoopFields.jsx`). `palette.check.mjs` guards it.
 
 ## Layer 2 — scope derivation (`src/editor/params/rolls.jsx`)
 

@@ -22,6 +22,9 @@ export const GENERATIVE_TREE = [
   { label: 'Loops',         groups: ['shape', 'field', 'patternloop'] },
   { label: 'Math',          groups: ['math'] },
   { label: 'Penrose',       groups: ['penrose'] },
+  /* the effects intake (plan 37 W6): the field-core loops, and the letter-gap type study */
+  { label: 'Flow',          groups: ['flow'] },
+  { label: 'Letter Gap',    groups: ['lettergap'] },
   { label: 'Drift',         groups: ['drift'] },
   { label: 'Gradients',     groups: ['gradients'] },
   { label: 'Soft Forms',    groups: ['softforms'] },

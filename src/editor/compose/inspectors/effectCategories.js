@@ -14,7 +14,7 @@ import { filterById } from '../../../filters'
 import { loopById } from '../../../loops/registry'
 
 const CATEGORIES = [
-  { id: 'halftone',   label: 'Halftone',   filterIds: ['fx-halftone-dither', 'fx-ascii', 'fx-bitmap'] },   /* labs page order: Dither · ASCII · Bitmap */
+  { id: 'halftone',   label: 'Halftone',   filterIds: ['fx-halftone-dither', 'fx-ascii', 'fx-bitmap', 'fx-riso'] },   /* labs page order: Dither · ASCII · Bitmap; Riso (plan 37 § 6.6) after */
   { id: 'scanline',   label: 'Scanline',   filterIds: ['scanline'] },
   /* labs CRT = the four synth pages (Disco · Slitscan · Scan · Symmetry);
    * kaleido/mirror belong to the rack's Post-Processing category. */
@@ -40,7 +40,7 @@ export const FX_RACK_GROUPS = [
   { id: 'utility',           label: 'Utility',           filterIds: ['fx-threshold'], pixiGroup: 'utility' },
   /* labs' CANVAS_FX_DEFS — the same list every effect page's Post-Processing
    * block adds from. */
-  { id: 'post-processing',   label: 'Post-processing',   filterIds: ['fx-rgb', 'fx-edge', 'fx-posterize', 'fx-pixelsort', 'fx-mirror', 'fx-kaleido', 'fx-threshold', 'fx-blocks', 'fx-media'] },
+  { id: 'post-processing',   label: 'Post-processing',   filterIds: ['fx-rgb', 'fx-edge', 'fx-posterize', 'fx-pixelsort', 'fx-mirror', 'fx-kaleido', 'fx-threshold', 'fx-blocks', 'fx-media', 'fx-slice-wave'] },
 ]
 
 const CLAIMED = new Set([
@@ -167,13 +167,13 @@ export const LIVE_FILTER_GROUPS = [
   { label: 'Lighting', ids: ['filter-glow', 'filter-godray', 'filter-simple-lightmap'] },
   { label: 'Colors', ids: ['filter-adjustment', 'filter-hsl-adjustment', 'fx-hsl', 'fx-hsv', 'fx-brightness', 'fx-contrast', 'fx-rgb', 'filter-rgb-split', 'fx-chromatic', 'fx-invert', 'fx-sepia', 'fx-grayscale', 'fx-posterize', 'fx-solarize', 'fx-threshold', 'filter-color-gradient', 'filter-color-map', 'filter-color-overlay', 'filter-color-replace', 'filter-multi-color-replace', 'fx-edge', 'fx-emboss'] },
   { divider: true },
-  { label: 'Halftone', ids: ['fx-halftone-dither', 'fx-ascii', 'fx-bitmap', 'filter-ascii', 'filter-cross-hatch', 'filter-dot'] },
+  { label: 'Halftone', ids: ['fx-halftone-dither', 'fx-ascii', 'fx-bitmap', 'fx-riso', 'filter-ascii', 'filter-cross-hatch', 'filter-dot'] },
   { label: 'Scanline', ids: ['scanline'] },
   { label: 'CRT', ids: ['gl-disco', 'gl-scan', 'gl-trails', 'filter-crt'] },
   { label: 'Refraction', ids: ['glass'] },
   { label: 'Dither', ids: ['dither'] },
   { label: 'Stylize', ids: ['filter-bevel', 'filter-drop-shadow', 'filter-outline'] },
-  { label: 'Post-processing', ids: ['fx-blocks', 'fx-media'] },
+  { label: 'Post-processing', ids: ['fx-blocks', 'fx-media', 'fx-slice-wave'] },
 ]
 const LIVE_LABELS = { 'fx-blur': 'Gaussian Blur', 'fx-chromatic': 'Chromatic Aberration', 'fx-halftone-dither': 'Halftone Dither' }
 export const liveFilterLabel = (f) => LIVE_LABELS[f.id] ?? f.label

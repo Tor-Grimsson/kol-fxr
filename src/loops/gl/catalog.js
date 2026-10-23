@@ -278,7 +278,7 @@ const SCENE_LOOP = {
     /* Material-dependent knobs (per makeMaterial/applyMaterialProps):
      * normal ignores colour; roughness exists on standard + the physical pair;
      * metalness only applies to standard; env IBL only lights PBR materials. */
-    { key: 'sceneColor', label: 'Color', type: 'color', default: '#b9c2d0', section: 'Material', when: (l) => (l.materialType ?? 'standard') !== 'normal' || !!l.wireframe },
+    { key: 'sceneColor', label: 'Color', type: 'color', role: 'fg', default: '#b9c2d0', section: 'Material', when: (l) => (l.materialType ?? 'standard') !== 'normal' || !!l.wireframe },
     { ...range('roughness', 'Roughness', 0, 1, 0.02, 0.38, { section: 'Material' }), when: (l) => ['standard', 'glass', 'dispersion'].includes(l.materialType ?? 'standard') },
     { ...range('metalness', 'Metalness', 0, 1, 0.02, 0.18, { section: 'Material' }), when: (l) => (l.materialType ?? 'standard') === 'standard' },
     { key: 'flatShading', label: 'Flat shading', type: 'toggle', default: false, section: 'Material' },

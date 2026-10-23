@@ -99,8 +99,8 @@ export default {
     { key: 'charset', label: 'Charset', type: 'select', options: CHARSET_OPTIONS, default: 'ascii', when: (l) => l.mark === 'glyph', section: 'Mark' },
     { key: 'fontScale', label: 'Font size', type: 'range', min: 0.4, max: 2, step: 0.05, default: 1, when: (l) => l.mark === 'glyph', section: 'Mark' },
     /* Color. */
-    { key: 'bg', label: 'Background', type: 'color', default: '#06070b', section: 'Color' },
-    { key: 'fg', label: 'Ink', type: 'color', default: '#f4f1ea', section: 'Color' },
+    { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#06070b', section: 'Color' },
+    { key: 'fg', label: 'Ink', type: 'color', role: 'fg', default: '#f4f1ea', section: 'Color' },
     /* Motion — the seamless woven pulse/sweep (flow/spin stay internal). */
     { key: 'pulse', label: 'Pulse', type: 'range', min: 0, max: 1, step: 0.05, default: 0, tab: 'anim', section: 'Motion' },
     /* the engine's sweep wave skips the lattice mark */

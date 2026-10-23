@@ -2,7 +2,7 @@
 title: The Layer Model
 type: reference
 status: active
-updated: 2026-07-08
+updated: 2026-10-22
 description: The layer types, the full-frame-vs-placed creation rule, the DOM compositor, the Figma layers panel, non-destructive booleans/groups, and the layer state store with undo + draft persistence.
 aliases:
   - layers
@@ -106,13 +106,13 @@ Positioning is uniform: positioned layers set `left/top/width/height` from `laye
 
 ## The layers panel
 
-`LayerStack` (`src/editor/compose/LayerStack.jsx`) is the left rail. It follows the **Figma container model**:
+`LayerStack` (`src/editor/compose/LayerStack.jsx`) is the left rail, over the list in `LayerStackView.jsx` — kol-component's `LayerStack`, taken into this repo 2026-10-22 (plan 37 § 8.6; the editor's organisms are edited here, plan 06). The canvas, viewport, rulers and guides came in the same way (`src/editor/shell/CanvasView.jsx`, § 8.10 — the ruler corner carries no unit). It follows the **Figma container model**:
 
 - **Canvas is the root container.** `CanvasRow` sits at the top, always present, can't be deleted. Every top-level layer nests one 16px step inside it; group/bool children nest one step further. Selecting Canvas selects every top-level layer (it's the parent of all).
 - **The stack renders reversed** (`[...layers].reverse()`) so the top of the panel is the top of the z-stack.
 - **Row anatomy** is `[chevron] [type icon] [name] … [eye] [lock]`. The eye/lock toggles are hover-revealed (always shown when off/locked). Double-clicking a name renames inline (stored on `layer.name`, undo-safe via `updateLayer`; emptying it falls back to the type label).
 - **Containers nest recursively.** `group` and `bool` rows get a collapse chevron; `renderChildren` walks the tree, so collapse, selection, and drag work identically **at any depth** (16px indent compounds per level).
-- **Drag-to-reorder and reparent at any depth.** `onDragStart/Over/Drop` compute a drop position (above/below the target) and call `reparentLayer(draggedId, targetParentId, index)` — one path handles same-container reorder, child → top level, and top level → into a group/bool. Dragging a container into its own subtree is refused (`isIntoOwnSubtree` cycle guard) and the UI withholds the drop line.
+- **Drag-to-reorder and reparent at any depth.** `onDragStart/Over/Drop` compute a drop position (above/below the target) and call `reparentLayer(draggedId, targetParentId, index)` — one path handles same-container reorder, child → top level, and top level → into a group/bool. **A container's row takes a drop INTO it**: its middle third outlines the row and drops the layer on top of the container's children, so an empty layer can be filled. Dragging a container into its own subtree is refused (`isIntoOwnSubtree` cycle guard) and the UI withholds the drop line.
 
 The `+` add button (`AddLayerButton`) lives in the Layers/Assets tab row, not the stack footer; its Shape entry expands to a kind picker. The footer only appears while ≥2 layers are selected — it holds the **Group** button. Delete is `Del`/`Backspace` (no trash button).
 

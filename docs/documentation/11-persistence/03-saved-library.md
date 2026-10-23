@@ -2,7 +2,7 @@
 title: Saved library (presets)
 type: reference
 status: active
-updated: 2026-10-10
+updated: 2026-10-22
 description: LibraryProvider — the localStorage-backed store of user-saved generator assets (palette / pattern / type / preset), its versioned item envelope, v1→v3 migrations, cross-tab sync, and how it differs from the CDN media library.
 tags:
   - project/kol-fxr
@@ -76,4 +76,6 @@ Signed in, Home's RECENT lists the last 12 saved files and SAVED all of them, as
 
 ## 2026-10-10 changes (plan 26)
 
-Home opens in **grid** signed in or not; a grid card shows the file's `thumb` and carries the verbs (Rename · Duplicate · Delete) in one `···` menu. A file saved before thumbs existed gets one on its next save. Saved photos are data URLs in the spec now (see [[../09-media/INDEX|media]]).
+Home opens in **grid** signed in or not. **Home and the Library page show a file on the DS `file` card and row** (2026-10-22, plan 37 — `src/components/FileCard.jsx`): the file's `thumb` (a placeholder until a pre-thumb file's next save), a **Download** on the cover (the stored file as `.json`), the ISO date and the stored size, and a **cog over a trash** stacked by the title — the cog opens Rename · Duplicate · Delete, which right-click opens too; Rename and Delete ask first. `tone="secondary"` grounds both. A click opens a preset in its chrome; palettes, patterns and type have none to open in.
+
+A one-time clean on boot (`src/main.jsx`, `kol.editor.plan08-clean`) removed the 2026-10-08 walk scripts' saves (`Plan08 …`, `Sync A <ms>`, `Morph W <ms>`) from the browser's library, keeping a copy under `kol.editor.library.plan08-backup`. Saved photos are data URLs in the spec now (see [[../09-media/INDEX|media]]).

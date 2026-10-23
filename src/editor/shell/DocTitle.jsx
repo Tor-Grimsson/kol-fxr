@@ -26,7 +26,9 @@ export default function DocTitle() {
   const dirty = isDirty(doc, saved)
   const zoom = useZoom()
   return (
-    <div className="kol-editor-doctitle flex items-center justify-center h-5 px-3 border-t border-oq-08 kol-helper-10 text-meta">
+    /* no top hairline (plan 37 § 8.9 — "looks double on top"): the toolbar band above already draws its
+       bottom one on the same line */
+    <div className="kol-editor-doctitle flex items-center justify-center h-5 px-3 kol-helper-10 text-meta">
       <span className="truncate">{`${currentPresetName || 'Untitled'}${dirty ? '*' : ''} @ ${Math.round(zoom * 100)}%`}</span>
     </div>
   )

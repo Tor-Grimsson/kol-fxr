@@ -2,7 +2,7 @@
 title: Canvas-2D tier
 type: reference
 status: active
-updated: 2026-10-10
+updated: 2026-10-22
 description: Tier 1 — the Canvas-2D effect set. fxCore.runChain / runFx, the per-source ImageData cache, the dry/wet Amount contract, and the full catalog (glass, scanline, dither, radar FX, ASCII, halftone, bitmap, FX-rack).
 tags:
   - project/kol-fxr
@@ -97,6 +97,8 @@ Assembled in `src/filters/index.js`. All are Canvas-2D (`kind` absent) except wh
 | `fx-ascii` | ASCII | `algorithm` |
 | `fx-halftone-dither` | Dither | `mode` |
 | `fx-bitmap` | Bitmap | `palette` |
+
+**The image slicer (`fxSlicer.js`, plan 37 § 6.6).** `fx-slice-wave` — **Slice wave** (Post-processing): the source cut into cols × rows, a band travelling across the cells zooms each about its centre (direction · width · zoom % · back-and-forth · cycles · gutter); seamless in `u`. `fx-riso` — **Riso** (Halftone): two inks over paper split by tone (ink A the shadows, ink B the mids), each on its own screen — `dots` or a Gray-Scott `labyrinth` (an off-screen `RDEngine` maze, developed once and kept) — with misregistration and grain. Riso is a per-pixel CPU pass: fine on a still, ~0.5 s a frame on a moving generator at 1080×1350.
 
 **FX rack (`fxEffects.js` — `EFFECTS_FX`)** — the Canvas-2D imagefilters set, each carrying its own `amount`.
 

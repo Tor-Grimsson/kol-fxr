@@ -19,7 +19,8 @@ import ParatypeTools from './ParatypeTools'
 import SoftformsLayers from './SoftformsLayers'
 import { loopById, loopBgToggleable, resolveCameraKeys, presetsInGroup } from '../../../loops/registry'
 import { wildExpression, fitBounds } from '../../../loops/math/expression'
-import { mulberry32 } from '../../lib/rng'
+import { mulberry32, randomSeed } from '../../lib/rng'
+import { RELATIONS, rollPalette, resolvePalette } from '../../color/palette'
 import { LoopPicker } from './LoopPicker'
 import { themeParams } from '../../../loops/theme'
 import { THEME_OPTIONS, DEFAULT_THEME } from '../../../loops/lib/themes'
@@ -80,6 +81,14 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
   const invert = !!layer.themeInvert
   const onTheme  = (id) => updateLayer(layer.id, { themeId: id, ...themeParams(layer, loop?.params, id, invert) })
   const onInvert = (v)  => updateLayer(layer.id, { themeInvert: v, ...themeParams(layer, loop?.params, themeId, v) })
+  /* PALETTE (plan 37 § 5.4, Labs' colour section in the settings rail): pick a relationship, roll one
+     palette and recolour every colour param from it — roles by role, the rest in turn */
+  const relation = layer._paletteRelation ?? 'analogous'
+  const rollColors = () => {
+    const pal = rollPalette(mulberry32(randomSeed()), relation)
+    const next = resolvePalette(layer, loop?.params, pal, { rotate: true })
+    updateLayer(layer.id, Object.fromEntries((loop?.params ?? []).filter((p) => p.type === 'color').map((p) => [p.key, next[p.key]])))
+  }
 
   /* ── Generate: Look quick-select (labs softforms look recipes) — picking
    * applies the preset patch in one coalesced write; editing any param a
@@ -223,6 +232,12 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
             </Row>
             <Row inline label="Invert">
               <OnOff inline cs={cs} on={invert} onChange={onInvert} />
+            </Row>
+            <Row inline label="Palette">
+              <div className="flex w-full gap-2">
+                <Dropdown variant="subtle" size={cs} className="flex-1 min-w-0" options={RELATIONS.map((r) => ({ value: r.id, label: r.label }))} value={relation} onChange={(v) => setProp('_paletteRelation', v)} />
+                <Button tone="grey" size={cs} onClick={rollColors}>Roll</Button>
+              </div>
             </Row>
             {loopBgToggleable(loop) && (
               <Row inline label="Background">

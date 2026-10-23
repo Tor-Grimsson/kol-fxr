@@ -476,6 +476,24 @@
   color: var(--kol-fg-emphasis);
   height: 26px;
 }
+/* THE OPEN MENU WEARS THE TAB CHIP (plan 37 § 8.1 — the user: "we have no selected state … we already
+   have this style?"): the trigger whose panel is open takes the `variant="tab"` pressed fill, the
+   Inspector chip's `oq-08` in full ink — macOS's open-menu pill. `aria-expanded` is floating-ui's. */
+.kol-editor-topbar .kol-menu-btn[aria-expanded="true"] {
+  background: var(--kol-oq-08);
+  color: var(--kol-fg-emphasis);
+}
+/* ROWS GET THE SAME FILL ON HOVER (§ 8.2 — "children items get hoverstate … we should also have this"),
+   and a nest whose flyout is open keeps it, as the macOS row under the pointer does */
+.kol-editor-menu .kol-menu-btn:not(:disabled):hover,
+.kol-editor-menu .kol-menu-btn[aria-expanded="true"] {
+  background: var(--kol-oq-08);
+}
+/* FLYOUTS BUTT THE PARENT PANEL (§ 8.2 — "overlapping frames, while we have edge to edge"): the DS
+   flyout sits at `left-full` of a row INSIDE the parent's 1px border, so its own border lay on top of
+   the parent's. One pixel out puts the two edges side by side. */
+.kol-editor-menu [role="menu"].left-full { margin-left: 1px; }
+.kol-editor-menu [role="menu"].right-full { margin-right: 1px; }
 
 /* THE WORKSPACE'S PANES (plan 30 § 9 → plan 31 §§ 6–7). A pane sizes to its content; the LAST pane
    in a rail fills what is left and scrolls inside (the inspector's old fill, now any pane that sits

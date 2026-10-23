@@ -27,7 +27,7 @@ export default function LabsCatalogCard({ onPicked, onClose, initialOpen = null,
     /* On a phone the card starts UNDER the top bar (`top-12`), so the hamburger stays reachable;
        a tap on the scrim closes it (audit A14 — the card trapped the phone: nav, sheet and
        transport all under its scrim, no way out but a pick). */
-    <div className="fixed bottom-0 top-12 md:top-0 right-0 left-[var(--fxr-rail,0px)] kol-overlay-scrim flex flex-col items-center overflow-y-auto p-6" style={{ zIndex: 'var(--kol-z-modal)' }} onClick={(e) => { if (e.target === e.currentTarget) onClose?.() }}>
+    <div className="fixed bottom-0 top-12 md:top-0 right-0 left-[var(--fxr-rail,0px)] kol-overlay-scrim flex flex-col items-center overflow-y-auto p-6" style={{ zIndex: 'calc(var(--kol-z-sticky) - 2)' }} /* under the nav drawer's scrim (sticky − 1) — on a phone the drawer opens OVER this chooser (plan 37 § 7.3) */ onClick={(e) => { if (e.target === e.currentTarget) onClose?.() }}>
       <div className="my-auto w-full max-w-sm rounded p-8 flex flex-col gap-6" style={{ background: 'var(--kol-surface-primary)' }}>
         <span className="kol-eyebrow text-body">{section ? section.label : 'Labs'}</span>
         <div className="flex flex-col gap-2">

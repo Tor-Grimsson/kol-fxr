@@ -53,7 +53,10 @@ export default function ToolStrip() {
     <>
       <DsToolPalette items={items} activeId={active} onSelect={onSelect} onAction={onAction}
         size="md" orientation="vertical" className="py-2" />
-      <div className="mt-auto flex justify-center pb-3 cursor-pointer" onClick={openPaint} title="Fill / Stroke">
+      {/* THE PAIR KEEPS THE STRIP'S GUTTER (plan 37 § 8.7 — "the color item on the bottom has no padding
+          from edges"): SwatchStack is a fixed 44, the strip's whole width; at 0.73 it is the tool
+          buttons' 32 with their 6px either side. The DS stack has no size rung to ask for instead. */}
+      <div className="mt-auto flex justify-center pb-3 cursor-pointer [&>*]:scale-[0.73] [&>*]:origin-bottom" onClick={openPaint} title="Fill / Stroke">
         <SwatchStack fillColor={target.fillHex ?? '#FFFFFF'} strokeColor={target.strokeHex ?? '#000000'} activePaint={target.activePaint} onSwap={target.swap} />
       </div>
     </>

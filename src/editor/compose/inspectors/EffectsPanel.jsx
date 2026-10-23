@@ -111,9 +111,14 @@ function LayerEffects({ layer }) {
       ? !hasEngine
       : chain[i]?.def?.kind === 'engine' || (!hasEngine && i === chain.length - 1))
     const available = FILTERS.filter((f) => f.kind !== 'engine' || engineOk)
-    return flatCategories(available).flatMap((c) => c.filters.length
-      ? [{ heading: c.label }, ...c.filters.map((f) => ({ value: f.id, label: f.label }))]
-      : [])
+    /* a filter two rack groups claim (fx-rgb · fx-posterize · fx-threshold sit in Post-processing
+       too) lists once, under its first — the Dropdown keys rows by value, so a second copy was a
+       duplicate React key on every render (found walking plan 37 § 6.6) */
+    const seen = new Set()
+    return flatCategories(available).flatMap((c) => {
+      const fs = c.filters.filter((f) => !seen.has(f.id) && seen.add(f.id))
+      return fs.length ? [{ heading: c.label }, ...fs.map((f) => ({ value: f.id, label: f.label }))] : []
+    })
   }
 
   /* ── stage param plumbing — the existing renderer over NESTED params ──

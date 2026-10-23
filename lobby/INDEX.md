@@ -35,6 +35,8 @@ Parking, declaring stale, reopening and any design decision stay the **user's ca
 
 | | Entry | About | Staged | State |
 |---|---|---|---|---|
+| 🟢 | [color-pass-one-palette-for-every-layer](done/color-pass-one-palette-for-every-layer.md) | One palette store + resolver every layer reads: link to editor swatches or not, amount, roles or rotation, relationship generator (OKLCH), lock/load/save, mapping by property; the Color roll rolls a palette, not N random hexes | 2026-10-22 | 🟢 `closed` 2026-10-22 — plan 37 W5: one store + resolver on kol-component colorMath, palette Color roll, editor Palette tab + Labs rail Palette row, mapping by property on the Flow loops; walked desk + 390 on `vite preview`, 0 console messages |
+| 🟢 | [effects-intake-motion-references-2026-10](done/effects-intake-motion-references-2026-10.md) | Eight motion references judged: a shared field core (streamlines + glyph instancer) for three of them, letter-gap kinetic type, slice + zoom-wave filter, Voronoi pulse; order proposed, user's call | 2026-10-22 | 🟢 `closed` 2026-10-22 — plan 37 W6: field core, E1–E6 built and walked at desk (Flow · Letter Gap · Slice wave · Riso), E7/E8 parked with reasons; walked desk + 390 on `vite preview`, 0 console messages — at 390 thin streamlines read dashed (a 1080 canvas shown at ~290px), output solid |
 
 
 ## Closed
@@ -54,11 +56,15 @@ _(none yet — ownership, deferral and context notes land in `archive/`)_
 
 Tickets this ledger does **not** govern — each row names the destination ledger
 that does. The **Remainder** is this repo's to do; the state is theirs to report.
-Forty-seven went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
+Fifty-one went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
 last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/INDEX.md`).
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [FileCardTitleClearsActions](outbox/FileCardTitleClearsActions.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-22 — kol-component 0.290.0 | none — adopted 2026-10-22: 0.290.0 pinned, long title stops before the cog (Home, `vite preview`) |
+| 🟢 | [ContentCardRowTone](outbox/ContentCardRowTone.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-22 — kol-component 0.288.0 | none — adopted 2026-10-22: `tone="secondary"` on the file card and row (`FILE_TONE`, Home + Library) |
+| 🟢 | [MenuRowSidePadding](outbox/MenuRowSidePadding.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-22 — kol-component 0.288.0 | none — adopted 2026-10-22: 0.290.0 pinned |
+| 🟢 | [DevSectionHeader](outbox/DevSectionHeader.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-22 — kol-component 0.285.0 | none — adopted 2026-10-22: the Dev page's `Section` became `SectionText level="content"`; the page then retired with plan 37 (`_tmp/2026-10-22-dev-page-retired/`) |
 | 🟢 | [ViewportTouchGestures](outbox/ViewportTouchGestures.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-14 — kol-component 0.259.0 | none — adopted 2026-10-14: 0.259.0 pinned; Labs got the gestures locally (own letterbox), walked |
 | 🟢 | [CanvasViewCommands](outbox/CanvasViewCommands.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.258.0 | none — adopted 2026-10-14: 0.258.0 pinned, zoom walked |
 | 🟢 | [CanvasRulerGraduated](outbox/CanvasRulerGraduated.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-13 — kol-component 0.256.0 | none — adopted 2026-10-13: 0.257.0 pinned, walked |
@@ -130,6 +136,14 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-22 | **Both inbox tickets closed** — `color-pass-one-palette-for-every-layer` · `effects-intake-motion-references-2026-10`, resolutions appended, moved to `done/` (plan 37 W5 · W6) |
+| 2026-10-22 | **Four receipts adopted** — kol-component 0.290.0: `MenuRowSidePadding` · `ContentCardRowTone` (tone on file card + row) · `FileCardTitleClearsActions` · `DevSectionHeader`; walked on `vite preview` |
+| 2026-10-22 | **`FileCardTitleClearsActions` filed into kol-ds-ui** — long titles truncate before the plate actions |
+| 2026-10-22 | **`ContentCardRowTone` filed into kol-ds-ui** — `tone` on ContentCard + ContentRow |
+| 2026-10-22 | **`MenuRowSidePadding` filed into kol-ds-ui** — menu row side padding 12px → 8px (user ruling) |
+| 2026-10-22 | **`DevSectionHeader` filed into kol-ds-ui** — the Dev page's section header (eyebrow · heading-04 · body-01), user-approved |
+| 2026-10-22 | **Both read into plan 37** — `color-pass-one-palette-for-every-layer` → W5 · `effects-intake-motion-references-2026-10` → W6; file paths re-checked, all exist |
+| 2026-10-22 | **Two filed from a claude.ai chat session** — `color-pass-one-palette-for-every-layer` (audit found three unconnected colour systems and a per-param random hex roll) · `effects-intake-motion-references-2026-10` (eight references, a shared field core); no receipts — not filed by a repo |
 | 2026-10-14 | **`ViewportTouchGestures` adopted** — kol-component 0.259.0 pinned; Labs' own stage built the same gestures, walked |
 | 2026-10-14 | **`ViewportTouchGestures` filed into kol-ds-ui** — plan 35 § 2–3: two-finger pinch + pan, one-finger tap → onSpaceTap |
 | 2026-10-14 | **`CanvasViewCommands` adopted** — kol-component 0.258.0 pinned; View › Zoom walked (⌘1–⌘4 real, To Width) |

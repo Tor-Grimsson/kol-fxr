@@ -252,7 +252,7 @@ export default {
     { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#0e0e11', section: 'Color' },
     { key: 'color', label: 'Color', type: 'color', role: 'fg', default: '#fcfbf8', section: 'Color' },
     { key: 'color2', label: 'Color 2', type: 'color', role: 'accent', default: '#c2502e', section: 'Color' },
-    { key: 'color3', label: 'Color 3', type: 'color', default: '#3f6485', section: 'Color' },
+    { key: 'color3', label: 'Color 3', type: 'color', role: 'dim', default: '#3f6485', section: 'Color' },
     // Tiles — shape + grid (grid shared with weave)
     { key: 'shape', label: 'Shape', type: 'select', options: TILE_SHAPE_OPTIONS, default: DEFAULT_SHAPE_ID, when: isTiles, section: 'Tiles' },
     // Glyph tile (shape:'glyph') — char/run + a Right Grotesk cut (glyphTile.js)
@@ -303,7 +303,7 @@ export default {
     // Split-gap fill (only meaningful when Direction = Split)
     { key: 'fillMode', label: 'Split fill', type: 'select', default: 'off', when: (l) => isBands(l) && l.panDir === 'split', section: 'Frame',
       options: [{ value: 'off', label: 'Off' }, { value: 'extend', label: 'Extend' }, { value: 'solid', label: 'Solid' }] },
-    { key: 'fillColor', label: 'Fill colour', type: 'color', default: '#101014', when: (l) => isBands(l) && l.panDir === 'split' && l.fillMode === 'solid', section: 'Frame' },
+    { key: 'fillColor', label: 'Fill colour', type: 'color', role: 'bg', default: '#101014', when: (l) => isBands(l) && l.panDir === 'split' && l.fillMode === 'solid', section: 'Frame' },
     // Animation sweep (per-cell tiles / per-crossing weave)
     { key: 'animAxis', label: 'Sweep axis', type: 'select', options: AXIS_OPTIONS, default: 'none', when: (l) => !isField(l), section: 'Form' },
     { key: 'animCycles', label: 'Sweep cycles', type: 'range', min: 1, max: 8, rMin: 1, rMax: 4, step: 1, default: 1, when: (l) => !isField(l), section: 'Form' },

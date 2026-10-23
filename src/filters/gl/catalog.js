@@ -70,7 +70,7 @@ const scan = {
     ...sec('Look',
       toggle('mono', 'Mono'),
       /* tint only mixes in on the mono path */
-      { key: 'tint', label: 'Tint', type: 'color', default: '#9fe7ff', when: (l) => !!l.mono },
+      { key: 'tint', label: 'Tint', type: 'color', role: 'accent', default: '#9fe7ff', when: (l) => !!l.mono },
       range('opacity', 'Line opacity', 0.05, 1, 0.05, 1)),
     ...sec('Camera',
       /* manual rig vs motion preset — each side yields to the other */
@@ -208,7 +208,7 @@ const lens = {
       range('sheen', 'Sheen', 0, 1.5, 0.05, 0.5),
       range('lightAngle', 'Light angle', 0, 360, 1, 45),
       range('tintAmt', 'Tint amount', 0, 1, 0.02, 0),
-      { key: 'tint', label: 'Tint', type: 'color', default: '#ffffff', when: (l) => (l.tintAmt ?? 0) > 0 }),
+      { key: 'tint', label: 'Tint', type: 'color', role: 'accent', default: '#ffffff', when: (l) => (l.tintAmt ?? 0) > 0 }),
     /* NB: the engine's `bg` only paints contain-mode bars, and `fit` is pinned
      * to cover here — param removed as unreachable (audit). */
     ...sec('Motion',

@@ -1,8 +1,7 @@
 import { Icon } from '@kolkrabbi/kol-icons'
 import { useCallback, useEffect } from 'react'
 import { MenuItem, MenuDropdownItem, MenuDropdownDivider, MenuDropdownNest, useModal } from '@kolkrabbi/kol-component'
-import { Logomark, useNavHidden } from '@kolkrabbi/kol-shell'
-import logomarkUrl from '@kolkrabbi/kol-brand/svg/favicon-01.svg?url'
+import { useNavHidden } from '@kolkrabbi/kol-shell'
 import { ASPECTS } from './aspects'
 import { useComposeState } from '../compose/state'
 import { useGeneratorLibrary } from '../library/LibraryProvider'
@@ -39,10 +38,10 @@ const presetParams = (preset) => gen().presetParams(preset)
 /**
  * MenuTop — the menu bar above the editor grid (plans 28–29, on Affinity's conventions; spec R1.1).
  *
- *   [logo]  FXR  File  Edit  Layer  Text  Vector  Tools  View  Window  Help
+ *   FXR  File  Edit  Layer  Text  Vector  Tools  View  Window  Help
  *
- * THE LOGO IS THE HOME DOOR, the APP NAME IS THE APP MENU (plan 30 § 1, the user: "just logo should
- * go to home, and name should open menu"): Home, the chromes, Settings…. The cog retired into it (plan 29 § 5). The editor hides the shell rail while it is
+ * THE APP NAME IS THE APP MENU (plan 30 § 1): Home, the chromes, Settings…. The logo that stood
+ * before it as the Home door went in plan 37 § 8.1 (the user: "remove the logo") — Home is the menu's first row. The cog retired into it (plan 29 § 5). The editor hides the shell rail while it is
  * mounted — the app menu is its nav — and `\` brings it back. Layer holds edit verbs; creation
  * and effects are Tools (the user's ruling, plan 29 § 7). Submenus open BESIDE their row
  * (the DS `MenuDropdownNest flyout`, kol-component 0.252.0), and a row that does not apply is greyed, never hidden.
@@ -136,6 +135,20 @@ export default function MenuTop() {
     return () => setNavHidden(false)
   }, [setNavHidden])
   const toggleRail = useCallback(() => setNavHidden?.((h) => !h), [setNavHidden])
+
+  /* THE BAR IS LIVE ONCE A MENU IS OPEN (plan 37 § 8.1 — the user: "moving between categories
+     automatically triggers selected state with hover … this is just how the mac topbar works"). The DS
+     MenuItem is uncontrolled, so the slide is two clicks: close the open one, open the one under the
+     pointer — each trigger's own toggle. */
+  const slideMenus = useCallback((e) => {
+    const bar = e.currentTarget
+    const over = e.target.closest?.('.kol-menu-btn')
+    if (!over || !bar.contains(over) || over.getAttribute('aria-expanded') === 'true') return
+    const open = bar.querySelector(':scope > .kol-menu-btn[aria-expanded="true"]')
+    if (!open) return
+    open.click()
+    over.click()
+  }, [])
 
   /* Save / save-as / export shared with the rail EditorFooter. */
   const { onSave, onExportSvg, onExportPng, openOutputWindow } = useComposeFile()
@@ -239,15 +252,11 @@ export default function MenuTop() {
   const kinetic = motion()
   const paratype = gen() ? presetsInGroup('paratype') : []
 
-  /* THE BAR'S WASH is the panel's (plan 31 § 1 — the user: "MAKE IT DARKER"): bar and open menu read
-     as one piece, macOS's */
+  /* THE BAR IS THE DARKEST THING ON SCREEN (plan 31 § 1 "MAKE IT DARKER", plan 37 § 8.3 — the user: "like
+     mac … its always darker … absolute even darker?"): `surface-absolute-split`, black in dark, below
+     the panes' primary and the panels' tertiary. No logo (§ 8.1 — Home is the app menu's first row). */
   return (
-    <div className="kol-editor-topbar flex items-center gap-1 px-4 h-8 bg-surface-tertiary border-b border-oq-08">
-      {/* THE LOGO — the Home door (plan 30 § 1) */}
-      <button type="button" aria-label="Home" title="Home" onClick={() => navigateTo('/')}
-        className="inline-flex items-center mr-1 text-body hover:text-emphasis transition-colors">
-        <Logomark svgUrl={logomarkUrl} size={16} />
-      </button>
+    <div className="kol-editor-topbar flex items-center gap-1 px-4 h-8 bg-[var(--kol-surface-absolute-split)] border-b border-oq-08" onPointerOver={slideMenus}>
       {/* THE APP MENU — the name holds Home, the chromes and Settings (plan 29 § 5; `APP.name`) */}
       <MenuItem label="FXR" {...BAR} buttonClassName="font-bold text-emphasis">
         <div className="py-1 w-[200px]">
@@ -339,6 +348,7 @@ export default function MenuTop() {
           <MenuDropdownDivider />
           <MenuDropdownItem onClick={cmd('eyedrop')} shortcut={key('eyedrop')}>Eyedropper</MenuDropdownItem>
           <MenuDropdownItem onClick={() => openColorPane()}>Color</MenuDropdownItem>
+          <MenuDropdownItem onClick={() => openColorPane('Palette')}>Color Modes</MenuDropdownItem>
         </div>
       </MenuItem>
 
@@ -471,6 +481,8 @@ export default function MenuTop() {
               </MenuDropdownNest>
             )}
           </MenuDropdownNest>
+          {/* the color modes tool (plan 37 § 5.4) — a tool like the rest, it opens its tab in the color pane */}
+          <MenuDropdownItem onClick={() => openColorPane('Palette')}>Color Modes</MenuDropdownItem>
           <MenuDropdownDivider />
           <MenuDropdownItem onClick={() => window.dispatchEvent(new CustomEvent('kol:insert-image'))}>Insert image</MenuDropdownItem>
         </div>
@@ -513,7 +525,7 @@ export default function MenuTop() {
           <MenuDropdownNest flyout label="Left rail">
             {['Layers', 'Assets', 'History', 'Navigator'].map((t) => <MenuDropdownItem key={t} onClick={() => openTab(t)}>{t}</MenuDropdownItem>)}
             <MenuDropdownDivider />
-            {[['Stroke', 'Stroke'], ['Colour', 'Color'], ['Swatches', 'Swatches']].map(([id, label]) => (
+            {[['Stroke', 'Stroke'], ['Colour', 'Color'], ['Swatches', 'Swatches'], ['Palette', 'Color Modes']].map(([id, label]) => (
               <MenuDropdownItem key={id} onClick={() => openColorPane(id)}>{label}</MenuDropdownItem>
             ))}
             <MenuDropdownDivider />

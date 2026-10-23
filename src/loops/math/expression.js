@@ -200,7 +200,7 @@ export default {
     { key: 'traceWeight', label: 'Trace weight', type: 'range', min: 0.5, max: 6, step: 0.1, default: 2, section: 'View' },
     { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#121215', section: 'Color' },
     { key: 'fg', label: 'Trace', type: 'color', role: 'fg', default: '#faf7f0', section: 'Color' },
-    { key: 'gridColor', label: 'Grid color', type: 'color', default: '#faf7f0', section: 'Color' },
+    { key: 'gridColor', label: 'Grid color', type: 'color', role: 'dim', default: '#faf7f0', section: 'Color' },
   ],
   draw(ctx, u, w, h, p) {
     const { fn } = compile(p.expr ?? 'wave(t)')

@@ -1,4 +1,4 @@
-import { createNoise2D } from 'simplex-noise'
+import { noiseAngle } from '../../flow/fieldCore.js'
 
 import { clear, strokeOutline, wrapLoop, sampleInside, stampGrid, pc } from '../common.js'
 
@@ -34,7 +34,8 @@ export const flowField            = {
 
     const { scale, speed, life: starveTime } = params
 
-    const noise2D = createNoise2D(rng)
+    /* the angle field is the flow core's (plan 37 § 6.2) — same rng draw, same values */
+    const angleAt = noiseAngle(rng, scale)
 
     // ── food field — coarse grid over the sim, alive only inside the mask ──
     const cell = 8
@@ -111,7 +112,7 @@ export const flowField            = {
         const p = orgs[oi]
         p.px = p.x
         p.py = p.y
-        let a = noise2D(p.x * scale, p.y * scale) * Math.PI * 2
+        let a = angleAt(p.x, p.y)
         // food whiskers — steer toward the richer side
         const wd = 12
         const fL = foodAt(p.x + Math.cos(a - 0.7) * wd, p.y + Math.sin(a - 0.7) * wd)

@@ -26,6 +26,7 @@ import { MATH_LOOPS, MATH_PRESETS } from './math/presets.js'
 import { MODULATOR_LOOPS, MODULATOR_PRESETS } from './modulator/presets.js'
 import { DISTRESS_LOOPS, DISTRESS_PRESETS } from './distress/presets.js'
 import { PARATYPE_LOOPS, PARATYPE_PRESETS } from './paratype/presets.js'
+import { FLOW_LOOPS, FLOW_PRESETS } from './flow/presets.js'
 /* GL catalog is DATA ONLY (groups/defs/presets/schemas) — the three.js
  * engines behind it load lazily via gl/host.js when a layer renders. */
 import { GL_GROUPS, GL_LOOPS, GL_PRESETS_BY_GROUP, MESH_PRESETS } from './gl/catalog.js'
@@ -43,6 +44,8 @@ export const GROUPS = [
   { id: 'paratype', label: 'Para-type' },
   { id: 'modulator', label: 'Modulator' },
   { id: 'distress', label: 'Distressor' },
+  { id: 'flow', label: 'Flow' },
+  { id: 'lettergap', label: 'Letter gap' },
   ...GL_GROUPS,
 ]
 export const groupById = (id) => GROUPS.find((g) => g.id === id) || GROUPS[0]
@@ -50,7 +53,7 @@ export const groupById = (id) => GROUPS.find((g) => g.id === id) || GROUPS[0]
 const LOOPS = [
   ...SHAPE_LOOPS, ...FIELD_LOOPS, ...PATTERN_LOOPS, ...PENROSE_LOOPS,
   ...SCANLINE_LOOPS, ...OPTIC_LOOPS, ...ABSTRACT_LOOPS,
-  ...MATH_LOOPS, ...PARATYPE_LOOPS, ...MODULATOR_LOOPS, ...DISTRESS_LOOPS, ...GL_LOOPS,
+  ...MATH_LOOPS, ...PARATYPE_LOOPS, ...MODULATOR_LOOPS, ...DISTRESS_LOOPS, ...FLOW_LOOPS, ...GL_LOOPS,
 ]
 /* THE TIME-SHAPE FOLD (plan 18 § 4): every def whose clock is `u` — 2d draws and the GL engines
  * alike — carries the three time params (lib/viewport.js `TIME_PARAMS`), so the Animation tab shows
@@ -86,13 +89,16 @@ const PRESETS_BY_GROUP = {
   paratype: PARATYPE_PRESETS,
   modulator: MODULATOR_PRESETS,
   distress: DISTRESS_PRESETS,
+  /* the effects intake (plan 37 W6) — two groups, one type each in GENERATIVE_TREE */
+  flow: FLOW_PRESETS.filter((p) => p.loop !== 'flow-letter-gap'),
+  lettergap: FLOW_PRESETS.filter((p) => p.loop === 'flow-letter-gap'),
   ...GL_PRESETS_BY_GROUP,
 }
 export const PRESETS = [
   ...SHAPE_PRESETS, ...PATTERN_PRESETS, ...PATTERNLOOP_PRESETS, ...PENROSE_PRESETS,
   ...FIELD_PRESETS,
   ...SCANLINE_PRESETS, ...OPTIC_PRESETS, ...MESH_PRESETS, ...ABSTRACT_PRESETS,
-  ...MATH_PRESETS, ...PARATYPE_PRESETS, ...MODULATOR_PRESETS, ...DISTRESS_PRESETS,
+  ...MATH_PRESETS, ...PARATYPE_PRESETS, ...MODULATOR_PRESETS, ...DISTRESS_PRESETS, ...FLOW_PRESETS,
   ...Object.values(GL_PRESETS_BY_GROUP).flat(),
 ]
 

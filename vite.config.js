@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import svgr from 'vite-plugin-svgr'
 import { THEME_BOOT_SCRIPT } from '@kolkrabbi/kol-framework/src/theme.js'
+import { devFavicon, loaderApp } from '@kolkrabbi/kol-framework/vite'
 
 /* The no-flash theme boot — kol-framework's own snippet (0.28.0), inlined
    before the app script so the stored choice stamps data-theme pre-paint. */
@@ -13,22 +14,9 @@ const themeBoot = {
   },
 }
 
-/* Dev-only favicon — a big yellow X so dev tabs are instantly tellable from
- * prod. `apply: 'serve'` keeps it out of every build. */
-const devFavicon = {
-  name: 'dev-favicon',
-  apply: 'serve',
-  transformIndexHtml(html) {
-    const svg = encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M7 7 L25 25 M25 7 L7 25" stroke="#F2D24B" stroke-width="8" stroke-linecap="round"/></svg>',
-    )
-    return html.replace('</head>', `<link rel="icon" href="data:image/svg+xml,${svg}"></head>`)
-  },
-}
-
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), svgr(), tailwindcss(), devFavicon, themeBoot],
+  plugins: [react(), svgr(), tailwindcss(), devFavicon({ label: 'X', ground: '#F2D24B' }), themeBoot, loaderApp({ graphic: 'src/assets/fxr-mark.svg' })],
   // Single react / react-dom copy — the published DS packages peer-depend on
   // React, and a duplicated copy crashes at runtime with a null dispatcher.
   resolve: {

@@ -152,9 +152,10 @@ function HueMode({ target }) {
   return (
     <div className="flex flex-col gap-3 w-full flex-1 min-h-0">
       <HueStrip hue={hsv.h} onChange={onHue} />
-      {/* a real 2D square, not a strip (plan 30 § 14: "why can't I drag vertically"); 160 is the
-          floor — a taller pane goes to the square (plan 31 § 8) */}
-      <div className="flex-1 min-h-40 rounded-[2px] overflow-hidden">
+      {/* a real 2D square, not a strip (plan 30 § 14: "why can't I drag vertically"); a taller pane
+          goes to the square (plan 31 § 8). The floor is 64, not 160 (plan 37 § 8.8 — the user: "it
+          shouldnt have min height, or at least not as large"): a short pane shrinks it, never scrolls. */}
+      <div className="flex-1 min-h-16 rounded-[2px] overflow-hidden">
         <SBSquare hue={hsv.h} sat={hsv.s} val={hsv.v} onChange={onSV} />
       </div>
     </div>

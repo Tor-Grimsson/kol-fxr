@@ -2,7 +2,7 @@
 title: The App Hierarchy
 type: reference
 status: active
-updated: 2026-09-01
+updated: 2026-10-22
 description: The four-level content hierarchy — METHOD > TYPE > CATEGORY > PRESET — that organises every generative family, effect, and modulation source in the editor, plus where the data lives and how each level renders.
 aliases:
   - hierarchy
@@ -52,7 +52,9 @@ METHOD is never a picker — it's implied by what you're doing.
 
 The children of a method (labs called these pages; the level is named **Type**).
 
-**Generative types (10, labs sidebar order):** Scanline · Pattern · Loops · Math · Penrose · Drift · Gradients · Soft Forms · Soft Forms 3D · 3D Scene
+**Generative types (12, labs sidebar order):** Scanline · Pattern · Loops · Math · Penrose · Flow · Letter Gap · Drift · Gradients · Soft Forms · Soft Forms 3D · 3D Scene
+
+**Flow** (2026-10-22, plan 37 W6) — the field-core loops: Streamlines (Obstacle flow · Charge lines) · Glyphs (Glyph vortex) · Cells (Voronoi pulse), on `src/loops/flow/fieldCore.js`. **Letter Gap** — a word list whose letter gaps breathe, decorated rule · box · tick · dot.
 Data: `GENERATIVE_TREE` in `src/loops/taxonomy.js`. Two types span several flat registry groups and get a second dropdown: **Loops** → Simple / Field / Pattern Loops (`shape` / `field` / `patternloop`); **3D Scene** → Primitive / Ribbon / Forms / Environment / Abstract (`scene` / `ribbon` / `forms` / `environment` / `abstract`, `scene` relabelled to "Primitive").
 
 **Vector types (2, added 2026-09-01 — the kol-apps ports):** Distressor (`distress` — SVG path distress, source via the labs source picker's SVG mode) · Modulator (`modulator` — warped concentric ring instrument). Labs-only: both live in the labs catalog's VECTOR section (`src/editor/labs/catalog.js`), stay out of `GENERATIVE_TREE`/`PICKER_TREE`, and resolve read-only in the editor inspector via `LEGACY_GROUP_LABELS`.

@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Button, EmptyState, usePlaceholders } from '@kolkrabbi/kol-component'
+import { useNavigate } from 'react-router-dom'
+import { ActionButton, Button, EmptyState, usePlaceholders, useContextMenu, formatSize } from '@kolkrabbi/kol-component'
+import { FileThumb, FilePlate, FileMenu, chromeOf, bytesOf, downloadFile, FILE_TONE, fileDate } from '../components/FileCard'
 import { CatalogPage } from '@kolkrabbi/kol-shell'
 import { openNewFile } from '../components/NewFileDialog'
 import {
@@ -22,9 +24,9 @@ import {
  * THE PROVIDER IS MOUNTED HERE. `Editor.jsx` mounts its own inside the compose
  * stack; this page is outside every chrome, so it wraps itself.
  *
- * NO LOAD ACTION, deliberately. Loading a preset is `loadPreset` on compose
- * state, which exists only inside the editor. Delete is here because removal
- * is pure store work.
+ * A PRESET OPENS on a click — in its chrome, by `?open=` (Home's route, plan 08); the chrome loads it.
+ * Palettes, patterns and type have no chrome of their own and do not open. Rename · duplicate · delete
+ * are store work, on the cog, the trash and right-click (the approved file card, 2026-10-22).
  */
 
 const SLOT_LABELS = {
@@ -45,18 +47,6 @@ if (import.meta.env.DEV) {
   if (missing.length) console.warn('LibraryPage: slots with no tab —', missing)
 }
 
-const fmtDate = (ms) =>
-  new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-
-/* Every slot's items carry `{ id, savedAt, name? }`; only the spec differs, so
-   one row shape covers all four and the detail line is the one slot-aware
-   bit — a count that means something different per slot. */
-function itemDetail(slot, item) {
-  if (slot === 'preset') return `${item.layers?.length ?? 0} layers · ${item.aspect ?? '1:1'}`
-  if (slot === 'palette') return `${item.colors?.length ?? 0} colors`
-  if (slot === 'pattern') return `${item.shapeId} · ${item.cols}×${item.rows}`
-  return item.text?.slice(0, 40) || 'Untitled'
-}
 
 /* Display-only stand-ins for an empty slot (user, 2026-08-27) — never written
    to the store, no Delete, so the page has a body before anything is saved. */
@@ -85,12 +75,18 @@ const VIEWS = [
   { value: 'recent', label: 'RECENT' },
   { value: 'saved', label: 'SAVED' },
 ]
-/* card media: the three chrome previews from Home, cycled (user, 2026-08-27) */
-const PREVIEWS = ['editor', 'labs', 'randomiser']
 
 
 function LibraryBody() {
-  const { library, removeItem } = useGeneratorLibrary()
+  const { library, removeItem, renameItem, duplicateItem } = useGeneratorLibrary()
+  const navigate = useNavigate()
+  const menu = useContextMenu()
+  /* the provider's verbs for one item — the plate and the menu ask before they act */
+  const verbsFor = (item) => ({
+    rename: (name) => renameItem(item.slot, item.id, name),
+    duplicate: () => duplicateItem(item.slot, item.id),
+    remove: () => removeItem(item.slot, item.id),
+  })
   const [view, setView] = useState('recent')
 
   /* placeholders only while the library holds NOTHING real (plan 08) — once anything is saved, an
@@ -127,25 +123,32 @@ function LibraryBody() {
       views={VIEWS}
       view={view}
       onViewChange={setView}
-      toCard={(item) => ({
-        key: item.id,
-        title: item.name || `Untitled ${SLOT_LABELS[item.slot].slice(0, -1).toLowerCase()}`,
-        detail: item.placeholder ? 'Placeholder' : `${itemDetail(item.slot, item)} · ${fmtDate(item.savedAt)}`,
-        media: <img src={`/previews/chromes/${PREVIEWS[items.indexOf(item) % PREVIEWS.length]}.png`} alt="" />,
-        actions: item.placeholder ? undefined : (
-          <Button
-            tone="outline"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); removeItem(item.slot, item.id) }}
-          >
-            Delete
-          </Button>
-        ),
-      })}
+      /* THE APPROVED FILE CARD (2026-10-22): the DS `file` card and row — download on the cover, the
+         size, a cog over a trash in the plate, the same verbs on right-click. A preset opens in its
+         chrome on a click; palettes, patterns and type have no chrome to open in. */
+      cardVariant="file"
+      rowVariant="file"
+      toCard={(item) => {
+        if (item.placeholder) return { key: item.id, title: item.name, detail: 'Placeholder', media: <FileThumb /> }
+        const open = item.slot === 'preset' ? () => navigate(`/${chromeOf(item)}?open=${encodeURIComponent(item.id)}`) : () => {}
+        return {
+          key: item.id,
+          title: item.name || `Untitled ${SLOT_LABELS[item.slot].slice(0, -1).toLowerCase()}`,
+          date: fileDate(item.updatedAt ?? item.savedAt),
+          size: formatSize(bytesOf(item)),
+          media: <FileThumb src={item.thumb} alt={item.name} />,
+          tone: FILE_TONE,
+          control: <ActionButton chrome="media" icon="download" confirmIcon="check" label="Download" confirmLabel="Downloaded" onAction={() => downloadFile(item)} />,
+          actions: <FilePlate item={item} verbs={verbsFor(item)} onSettings={(e) => menu.openAt(e, item)} />,
+          onClick: open,
+          onContextMenu: (e) => menu.openAt(e, item),
+        }
+      }}
       actions={
         <Button tone="grey" size="md" onClick={openNewFile}>New File</Button>
       }
     />
+    <FileMenu menu={menu} verbsFor={verbsFor} />
     {/* the empty state the page had none of (audit A6) — the header and its strip stay above it */}
     {items.length === 0 && (
       <EmptyState className="px-6" eyebrow="Library" title="Nothing saved yet" body="Save… in any chrome keeps a file here. Signed in, it syncs to the cloud library." />
