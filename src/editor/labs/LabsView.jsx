@@ -5,6 +5,7 @@ import { EditorProviders } from '../Editor'
 import EditorShell from '../EditorShell'
 import { useFps } from '../shell/Canvas'
 import { OutputCanvas } from '../OutputView'
+import KineticElementOverlay from '../compose/KineticElementOverlay'
 import { useComposeState } from '../compose/state'
 import { useTool } from '../state/tools'
 import { useGlobalShortcuts } from '../state/useGlobalShortcuts'
@@ -72,7 +73,24 @@ const chipCls = 'px-2 py-1 rounded border border-oq-08 bg-surface-secondary kol-
 
 function LabsStage() {
   const { layer } = useLabsLayer()
-  const { removeLayer } = useComposeState()
+  const { removeLayer, layers, updateLayer, beginTransaction, commitTransaction, select } = useComposeState()
+
+  /* EDIT ON CANVAS IN LABS (plan 40 § 4.2, user 2026-10-24: *"how does this work? I think its broken?"*): the Type
+   * panel's button fired `kol:kinetic-edit` and only the editor's CanvasArea listened, so here it did nothing. Same
+   * mode, same toggle: the overlay draws over OutputCanvas in its virtual px. */
+  const [kineticEdit, setKineticEdit] = useState(null)
+  useEffect(() => {
+    const onKineticEdit = (e) => {
+      const { id, index } = e.detail || {}
+      if (kineticEdit?.id === id) { setKineticEdit(null); return }
+      if (!layers.some((l) => l.id === id && l.type === 'kinetic' && !l.locked)) return
+      select(id)
+      setKineticEdit({ id, index: index ?? 0 })
+    }
+    window.addEventListener('kol:kinetic-edit', onKineticEdit)
+    return () => window.removeEventListener('kol:kinetic-edit', onKineticEdit)
+  }, [layers, kineticEdit, select])
+  const kineticEditLayer = kineticEdit && layers.find((l) => l.id === kineticEdit.id && l.type === 'kinetic')
   const needsSource = layer?.type === 'photo' && !layer.src && layer.srcType !== 'webcam'
 
   /* Labs' frame doesn't fill the cell — it floats at a zoom the user drives.
@@ -186,7 +204,17 @@ function LabsStage() {
     >
       {/* flex: none — past 100% the frame must overflow the cell, not shrink back into it */}
       <div style={{ flex: 'none', width: `${zoom * LABS_FIT * 100}%`, height: `${zoom * LABS_FIT * 100}%`, transform: `translate(${pan.x}px, ${pan.y}px)` }}>
-        <OutputCanvas />
+        <OutputCanvas overlay={kineticEditLayer ? (toVirtual) => (
+          <KineticElementOverlay
+            layer={kineticEditLayer}
+            initialIndex={kineticEdit.index}
+            toVirtual={toVirtual}
+            updateLayer={updateLayer}
+            beginTransaction={beginTransaction}
+            commitTransaction={commitTransaction}
+            onExit={() => setKineticEdit(null)}
+          />
+        ) : undefined} />
       </div>
       {/* an effect picked before any media: the card asks for it (2026-10-06, was three panes
           across the stage); Back drops the empty layer, and the entry card comes back */}

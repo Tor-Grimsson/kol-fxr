@@ -261,7 +261,7 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
      * bare tiles beside it were two answers to one question. The editor
      * keeps ViewToggle with the rest of its inspector. */
     control = inline ? (
-      <SegmentedToggle tone="sunken"
+      <SegmentedToggle
         size={cs} className={`w-full ${stripClamp(cs) ?? ''}`}
         options={p.options ?? []}
         value={value}
@@ -290,7 +290,7 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
       /* labelled pair in the labs skin: the same SegmentedToggle as
        * `segmented`, spanning the control column like a dropdown */
       control = (
-        <SegmentedToggle tone="sunken"
+        <SegmentedToggle
           size={cs} className={`w-full ${stripClamp(cs) ?? ''}`}
           options={[{ value: 'off', label: offLabel }, { value: 'on', label: onLabel }]}
           value={value ? 'on' : 'off'}

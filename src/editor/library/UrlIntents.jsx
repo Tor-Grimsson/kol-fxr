@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useComposeState } from '../compose/state'
-import { loadLibrary, useGeneratorLibrary } from './LibraryProvider'
+import { useGeneratorLibrary } from './LibraryProvider'
+import { findFile } from './shipped'
 import { useComposeFile } from '../compose/useComposeFile'
 import { resetMorph } from '../morph/morphStore'
 import { transport } from '../params/transport'
@@ -44,16 +45,17 @@ export default function UrlIntents() {
     const { open, fresh } = urlIntent()
     if (!open && !fresh) return
     if (open) {
-      const item = (loadLibrary().preset ?? []).find((it) => it.id === open)
+      const item = findFile(open)
       if (item) {
-        if (item.mode === 'morph' && item.morph) resetMorph({ active: true, ...item.morph, fileId: item.id, fileName: item.name ?? null })
+        if (item.mode === 'morph' && item.morph) resetMorph({ active: true, ...item.morph, fileId: item.shipped ? null : item.id, fileName: item.name ?? null })
         else resetMorph()
         /* a morph file is motion: it opens playing, in every chrome (the randomiser landed on step 1, still) */
         setTimeout(() => {
           loadPreset(item)
           /* the morph's length is the transport's (plan 14 § 4 — the rail has no Length of its own) */
           if (item.mode === 'morph') { if (item.morph?.seconds > 0) transport.setLoopSeconds(item.morph.seconds); transport.play() }
-          if (!item.thumb) setTimeout(async () => {
+          /* a shipped file's cover is drawn on demand (FileCover) — never a data URL in the user's quota */
+          if (!item.thumb && !item.shipped) setTimeout(async () => {
             const thumb = await fileRef.current?.captureThumb()
             if (thumb) setThumb('preset', item.id, thumb)
           }, COVER_DELAY_MS)

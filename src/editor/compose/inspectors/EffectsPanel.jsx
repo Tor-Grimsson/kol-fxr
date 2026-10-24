@@ -184,14 +184,14 @@ function LayerEffects({ layer }) {
               )}
               {stage.def.orbit && (
                 <SettingsRow label="Camera drag" align="fill" labelWidth={RAIL_LABEL_W}>
-                  <SegmentedToggle tone="sunken" size={cs} className="w-full"
+                  <SegmentedToggle size={cs} className="w-full"
                     options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
                     value={layer.cameraDrag ? 'on' : 'off'}
                     onChange={(v) => setStageProp('cameraDrag', v === 'on')}
                   />
                 </SettingsRow>
               )}
-              <SegmentedToggle tone="sunken" size={cs} className="w-full" value={tab} onChange={setTab} options={FX_TABS} />
+              <SegmentedToggle size={cs} className="w-full" value={tab} onChange={setTab} options={FX_TABS} />
               {tab === 'effect' && (
                 <>
                   <AutoControls schema={effectParams} layer={paramsView} setProp={setStageProp} palette={palette} renderAnimate={renderAnimate} />
@@ -281,7 +281,7 @@ export function StageRolls({ def, view, tab, onPatch, inline = false }) {
             {motion ? 'Randomize motion' : 'Randomize all'}
           </Button>
           {/* reset, visible — it was only ⌥ on the button beside it */}
-          <Tooltip label="Reset to defaults" shortcut="R"><Button tone="primary" size={cs} iconOnly="rotate-left" aria-label="Reset to defaults" onClick={() => reset(allParams)} className="shrink-0" /></Tooltip>
+          <Tooltip label="Reset to defaults" shortcut="R"><Button tone="primary" size={cs} iconOnly="refresh" aria-label="Reset to defaults" onClick={() => reset(allParams)} className="shrink-0" /></Tooltip>
         </div>
       )}
       {scopes.length > 0 && (

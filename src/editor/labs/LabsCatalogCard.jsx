@@ -9,9 +9,7 @@ import { SPREAD, useSheetChrome } from '../mobile/CategoryScreen'
  * the stage — the randomiser's entry card, with labs' catalog in it: the SAME rows LabsNav
  * publishes to the shell rail (`railExtras`), so there is one catalog, read twice. Sections first,
  * a section's groups after a tap, Back between; a pick runs the row's action and the card goes.
- * Effects and Vector then ask for their media (LabsSourceCard). Modulation is not a door — its one
- * row only opens the params, because modulation lives on every parameter's bind dot — so it is
- * left out here and stays on the rail.
+ * Effects and Vector then ask for their media (LabsSourceCard).
  */
 /* the doors that work ON media — their groups come after the source is picked (plan 26 § 2) */
 const MEDIA_DOORS = new Set(['#rail/sec:effects'])
@@ -20,9 +18,8 @@ export default function LabsCatalogCard({ onPicked, onClose, initialOpen = null,
   const { items, dispatch } = useRailExtras()
   const [open, setOpen] = useState(initialOpen)
   useSheetChrome(onClose)
-  const doors = items.filter((i) => i.path !== '#rail/sec:modulation')
-  const section = doors.find((i) => i.path === open) ?? null
-  const rows = section ? section.sub : doors
+  const section = items.find((i) => i.path === open) ?? null
+  const rows = section ? section.sub : items
   return (
     /* On a phone the card starts UNDER the top bar (`top-12`), so the hamburger stays reachable;
        a tap on the scrim closes it (audit A14 — the card trapped the phone: nav, sheet and

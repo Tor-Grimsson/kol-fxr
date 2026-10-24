@@ -6,6 +6,7 @@
 import { registerPack } from '../editor/packs'
 import { kineticPresetById, presetComp, KINETIC_TREE, KINETIC_PRESETS } from '../kinetic/presets'
 import KineticType from '../kinetic/KineticType'
+import { applyKnobBridges } from '../kinetic/knobs'
 import { loadFonts, warmFontCss, kineticFontCss } from '../kinetic/fonts'
 import KineticPanel from '../editor/compose/inspectors/KineticPanel'
 import TimelineDock, { useTimelineUp } from '../editor/params/TimelineDock'
@@ -14,7 +15,7 @@ import TransportBar from '../editor/params/TransportBar'
 
 export const motion = {
   layerTypes: ['kinetic'],
-  kineticPresetById, presetComp, KINETIC_TREE, KINETIC_PRESETS, KineticType, loadFonts, warmFontCss, kineticFontCss,
+  kineticPresetById, presetComp, KINETIC_TREE, KINETIC_PRESETS, KineticType, applyKnobBridges, loadFonts, warmFontCss, kineticFontCss,
   KineticPanel, TimelineDock, useTimelineUp, TransportBar, TransportFab,
 }
 

@@ -99,7 +99,7 @@ export default function LayerInspector({ layer }) {
               * padding are 163px in a 140px track — Crop sat half outside the rail (found in
               * apps/panels, 2026-10-03). Three cells already filled the track, so they do not move. */}
             <SegmentedToggle
-              tone="sunken" size={cs} value={null}
+              size={cs} value={null}
               ariaLabel="Transform"
               className="[&_.kol-seg-cell]:min-w-0 [&_.kol-seg-cell]:px-1"
               options={[
@@ -119,7 +119,7 @@ export default function LayerInspector({ layer }) {
             /* Real behavior, not chrome: fixed keeps the box; auto modes measure the rendered text
              * (TextLayer effect) and write it. Selected = the dark tile. */
             <SegmentedToggle
-              tone="sunken" size={cs}
+              size={cs}
               ariaLabel="Resizing"
               value={layer.resizing ?? 'fixed'}
               onChange={(v) => setProp('resizing', v)}
@@ -143,7 +143,7 @@ export default function LayerInspector({ layer }) {
           {gen.loopBgToggleable(gen.loopById(layer.loopId)) && (
             <SettingsRow label="Background" align="fill" labelWidth={RAIL_LABEL_W}>
               <SegmentedToggle
-                tone="sunken" size={cs} className="w-full"
+                size={cs} className="w-full"
                 options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
                 value={layer.bgOn === false ? 'off' : 'on'}
                 onChange={(v) => setProp('bgOn', v === 'on')}
@@ -175,7 +175,7 @@ export default function LayerInspector({ layer }) {
           {/* Open ↔ closed — renderer + export honor `closed` via pathD;
             * in node-edit, clicking the first anchor also closes. */}
           <SegmentedToggle
-            tone="sunken" size={cs} className="w-full"
+            size={cs} className="w-full"
             options={[{ value: 'open', label: 'Open' }, { value: 'closed', label: 'Closed' }]}
             value={layer.closed ? 'closed' : 'open'}
             onChange={(v) => setProp('closed', v === 'closed')}

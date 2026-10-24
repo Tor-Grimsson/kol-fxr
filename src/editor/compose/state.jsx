@@ -331,7 +331,7 @@ function boxFromAnchor(anchor, w, h, vh = CANVAS_H) {
 /* Defaults for a text layer's Type Lab typography fields. Mirrors Type Lab's
  * newFrame() defaults so picking a saved type spec or starting fresh yields
  * the same baseline shape across the two surfaces. */
-const TEXT_DEFAULTS = {
+export const TEXT_DEFAULTS = {
   family:     'right-grotesk',   /* the 2026-08-12 family model (families.js) */
   width:      'Tight',
   weight:     600,
@@ -1655,7 +1655,8 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
     } else {
       /* default: whole-frame replace */
       setLayersTracked(() => fresh)
-      setCurrentPresetId(preset.id ?? null)
+      /* a shipped file is not stored (library/shipped.js) — Save on it asks for a name and makes the user's own */
+      setCurrentPresetId(preset.shipped ? null : preset.id ?? null)
       setCurrentPresetName(preset.name ?? null)
     }
     setSelectedIds([])

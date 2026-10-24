@@ -131,7 +131,7 @@ export function useComposeFile() {
       c.width = w; c.height = h
       await drawSvgToCanvas(c.getContext('2d'), buildLayersSvg(args), w, h)
       return c.toDataURL('image/webp', 0.8)
-    } catch { return null }
+    } catch (e) { console.warn('cover: the frame could not be captured —', e?.message || e); return null }
   }
   /* the spec plus its thumbnail — every save goes through this */
   const buildSavedSpec = async (name) => {

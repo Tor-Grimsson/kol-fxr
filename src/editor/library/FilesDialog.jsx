@@ -76,7 +76,7 @@ export default function FilesDialog({
   const find = (key) => { const { kind, id } = parseKey(key); return (library[kind] ?? []).find((x) => x.id === id) ?? null }
 
   /* the library as a bucket — rebuilt when the library changes, which is also the re-list signal */
-  const objects = useMemo(() => kinds.flatMap((kind) => (library[kind] ?? []).map((it) => ({
+  const objects = useMemo(() => kinds.flatMap((kind) => (library[kind] ?? []).filter((it) => !it.shipped).map((it) => ({
     key: keyOf(kind, it.id),
     displayName: labelOf(it),
     contentType: 'application/json',

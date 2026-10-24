@@ -29,6 +29,17 @@ assert.deepEqual(next.palette.map((it) => it.id), ['p'])
 assert.deepEqual(pushes.map((p) => p.item.id).sort(), ['a', 'b', 'e'])
 assert.equal(pushes.every((p) => p.op === 'put' && p.kind === 'preset'), true)
 
+// a shipped file stays local and never goes up
+const shipped = mergeRemote({ preset: [{ id: 'ship:labs:x', shipped: true, savedAt: 5 }] }, [])
+assert.deepEqual(shipped.next.preset.map((it) => it.id), ['ship:labs:x'])
+assert.deepEqual(shipped.pushes, [])
+
+// walk saves never merge in, and the cloud copy is removed once — local or remote-only
+const walk = mergeRemote({ preset: [{ id: 'w1', name: 'Plan08 Editor', savedAt: 5 }, { id: 'keep', name: 'Morph W', savedAt: 5 }] },
+  [row('w1', 'preset', 5), { ...row('w2', 'preset', 5), spec: { id: 'w2', name: 'Sync A 1791426181721', updatedAt: 5 } }])
+assert.deepEqual(walk.next.preset.map((it) => it.id), ['keep'])
+assert.deepEqual(walk.pushes.filter((p) => p.op === 'remove').map((p) => p.id).sort(), ['w1', 'w2'])
+
 // empty both ways
 assert.deepEqual(mergeRemote({ preset: [] }, []), { next: { preset: [] }, pushes: [] })
 console.log('mergeRemote: all checks pass')

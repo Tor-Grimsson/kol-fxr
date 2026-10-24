@@ -178,7 +178,7 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
   return (
     <div className="flex flex-col gap-5">
       {/* the mode is the rail's strip, where labs puts Generate · Style · Animation */}
-      <SegmentedToggle tone="sunken" value={mode} onChange={(v) => !readOnly && setMorph({ mode: v })} options={modeOptions} size={cs} className={stripClamp(cs)} />
+      <SegmentedToggle value={mode} onChange={(v) => !readOnly && setMorph({ mode: v })} options={modeOptions} size={cs} className={stripClamp(cs)} />
 
       <LabeledControlSection divided>
         {/* the DS list (kol-component 0.245.0, `StepList` — filed from here 2026-10-09); the local copy
@@ -201,7 +201,7 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
 
       {editing != null && !readOnly && layer && editTabs && (
         <LabeledControlSection label={`Step ${editing + 1}`} divided>
-          <SegmentedToggle tone="sunken" value={editTab} onChange={setEditTab} options={editTabs} size={cs} className={stripClamp(cs)} />
+          <SegmentedToggle value={editTab} onChange={setEditTab} options={editTabs} size={cs} className={stripClamp(cs)} />
           <LoopFields layer={layer} setProp={edit.setProp} patch={edit.patch} updateLayer={updateLayer} palette={palette} tab={editTab} tabStrip={null} inline picker={false} />
           <p className="kol-mono-12 text-emphasis">Editing step {editing + 1} — press Play to run the morph.</p>
         </LabeledControlSection>

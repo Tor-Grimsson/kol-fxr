@@ -105,8 +105,10 @@ export default function App() {
           <Route element={<AppLayout />}>
             {/* the Hub renders Home and Settings; the routes only have to exist */}
             <Route path="/" element={null} />
-            <Route path="/library" element={<LibraryPage />} />
+            <Route path="/library/*" element={<LibraryPage />} />
             <Route path="/settings" element={null} />
+            {/* the Dev page — the Hub renders it on a dev server only; the route only has to exist */}
+            <Route path="/dev" element={null} />
             {/* the chromes ride under the rail too (user, 2026-08-27 — "show the
                 sidebar in each mode"); `\` hides it, see AppLayout */}
             <Route path="/editor" element={<Editor />} />

@@ -18,7 +18,7 @@ import { openFiles, closeFiles, useFilesDialog } from './editor/library/filesDia
 import { setNavigator, VIEW_PATHS } from './editor/mode'
 import { isMobileDevice, wantsDesktop, setWantsDesktop } from './editor/mobile/device'
 import { MODES, setMode, withView, currentView } from './editor/mode'
-import { GeneratorLibraryProvider, useGeneratorLibrary, LIBRARY_SLOT_KEYS, loadLibrary } from './editor/library/LibraryProvider'
+import { GeneratorLibraryProvider, useGeneratorLibrary, LIBRARY_SLOT_KEYS, loadLibrary, readLibraryRaw, subscribeLibrary } from './editor/library/LibraryProvider'
 import { shortcutsBySection, comboLabel } from './editor/state/keymap'
 import { useSettingsSections, AppSettingsSections, DisplaySettingsDrawer } from './settings/AppSettings'
 import { BRAND } from './brand/config'
@@ -98,7 +98,7 @@ export { setMediaClient, setMediaProxyBase, setSettingsStore }
 
 /** Where the library syncs to (plan 07) — unset, the app is localStorage only and shows no Sign in. */
 export { setLibraryApi, getLibraryApi, useLibrarySession, signInLibrary, signOutLibrary, UnauthorizedError } from './editor/library/libraryApi'
-export { renameStored, duplicateStored, removeStored } from './editor/library/libraryOps'
+export { renameStored, duplicateStored, removeStored, setThumbStored, copyStored } from './editor/library/libraryOps'
 
 /** The seam — a host's own pack registers through it exactly as the shipped ones do. */
 export { registerPack } from './editor/packs'
@@ -154,7 +154,7 @@ export { setNavigator, VIEW_PATHS, isMobileDevice, wantsDesktop, setWantsDesktop
  */
 export {
   MODES, setMode, withView, currentView,
-  GeneratorLibraryProvider, useGeneratorLibrary, LIBRARY_SLOT_KEYS, loadLibrary,
+  GeneratorLibraryProvider, useGeneratorLibrary, LIBRARY_SLOT_KEYS, loadLibrary, readLibraryRaw, subscribeLibrary,
   shortcutsBySection, comboLabel,
   useSettingsSections, AppSettingsSections, DisplaySettingsDrawer,
   BRAND,

@@ -16,3 +16,9 @@ Nothing — a bump.
 kol-component 0.290.0: on a `file` card with `actions` the title truncates left of them (their width is reserved on the text side); the file row’s title shrinks beside its actions column. Nothing to pass.
 
 **Remainder here:** bump kol-component@0.290.0.
+
+## ✅ ADOPTED — 2026-10-22
+
+kol-component 0.290.0 pinned (0.298.0 today).
+
+**Remainder here:** none.

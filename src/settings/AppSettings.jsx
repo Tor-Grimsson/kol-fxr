@@ -77,7 +77,6 @@ const sectionsFor = (s) => [
             options={PREVIEW_RES_OPTIONS}
             value={s.previewRes}
             onChange={(v) => setAppSetting('previewRes', v)}
-            tone="sunken"
             className="w-full max-w-24"
             ariaLabel="Preview resolution"
           />
@@ -96,7 +95,6 @@ const sectionsFor = (s) => [
             options={ASPECT_OPTIONS}
             value={s.defaultAspect}
             onChange={(v) => setAppSetting('defaultAspect', v)}
-            tone="sunken"
             className="w-full max-w-24"
             ariaLabel="Default aspect"
           />
@@ -111,7 +109,6 @@ const sectionsFor = (s) => [
             options={pack('generators').THEME_OPTIONS}
             value={s.defaultTheme}
             onChange={(v) => setAppSetting('defaultTheme', v)}
-            tone="sunken"
             className="w-full max-w-24"
             ariaLabel="Loop theme"
           />
@@ -158,7 +155,6 @@ const sectionsFor = (s) => [
             options={LOOP_LENGTH_OPTIONS}
             value={s.defaultLoopSeconds}
             onChange={(n) => { setAppSetting('defaultLoopSeconds', n); transport.setLoopSeconds(n) }}
-            tone="sunken"
             className="w-full max-w-24"
             ariaLabel="Loop length"
           />
@@ -230,11 +226,41 @@ function DotsSwitch() {
   return <SettingsSwitch label="Modulation dots" on={on} onChange={(v) => { if (v !== on) toggleDots() }} />
 }
 
-export function DisplaySettingsDrawer({ open, onClose, children }) {
-  const reset = () => {
-    for (const [k, v] of Object.entries(DEFAULTS)) setAppSetting(k, v)
-    transport.setLoopSeconds(DEFAULTS.defaultLoopSeconds)
+/* the store's own defaults, written back through `setAppSetting` — the drawer's foot and the Hub's both */
+const reset = () => {
+  for (const [k, v] of Object.entries(DEFAULTS)) setAppSetting(k, v)
+  transport.setLoopSeconds(DEFAULTS.defaultLoopSeconds)
+}
+
+/**
+ * The Hub's settings — the same rows as TYPED DATA over the same store (studio adoption, 2026-10-24): the
+ * Hub's rail takes data and draws the controls; the editor's own drawer above keeps drawing its JSX. No
+ * Theme row — the Hub draws kol-framework's toggle in the rail's footer (user 2026-10-24).
+ */
+export function useHubSettings() {
+  const s = useAppSettings()
+  const dots = useBindDots()
+  return {
+    sections: [
+      { label: 'Display', rows: [
+        { label: 'Preview resolution', type: 'choice', options: PREVIEW_RES_OPTIONS, value: s.previewRes, onChange: (v) => setAppSetting('previewRes', v) },
+      ] },
+      { label: 'Defaults', rows: [
+        { label: 'Default aspect', type: 'choice', options: ASPECT_OPTIONS, value: s.defaultAspect, onChange: (v) => setAppSetting('defaultAspect', v) },
+        ...(pack('generators') ? [{ label: 'Loop theme', type: 'choice', options: pack('generators').THEME_OPTIONS, value: s.defaultTheme, onChange: (v) => setAppSetting('defaultTheme', v) }] : []),
+        { label: 'Clip to frame', type: 'switch', on: s.clipToFrame, onChange: (v) => setAppSetting('clipToFrame', v) },
+        { label: 'Modulation dots', type: 'switch', on: dots, onChange: (v) => { if (v !== dots) toggleDots() } },
+      ] },
+      { label: 'Transport', rows: [
+        { label: 'Autoplay', type: 'switch', on: s.autoplay, onChange: (v) => setAppSetting('autoplay', v) },
+        { label: 'Loop length', type: 'choice', options: LOOP_LENGTH_OPTIONS, value: s.defaultLoopSeconds, onChange: (n) => { setAppSetting('defaultLoopSeconds', n); transport.setLoopSeconds(n) } },
+      ] },
+    ],
+    drawer: { onReset: reset },
   }
+}
+
+export function DisplaySettingsDrawer({ open, onClose, children }) {
   return (
     <SettingsPanel
       open={open}

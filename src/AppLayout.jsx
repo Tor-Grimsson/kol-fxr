@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
-import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { AppHub, useNavHidden } from '@kolkrabbi/kol-shell'
-import { Button, Dropdown, ModalProvider, useModal } from '@kolkrabbi/kol-component'
-import { ThemeToggle } from '@kolkrabbi/kol-framework'
-import logomarkUrl from '@kolkrabbi/kol-brand/svg/favicon-01.svg?url'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
+import { AppStudio, useNavHidden } from '@kolkrabbi/kol-shell'
+import { ModalProvider, useModal } from '@kolkrabbi/kol-component'
+
 import NewFileDialog, { openNewFile } from './components/NewFileDialog'
-import { storedVerbs, chromeOf, bytesOf, downloadFile } from './components/FileCard'
+import { CHROMES, chromeOf, bytesOf, downloadFile } from './components/FileCard'
 import { pickMedia } from './editor/library/mediaPick'
-import { proxied, isVideoType } from './editor/library/mediaLibrary'
+import { proxied, isVideoType, getMediaClient } from './editor/library/mediaLibrary'
 /* The rail-extras store moved into the package with labs (0.4.0): labs WRITES
    it and this layout READS it, so two module copies meant subscribing to a
    store nothing ever touched. One copy, one store. The settings sections, the
@@ -16,42 +15,42 @@ import { proxied, isVideoType } from './editor/library/mediaLibrary'
    drawer cannot drift. */
 import {
   useRailExtras, RAIL_EXTRA_PREFIX,
-  useSettingsSections, shortcutsBySection, comboLabel,
-  MODES, setMode, withView, loadLibrary,
-  isMobileDevice, wantsDesktop,
+  shortcutsBySection, comboLabel,
+  setMode, withView, loadLibrary,
   getLibraryApi, useLibrarySession, signInLibrary, signOutLibrary, UnauthorizedError,
+  renameStored, duplicateStored, removeStored, setThumbStored, copyStored, readLibraryRaw, subscribeLibrary,
 } from './index.jsx'
-import MediaPickerDialog from './editor/library/MediaPickerDialog'
+import { listShipped, readShippedRaw, subscribeShipped, renameShipped, removeShipped } from './editor/library/shipped'
+import { setUploadedCover } from './editor/library/FileCover'
+import { saveSpot, readSpot, writeSpot, useRestoreScroll } from './editor/library/returnSpot'
+import { useHubSettings } from './settings/AppSettings'
+/* lazy — it pulls the output stack, which the shell tier otherwise never carries */
+const CoverHost = lazy(() => import('./editor/library/CoverHost'))
+import FileCover from './editor/library/FileCover'
+import DevCards from './pages/DevCards'
 
 /**
- * AppLayout — the shell tier's layout root: kol-shell's `AppHub` (Shell + Hub
- * in one call, the app anatomy of 2026-09-26) wrapping the router's `<Outlet/>`.
+ * AppLayout — the shell tier's layout root: kol-shell's `AppStudio` (the Shell
+ * and the Hub in one call) wrapping the router's `<Outlet/>` in each page.
  * kol-shell is router-agnostic by design, so the consumer supplies
  * `currentPath` / `onNavigate` and that is the whole wiring.
  *
- * ON THE HUB SINCE 2026-10-07 (user ruling). `AppHub` passes `items` straight
- * through to `AppShell`, so labs' category rows still ride under Labs exactly
- * as before — which is why it is `AppHub` and not `AppStudio` (the Studio
- * builds the rail from its own slots and has no seam for rows under one item).
- * Settings is the Hub's `HubSettings` — the page kol-shell rebuilt FROM this
- * repo's own, so every feature it had is a prop here: the sections as data,
- * the gear's drawer over the same sections, the chrome picker, the OPTIONS /
- * SHORTCUTS pair. Home is the Hub's `HubHome` — the user's (plan 39): RECENT =
- * a blank start + your newest files, SAVED = your files, read through
- * `loadLibrary()` on every render, so the shell tier mounts no library provider:
- * one above `AppHub` would go stale beside the editor's own in the same tab. A
- * file's cover is its own `thumb` (captured at save since 2026-10-09, backfilled
- * once for older files — plan 39 § 3.1).
+ * ON THE STUDIO SINCE 2026-10-24 (the Studio adoption, run from kol-ds-ui). The
+ * rail is the preset's: Library (the Hub's slot, `/library` through the Outlet) ·
+ * the four chromes as `pages` · Media · Sign in · Settings pinned by the Hub. Labs
+ * carries its categories as `sub` at Home and on /labs alike — the catalog's shape
+ * from `useLabsRows`, the live rows once labs publishes them — so Labs enters and
+ * its sections fold inside (user 2026-10-06, plan 37). Home is the Hub's `HubHome`
+ * over `files` read through `loadLibrary()` on every render (no provider at the
+ * shell tier: one above the Studio would go stale beside the editor's own), every
+ * verb through `renameStored` · `duplicateStored` · `removeStored`, a file's cover
+ * its own `thumb` (plan 39 § 3.1). The settings rail takes `useHubSettings`' typed
+ * rows; the chromes' own drawer keeps rendering `AppSettingsSections`.
  *
  * EVERYTHING SITS UNDER THE RAIL (user ruling 2026-08-27). `\` hides it
  * (H is the editor's layer-visibility key) and the rail comes back on every
- * route change; `touch="drawer"` takes the rail OFF-CANVAS under 768px — a
- * hamburger top-right brings it in over a scrim, and labs' catalog rows ride
- * it exactly as they do the desktop rail. The Hub's default is the phone BAR;
- * the drawer stays because the 2026-10-05 phone work was built and measured
- * against it. `railSections="enter"` is the user's 2026-10-06 ruling for labs'
- * rail: a section row enters its children under a Back row instead of folding —
- * and since plan 37 the section that enters is Labs itself; its five fold inside.
+ * route change. On a phone the rail is the preset's pill — the Studio's one
+ * phone shape; the chromes own the phone's bottom edge (`bar: false`).
  *
  * THE KEYS, split by route — read in kol-shell 0.62.0 and design-editor 0.21.0:
  *
@@ -83,24 +82,18 @@ import MediaPickerDialog from './editor/library/MediaPickerDialog'
  * imports-only by rule, so there is nowhere local to bind one.
  */
 
-export const NAV_ITEMS = [
-  { icon: 'nav-library', path: '/library', label: 'Library' },
-  { icon: 'desktop', path: '/editor', label: 'Editor' },
-  { icon: 'globe', path: '/labs', label: 'Labs' },
-  { icon: 'refresh', path: '/randomiser', label: 'Randomiser' },
+/* The chromes are the Studio's pages (studio adoption, 2026-10-24) — Library is the Hub's slot above them. */
+const CHROME_ROWS = [
+  { icon: 'desktop', path: '/editor', label: 'Editor', bar: false },
+  { icon: 'globe', path: '/labs', label: 'Labs', bar: false },
+  { icon: 'refresh', path: '/randomiser', label: 'Randomiser', bar: false },
   /* MORPH is a destination (plan 10, user 2026-10-08: "how the fuck is MORPH NOT IN THE SIDERAIL") — the labs
      chrome with the Morph rail open, not a row labs contributes only while you are on it */
-  { icon: 'swap', path: '/morph', label: 'Morph' },
+  { icon: 'swap', path: '/morph', label: 'Morph', bar: false },
 ]
+export const NAV_ITEMS = [{ icon: 'nav-library', path: '/library', label: 'Library' }, ...CHROME_ROWS]
 
 const SETTINGS_PATH = '/settings'
-/* THE SIGN-IN ROW — a sentinel, not a route (user, 2026-10-08: "why wouldn't it be in the rail?
-   like a user icon"). It sits in the rail's pinned foot above Settings, only when the host named
-   a library API; the session it opens lives in the editor's `libraryApi` module, so it outlives a
-   chrome switch. Never a page: there is nothing to show, only a password to ask for. */
-const SIGN_IN_PATH = '#sign-in'
-/* the rail's Media row (plan 15 § 4) — a sentinel too: it opens the library, it is not a route */
-const MEDIA_PATH = '#media'
 
 /* The ⌥-digit order: the rail READ TOP TO BOTTOM, logomark first. Derived from
    NAV_ITEMS so adding a destination cannot silently renumber the rest — the
@@ -114,10 +107,8 @@ const CHROME_PATHS = new Set(['/editor', '/labs', '/morph', '/randomiser'])
 const APP = {
   name: 'FXR',
   subtitle: 'Pick a chrome. All three run the same engine.',
-  logomark: logomarkUrl,
-  about: (
-    <>A DOM/SVG design compositor — frames, layers, vector tools — with generative, kinetic-type and effects layers on the same engine, served through three chromes: the Editor, Labs, and the Randomiser.</>
-  ),
+  logomark: '/favicon/favicon.svg',
+  about: 'A DOM/SVG design compositor — frames, layers, vector tools — with generative, kinetic-type and effects layers on the same engine, served through three chromes: the Editor, Labs, and the Randomiser.',
   links: [
     { label: 'GitHub', url: 'https://github.com/Tor-Grimsson/kol-fxr' },
     { label: 'Kolkrabbi', url: 'https://fxr.kolkrabbi.io' },
@@ -125,43 +116,41 @@ const APP = {
   ],
 }
 
-/* The masthead picker's contents — three chromes where kol-r2b2's row 1 has
-   buckets. The frame around it is `HubSettings`'. `w-48`, not `w-40`: the
-   touch rung types it at 16px and "Open a chro…" truncated (the 2026-10-03
-   rehearsal). */
-const CHROME_PICKS = [
-  { value: '', label: 'Open a chrome' },
-  { value: 'editor', label: 'Editor' },
-  { value: 'labs', label: 'Labs' },
-  { value: 'randomiser', label: 'Randomiser' },
+/* HOME IS THE USER'S (plan 39, user 2026-10-23: *"HOME IS THE START THE USER HOME... Library is saved
+   presets"*) and a DATA CONTRACT (HubHomeContract): the files are the library's presets, read through
+   `loadLibrary()` on every render; the Hub does RECENT (the 12 newest) and SAVED (all). Files only — New
+   File is the action button (user 2026-10-23). Signed in or not — sign-in only syncs the local library.
+   THE CHROME IS A MARK ON THE CARD (user 2026-10-24): the chrome a file was made with, in the cover's corner. */
+const stampOf = (p) => p.updatedAt ?? p.savedAt ?? 0
+/* Home's view labels (HubHome's defaults) → their values, for the Back-lands-on-the-card listener */
+const HOME_VIEWS = { RECENT: 'recent', SAVED: 'saved' }
+
+/* Home's six picks from the shipped Library — two editor, two labs, one randomiser, one morph */
+const HOME_PICKS = [
+  'ship:editor:type-statement', 'ship:editor:optic-half-drekker',
+  'ship:labs:mesh-spectrum', 'ship:labs:flow-obstacles',
+  'ship:randomiser:circle-warm',
+  'ship:morph:gradient-field--gradient-sunset',
 ]
 
-/* HOME IS THE USER'S (plan 39, user 2026-10-23: *"HOME IS THE START THE USER HOME... Library is saved
-   presets"*), monitor's and mirror's shape: RECENT = one blank start, then your newest files; SAVED = your
-   files. Signed in or not — signed out is a user with a local library, sign-in only syncs it. The blank
-   start opens New File's four doors. */
-const BLANK_START = { name: 'new-file', title: 'New File', detail: 'Editor · Labs · Randomiser · Morph', blank: true }
-
-const fmtDate = (ms) =>
-  new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-
-const stampOf = (p) => p.updatedAt ?? p.savedAt ?? 0
-const savedCards = () => (loadLibrary().preset ?? []).map((p) => ({
-  name: p.id,
-  title: p.name || 'Untitled preset',
-  detail: `${p.layers?.length ?? 0} layers · ${p.aspect ?? '1:1'} · ${fmtDate(stampOf(p))}`,
-  file: p,
-}))
-const RECENT_FILES = 12
-const recentFiles = () => savedCards().sort((a, b) => stampOf(b.file) - stampOf(a.file)).slice(0, RECENT_FILES)
+const fileOf = (p) => ({
+  id: p.id,
+  name: p.name || 'Untitled preset',
+  mark: CHROMES[chromeOf(p)] ?? CHROMES.editor,
+  details: [{ label: 'Layers', value: p.layers?.length ?? 0 }, { label: 'Aspect', value: p.aspect ?? '1:1' }],
+  updatedAt: stampOf(p),
+  bytes: bytesOf(p),
+  /* its saved frame, or one drawn on demand from its own layers (FileCover — memory + IndexedDB, never the quota) */
+  cover: p.thumb ?? <FileCover file={p} />,
+})
 
 /* The tour's copy is the chromes' own one-liners (the New File doors, the Home cards) — one
    source, nothing invented here (audit A3 replaced the "Placeholder." steps, 2026-10-09).
-   The last step's `actions` is a FUNCTION so HubHome can hand it `close`. */
+   The last step's `actions` is DATA — the Hub draws the Button and closes the walkthrough first. */
 const WALKTHROUGH = (enter) => [
   { title: '1. Pick a chrome', text: ['All three run the same engine.', 'Editor — the full compositor: layers, generators, effects, export.', 'Labs — one generator or source on a standardized output.', 'Randomiser — roll the dice: pick a category and randomize.'] },
   { title: '2. Save, and find it again', text: ['Save… in any chrome keeps the file on this device; signed in, it syncs to the cloud library.', 'Home lists your recent files; Library lists everything saved.'] },
-  { title: 'Get Started', actions: (close) => <Button tone="grey" size="md" onClick={() => { close(); enter('editor') }}>Open Editor</Button> },
+  { title: 'Get Started', actions: [{ label: 'Open Editor', onClick: () => enter('editor') }] },
 ]
 
 /* The shortcuts the Hub's sheet and the Settings page both read — ONE array,
@@ -172,29 +161,46 @@ const SHORTCUTS = shortcutsBySection(null)
 
 const typing = (t) => t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName)
 
-/* The sign-in gesture, under the shell's own ModalProvider so the KOL prompt serves it on every
-   route — the chromes carry their own provider inside. Registers itself on a ref the rail's
-   onNavigate calls. */
+/* The sign-in gesture, under the shell's own ModalProvider so the KOL alert serves it on every
+   route — the chromes carry their own provider inside. The Hub's Sign in row asks the password
+   (or the sign-out confirm) itself and hands it here: a string signs in, `null` signs out. */
 function RailSignIn({ handlerRef }) {
   const modal = useModal()
-  const session = useLibrarySession()
-  handlerRef.current = async () => {
-    if (session) {
-      /* the same press signs out — so it asks first, the way the password was asked */
-      const ok = await modal.confirm('Sign out of the library sync? Saves stay on this device only.', { okLabel: 'Sign out' })
-      if (ok) signOutLibrary()
-      return
-    }
-    const pw = await modal.prompt('Password for the library sync:', '')
-    if (!pw) return
+  handlerRef.current = async (password) => {
+    if (password == null) { signOutLibrary(); return }
     try {
-      const n = await signInLibrary(pw)
+      const n = await signInLibrary(password)
       await modal.alert(`Signed in. ${n} saved ${n === 1 ? 'item' : 'items'} in the cloud library; saves now sync.`)
     } catch (e) {
       await modal.alert(e instanceof UnauthorizedError ? 'Wrong password. Still local only.' : `Sign in failed: ${e?.message || e}`)
     }
   }
   return null
+}
+
+/* LABS ALWAYS CARRIES ITS CATEGORIES (user 2026-10-24) — the five sections and their groups read off the labs
+ * catalog with no layer and no handlers (the shape, not the picks), so Labs enters at Home as on /labs. Lazily:
+ * the catalog pulls the engines, which the shell tier never carries. A press before labs is mounted opens /labs
+ * and runs the pick once LabsNav has published its dispatch (`pendingPick`). */
+const noop = () => {}
+function useLabsRows() {
+  const [rows, setRows] = useState([])
+  useEffect(() => {
+    let on = true
+    import('./editor/labs/catalog.js').then(({ buildLabsCatalog, SECTION_ICONS }) => {
+      if (!on) return
+      const items = []
+      buildLabsCatalog({ layer: null, setOnly: noop, addFilter: noop, patchFilter: noop, carriedSource: () => ({}) }).forEach((entry) => {
+        if (entry.id.startsWith('sec:')) { items.push({ icon: SECTION_ICONS[entry.id.slice(4)] ?? 'square', path: `${RAIL_EXTRA_PREFIX}${entry.id}`, label: entry.label, sub: [] }); return }
+        const row = { icon: entry.icon, path: `${RAIL_EXTRA_PREFIX}${entry.id}`, label: entry.label }
+        const section = items[items.length - 1]
+        if (section?.sub) section.sub.push(row); else items.push(row)
+      })
+      setRows(items)
+    })
+    return () => { on = false }
+  }, [])
+  return rows
 }
 
 /* Publishes `--fxr-rail` — the rail's width, or 0 when hidden or absent — so a
@@ -234,33 +240,32 @@ export default function AppLayout() {
      a second component per chrome. Their paths are sentinels, so they dispatch
      instead of routing. */
   const extras = useRailExtras()
-  const sections = useSettingsSections()
+  const labsRows = useLabsRows()
+  const hubSettings = useHubSettings()
   const session = useLibrarySession()
   const signInRef = useRef(null)
-  const [mediaOpen, setMediaOpen] = useState(false)
-  /* the pinned foot: Media (signed in — the r2b2 stores, read-only; plan 15 § 4) and Sign in (when
-     there is an API to sign in to) above Settings. AppHub pins Settings itself, but a
-     `shell.bottomItems` replaces its list, so Settings is named here too; the shell's
-     `settingsPath` toggle still applies to it. */
-  const bottomItems = [
-    ...(session ? [{ icon: 'image', path: MEDIA_PATH, label: 'Media' }] : []),
-    /* the icon IS the state: a person while local, a cloud while synced (the label only shows with the rail open) */
-    ...(getLibraryApi() ? [{ icon: session ? 'cloud' : 'user', path: SIGN_IN_PATH, label: session ? 'Synced · sign out' : 'Sign in' }] : []),
-    { icon: 'nav-settings', path: SETTINGS_PATH, label: 'Settings' },
-  ]
-  /* a pick lands in the chrome under it — or, from a shell page, in the editor it opens */
+  /* the Hub's Media row (signed in — the r2b2 stores, read-only; plan 15 § 4): a pick lands in the
+     chrome under it — or, from a shell page, in the editor it opens */
   const onMediaPick = (url, meta = {}) => {
     pickMedia({ url: proxied(url), srcType: isVideoType(meta.contentType) ? 'video' : 'image' })
-    setMediaOpen(false)
     if (!onChrome) navigate('/editor')
   }
+
+  /* Remember the pick, then leave for the chrome. */
+  const enter = (id) => { setMode(id); navigate(withView(id)) }
+
+  /* a labs pick pressed before labs is mounted — run when LabsNav publishes its dispatch */
+  const pendingPick = useRef(null)
+  useEffect(() => {
+    const p = pendingPick.current
+    if (p && extras.dispatch) { pendingPick.current = null; extras.dispatch(p) }
+  }, [extras])
 
   /* Every hop is an SPA transition since 2026-08-27 — the chromes are lazy
      routes that mount and unmount like any page. */
   const onNavigate = (path) => {
-    if (path === SIGN_IN_PATH) { signInRef.current?.(); return }
-    if (path === MEDIA_PATH) { setMediaOpen(true); return }
     if (path?.startsWith(RAIL_EXTRA_PREFIX)) {
+      if (!extras.dispatch) { pendingPick.current = path; enter('labs'); return }
       /* A labs pick swaps the layer without a route change, and the touch
          drawer only closes itself on `currentPath` — so it stayed open over
          the thing just picked. The scrim is the DS's own close control; press
@@ -272,15 +277,50 @@ export default function AppLayout() {
     navigate(path)
   }
 
-  /* Remember the pick, then leave for the chrome. */
-  const enter = (id) => { setMode(id); navigate(withView(id)) }
   /* a file card opens its file in its chrome — UrlIntents reads `open` there */
   const openFile = (p) => navigate(`/${chromeOf(p)}?open=${encodeURIComponent(p.id)}`)
-  /* Home's file verbs write storage directly (no provider at the shell tier); a tick re-reads it */
-  const [, setTick] = useState(0)
-  const bump = () => setTick((n) => n + 1)
-  /* the file cards' one menu (the approved file card, 2026-10-22) — Home writes storage directly */
-  const fileVerbs = (p) => storedVerbs('preset', p.id, bump)
+  /* Home re-reads on every library write — its own verbs, a save in a chrome, the sync's merge, another tab.
+     The snapshot is the stored string (stable between writes); the parse runs only when it changes. */
+  const raw = useSyncExternalStore(subscribeLibrary, readLibraryRaw, () => null)
+  /* Home is the user's saves plus six PICKS from the Library (plan 40 § 2.1, user 2026-10-24: *"just select a few from
+     library"*) — a couple per chrome, so a fresh browser opens on real work, not an empty grid */
+  const shippedRaw = useSyncExternalStore(subscribeShipped, readShippedRaw, () => null)
+  const saved = useMemo(() => {
+    const picks = listShipped().filter((f) => HOME_PICKS.includes(f.id))
+    return [...picks, ...(loadLibrary().preset ?? []).filter((p) => !p.shipped)]
+  }, [raw, shippedRaw])
+  /* ponytail: tags and notes are this session's until the library carries them (it has no write for either) */
+  const [extra, setExtra] = useState({})
+  const files = saved.map((p) => ({ ...fileOf(p), ...extra[p.id] }))
+  const edit = (id, patch) => setExtra((x) => ({ ...x, [id]: { ...x[id], ...patch } }))
+  const presetOf = (id) => saved.find((p) => p.id === id)
+  /* BACK LANDS ON THE CARD (plan 40 § 2.2): Home's view and scroll are recorded when a card opens and restored on a Back.
+     ponytail: HubHome keeps its view to itself (no onViewChange), so a press on a view label is read here; a KOL
+     `onViewChange` on Home replaces the listener. */
+  const onHome = location.pathname === '/'
+  const popped = useNavigationType() === 'POP'
+  useRestoreScroll('home', onHome)
+  useEffect(() => {
+    if (!onHome) return undefined
+    const onClick = (e) => { const v = HOME_VIEWS[e.target?.textContent?.trim()]; if (v) writeSpot('home', { view: v }) }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
+  }, [onHome])
+  const home = {
+    files,
+    defaultView: popped ? readSpot('home').view : undefined,
+    onOpen: (f) => { saveSpot('home'); openFile(presetOf(f.id)) },
+    onDownload: (f) => downloadFile(presetOf(f.id)),
+    onRename: (f, name) => { presetOf(f.id)?.shipped ? renameShipped(f.id, name) : renameStored('preset', f.id, name) },
+    onDuplicate: (f) => { const p = presetOf(f.id); p?.shipped ? copyStored('preset', p, `${f.name} copy`) : duplicateStored('preset', f.id) },
+    onRemove: (f) => { presetOf(f.id)?.shipped ? removeShipped(f.id) : removeStored('preset', f.id) },
+    onTags: (f, tags) => edit(f.id, { tags }),
+    onNote: (f, note) => edit(f.id, { note }),
+    onCover: (f, src) => (presetOf(f.id)?.shipped ? setUploadedCover(f.id, src) : setThumbStored('preset', f.id, src)),
+    action: { label: 'New File', onClick: openNewFile },
+  }
+  /* the one card Home's handlers draw — Library takes it too (step 4) */
+  const fileCard = (f) => ({ key: f.id, title: f.name, date: f.updatedAt, size: f.bytes, media: f.cover, tags: f.tags, details: f.details, mark: f.mark, onTags: (tags) => home.onTags(f, tags), note: f.note, onNote: (note) => home.onNote(f, note), verbs: { rename: (name) => home.onRename(f, name), duplicate: () => home.onDuplicate(f), remove: () => home.onRemove(f) }, download: () => home.onDownload(f), onClick: () => home.onOpen(f) })
 
   /* ⌥1…⌥7 — the rail top to bottom, HOME included. See the docblock for why
      this is local rather than AppShell's `navKeys`. */
@@ -300,97 +340,35 @@ export default function AppLayout() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  /* THE DEVICE GATE APPLIES AT `/` ONLY: a touch-primary device that has not
-     opted into desktop gets the randomiser instead of home. Ask for any other
-     path and you get it — reaching for `/settings` on a phone is explicit.
-     Here rather than in a route element because the Hub renders Home itself. */
-  if (location.pathname === '/' && isMobileDevice() && !wantsDesktop()) return <Navigate to="/randomiser" replace />
-
   return (
     <ModalProvider>
     <RailSignIn handlerRef={signInRef} />
     <NewFileDialog />
-    {/* the explorer media.kolkrabbi.io runs, over the three stores (the client lists its buckets) */}
-    <MediaPickerDialog open={mediaOpen} accept={['image', 'video']} onClose={() => setMediaOpen(false)} onSelect={onMediaPick} />
-    <AppHub
+    {/* the live renderer for the covers only a mounted engine can draw (FileCover), one at a time, off the page */}
+    <Suspense fallback={null}><CoverHost /></Suspense>
+    {onChrome && <ChromeSettingsKey />}
+    <AppStudio
       app={APP}
-      /* LABS IS A LEVEL (plan 37 § 7.2, user 2026-10-22: "when you press labs you should enter that
-         level and the sub categories should expand collapse"). On `/labs` the Labs row carries its five
-         sections as `sub`, so under `railSections: 'enter'` pressing it enters a ← Labs level; inside,
-         NavRail renders each section as a plain RailItem with no `onEnter`, so they FOLD in place with
-         their groups indented. Only on `/labs` — `/morph` is the same chrome with the Morph rail.
-         `KEY_ORDER` is derived from NAV_ITEMS, so ⌥-digit is unaffected. */
-      items={extras.items.length && location.pathname.startsWith('/labs')
-        ? NAV_ITEMS.map((n) => (n.path === '/labs' ? { ...n, sub: extras.items } : n))
-        : NAV_ITEMS}
       currentPath={location.pathname}
       onNavigate={onNavigate}
-      settingsPath={SETTINGS_PATH}
-      home={{
-        items: (view) => (view === 'recent' ? [BLANK_START, ...recentFiles()] : savedCards()),
-        filtersTitle: 'All Files',
-        /* GRID always (the user, 2026-10-09: "it should always default to grid mode") */
-        defaultLayout: 'grid',
-        /* the DS `app` card and row (monitor's and mirror's Home); HubHome hard-sets rowVariant="file",
-           so the row is named back. A file carries its verbs; the blank start carries none. */
-        preset: 'app',
-        rowVariant: 'app',
-        toCard: (c) => (c.blank ? {
-          key: c.name,
-          title: c.title,
-          meta: c.detail,
-          media: '/previews/chromes/editor.png',
-          onClick: openNewFile,
-        } : {
-          key: c.name,
-          title: c.title,
-          date: stampOf(c.file),
-          size: bytesOf(c.file),
-          media: c.file.thumb,
-          verbs: fileVerbs(c.file),
-          download: () => downloadFile(c.file),
-          onClick: () => openFile(c.file),
-        }),
-        /* New File → the four doors (plan 09) */
-        actions: <Button tone="grey" size="md" onClick={openNewFile}>New File</Button>,
-      }}
-      walkthrough={WALKTHROUGH(enter)}
-      settings={{
-        sections,
-        /* the gear opens the SAME sections as a drawer — one definition, two
-           frames, so they cannot drift (the editor's own drawer renders them too).
-           Not on /settings itself: a drawer of the page over the page (audit A7). */
-        drawer: location.pathname !== '/settings',
-        picker: (
-          <Dropdown
-            className="w-48"
-            tone="sunken"
-            options={CHROME_PICKS}
-            value=""
-            onChange={(v) => v && navigate(`/${v}`)}
-            aria-label="Open a chrome"
-          />
-        ),
-        splitShortcuts: true,
-        tone: 'sunken',
-      }}
       shortcuts={SHORTCUTS}
-      comboLabel={comboLabel}
-      themeToggle={<ThemeToggle fill="none" tone="sunken" label={false} size="sm" />}
       shortcutsKey={onChrome ? null : 's'}
-      shell={{
-        touch: 'drawer',
-        railSections: 'enter',
-        navKeys: false,
-        settingsKey: onChrome ? undefined : ',',
-        bottomItems,
-      }}
-    >
-      {onChrome && <ChromeSettingsKey />}
-      <RailFrame>
-        <Outlet />
-      </RailFrame>
-    </AppHub>
+      home={home}
+      walkthrough={WALKTHROUGH(enter)}
+      library={{ children: <RailFrame><Outlet /></RailFrame> }}
+      /* the chromes render through each page's Outlet. LABS IS A LEVEL (plan 37 § 7.2, user 2026-10-22) and always
+         carries its categories (user 2026-10-24): the live rows (with their picks) on /labs, the catalog's shape
+         everywhere else — a page row with `sub` enters by the preset's rule. */
+      pages={CHROME_ROWS.map((c) => ({ ...c, children: <RailFrame><Outlet /></RailFrame>, ...(c.path === '/labs' ? { sub: extras.items.length ? extras.items : labsRows } : {}) }))}
+      /* THE DEV PAGE (`/dev`, the `</>` rail row, dev server only) — the user's, and it stays even
+         empty (user, 2026-10-23). Never retire it. */
+      dev={{ tabs: [{ value: 'cards', label: 'Cards', content: <DevCards /> }] }}
+      settings={{ ...hubSettings, comboLabel }}
+      /* the Hub draws the foot rows and owns the picker and the password / sign-out dialogs */
+      media={session ? { client: getMediaClient(), accept: ['image', 'video'], onSelect: onMediaPick } : undefined}
+      signIn={getLibraryApi() ? { signedIn: !!session, onPress: (pw) => signInRef.current?.(pw) } : undefined}
+      shell={{ railToggleKey: '\\', navKeys: false, settingsKey: onChrome ? undefined : ',' }}
+    />
     </ModalProvider>
   )
 }

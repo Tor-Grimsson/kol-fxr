@@ -128,6 +128,10 @@ function validatePreset(spec) {
     ...(spec.morph && typeof spec.morph === 'object' ? { morph: spec.morph } : {}),
     /* the frame at save time, a small webp data URL (useComposeFile `captureThumb`) */
     ...(typeof spec.thumb === 'string' ? { thumb: spec.thumb } : {}),
+    /* a SHIPPED file (shipped.js) — local only, listed by the Library under its group and category */
+    ...(spec.shipped === true ? { shipped: true } : {}),
+    ...(typeof spec.group === 'string' ? { group: spec.group } : {}),
+    ...(typeof spec.sub === 'string' ? { sub: spec.sub } : {}),
   }
 }
 
@@ -260,11 +264,30 @@ function loadFromStorage() {
  * no second copy of the storage key. */
 export { loadFromStorage as loadLibrary, saveToStorage as saveLibrary }
 
+/* a shipped file never syncs (shipped.js) — its ops stay on this device; ids are `ship:…` */
+export const isShippedOp = (op) => op?.item?.shipped === true || String(op?.id ?? op?.item?.id ?? '').startsWith('ship:')
+
 function saveToStorage(state) {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  } catch { /* quota / private mode — silent */ }
+  } catch (e) {
+    /* quota / private mode — said out loud: a silent failure here is what left the Library empty (2026-10-24) */
+    console.warn('library: could not save to this browser —', e?.message || e)
+    return
+  }
+  /* every write says so, in-tab — `storage` fires cross-tab only, and Home reads with no provider */
+  window.dispatchEvent(new CustomEvent('kol:library'))
+}
+/* the library's write signal (saveToStorage dispatches `kol:library`) plus `storage` for other tabs */
+export const subscribeLibrary = (onChange) => {
+  window.addEventListener('kol:library', onChange)
+  window.addEventListener('storage', onChange)
+  return () => { window.removeEventListener('kol:library', onChange); window.removeEventListener('storage', onChange) }
+}
+/* the stored library as a string — a stable snapshot for `useSyncExternalStore` (it only changes on a write) */
+export const readLibraryRaw = () => {
+  try { return window.localStorage.getItem(STORAGE_KEY) } catch { return null }
 }
 
 const LibraryContext = createContext(null)
@@ -296,6 +319,8 @@ export function applyDuplicate(arr, id, newId) {
   const src = arr[at]
   const copy = { ...src, id: newId, name: `${src.name || 'Untitled'} copy`, savedAt: Date.now() }
   delete copy.updatedAt
+  /* a copy of a shipped file is the user's — it syncs and lists on Home */
+  delete copy.shipped
   return [...arr.slice(0, at + 1), copy, ...arr.slice(at + 1)]
 }
 
@@ -317,7 +342,7 @@ export function GeneratorLibraryProvider({ children }) {
   const [syncState, setSyncState] = useState('off')
   const push = useCallback((op) => {
     const b = backendRef.current
-    if (!b) return
+    if (!b || isShippedOp(op)) return
     b.push(op).catch((e) => {
       if (e instanceof UnauthorizedError) signOutLibrary()
       if (typeof console !== 'undefined') console.warn('library sync: push failed —', e?.message || e)
@@ -421,6 +446,8 @@ export function GeneratorLibraryProvider({ children }) {
    * place in RECENT. */
   const setThumb = useCallback((slot, id, thumb) => {
     if (!SLOT_KEYS.includes(slot) || !id || typeof thumb !== 'string') return
+    /* never a data URL for a shipped file — its cover is drawn on demand (FileCover) */
+    if ((libRef.current[slot] ?? []).find((x) => x.id === id)?.shipped) return
     const put = (arr) => arr.map((it) => (it.id === id ? { ...it, thumb } : it))
     setLibrary((prev) => ({ ...prev, [slot]: put(prev[slot] ?? []) }))
     const it = put(libRef.current[slot] ?? []).find((x) => x.id === id)

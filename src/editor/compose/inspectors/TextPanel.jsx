@@ -192,7 +192,7 @@ export function TextSurface({ layer }) {
         * the same icons read as one control twice. Affinity's paragraph row. */}
       <div className="flex items-center gap-2">
         <SegmentedToggle
-          tone="sunken" size={cs}
+          size={cs}
           ariaLabel="Text alignment"
           value={layer.textAlign ?? 'center'}
           options={[
@@ -203,7 +203,7 @@ export function TextSurface({ layer }) {
           onChange={(v) => setProp('textAlign', v)}
         />
         <SegmentedToggle
-          tone="sunken" size={cs}
+          size={cs}
           ariaLabel="Vertical alignment"
           value={layer.verticalAlign ?? 'middle'}
           options={[
@@ -217,14 +217,14 @@ export function TextSurface({ layer }) {
 
       <PopoverPanel popover={settings} panel={false} focus={false} className="z-50 bg-surface-secondary border border-oq-08 rounded shadow-lg p-3 flex flex-col gap-3" style={{ minWidth: 240 }}>
         <LabeledControl label="Case">
-          <SegmentedToggle tone="sunken" size={cs} className="w-full"
+          <SegmentedToggle size={cs} className="w-full"
             options={CASE_OPTIONS}
             value={layer.case ?? 'original'}
             onChange={(v) => setProp('case', v)}
           />
         </LabeledControl>
         <LabeledControl label="Italic">
-          <SegmentedToggle tone="sunken" size={cs} className="w-full"
+          <SegmentedToggle size={cs} className="w-full"
             variant="single"
             options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
             value={layer.italic ? 'on' : 'off'}
@@ -348,7 +348,7 @@ export function VariableBlock({ layer, setProp }) {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <span className="kol-eyebrow text-meta">Morph</span>
-        <SegmentedToggle tone="sunken" size={cs}
+        <SegmentedToggle size={cs}
           options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
           value={on ? 'on' : 'off'}
           onChange={(v) => setProp('axisOn', v === 'on')}
@@ -357,7 +357,7 @@ export function VariableBlock({ layer, setProp }) {
       {on && (
         <>
           <SettingsRow label="Mode" align="fill" labelWidth={RAIL_LABEL_W}>
-            <SegmentedToggle tone="sunken" size={cs} className="w-full"
+            <SegmentedToggle size={cs} className="w-full"
               options={[
                 { value: 'morph',  label: 'Morph' },
                 { value: 'fade',   label: 'Fade' },

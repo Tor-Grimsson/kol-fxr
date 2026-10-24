@@ -291,10 +291,11 @@ export const knobRange = (k, comp, i = 0) => ({
 // evaluated against the progressively patched comp) — the LoopFields
 // randomise idiom, comp-native. `rng` is a 0..1 source (pass a seeded
 // mulberry32 stream for reproducible rolls; defaults to Math.random).
-export function randomiseComp(comp, i = 0, rng = Math.random) {
+export function randomiseComp(comp, i = 0, rng = Math.random, tabs = null) {
   let next = comp
   for (const k of KINETIC_KNOBS) {
     if (k.noRandom || k.type === 'color') continue
+    if (tabs && !tabs.includes(k.tab)) continue
     if (k.when && !k.when(next, i)) continue
     if (k.type === 'range') {
       const r = knobRange(k, next, i)
@@ -307,6 +308,22 @@ export function randomiseComp(comp, i = 0, rng = Math.random) {
       const opts = knobOptions(k, next, i)
       if (opts.length) next = k.set(next, opts[Math.floor(rng() * opts.length)].value, i)
     }
+  }
+  return next
+}
+
+/* MODULATED KNOBS (plan 40 § 5.1, user 2026-10-24: *"M for modulate doesnt work in Composition?"*). A kinetic knob lives
+ * inside the comp, per element, where a BindDot cannot reach — so its binding lives FLAT on the layer as
+ * `kin:<element>:<knob key>` (morphBlend's bridge, generalised). resolveLayer turns a binding into a number each frame
+ * and this writes every such number into the comp the engine draws; the stored comp is never touched. */
+export const knobBridgeKey = (i, key) => `kin:${i}:${key}`
+export function applyKnobBridges(comp, layer) {
+  let next = comp
+  for (const key in layer) {
+    const m = /^kin:(\d+):(.+)$/.exec(key)
+    if (!m || typeof layer[key] !== 'number') continue
+    const k = KINETIC_KNOBS.find((x) => x.key === m[2])
+    if (k?.type === 'range') next = k.set(next, layer[key], Number(m[1]))
   }
   return next
 }

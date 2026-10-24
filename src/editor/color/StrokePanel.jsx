@@ -107,9 +107,9 @@ export function StrokeBody() {
       <SettingsRow label="Weight" align="fill" labelWidth={RAIL_LABEL_W}>
         <NumberField variant="filled" size={cs} suffix="pt" chars={4} value={weight} onCommit={onWeight} />
       </SettingsRow>
-      <SettingsRow label="Style" align="fill" labelWidth={RAIL_LABEL_W}><SegmentedToggle tone="sunken" size={cs} className="w-full" value={style} onChange={onStyle} options={STYLE_OPTIONS} /></SettingsRow>
-      <SettingsRow label="Cap" align="fill" labelWidth={RAIL_LABEL_W}><SegmentedToggle tone="sunken" size={cs} className="w-full" value={cap} onChange={(v) => setProp('strokeLinecap', v)} options={CAP_OPTIONS} /></SettingsRow>
-      <SettingsRow label="Join" align="fill" labelWidth={RAIL_LABEL_W}><SegmentedToggle tone="sunken" size={cs} className="w-full" value={join} onChange={(v) => setProp('strokeLinejoin', v)} options={JOIN_OPTIONS} /></SettingsRow>
+      <SettingsRow label="Style" align="fill" labelWidth={RAIL_LABEL_W}><SegmentedToggle size={cs} className="w-full" value={style} onChange={onStyle} options={STYLE_OPTIONS} /></SettingsRow>
+      <SettingsRow label="Cap" align="fill" labelWidth={RAIL_LABEL_W}><SegmentedToggle size={cs} className="w-full" value={cap} onChange={(v) => setProp('strokeLinecap', v)} options={CAP_OPTIONS} /></SettingsRow>
+      <SettingsRow label="Join" align="fill" labelWidth={RAIL_LABEL_W}><SegmentedToggle size={cs} className="w-full" value={join} onChange={(v) => setProp('strokeLinejoin', v)} options={JOIN_OPTIONS} /></SettingsRow>
     </div>
   )
 }

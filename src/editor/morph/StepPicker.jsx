@@ -20,7 +20,7 @@ import { useLabsLayer } from '../labs/useLabsLayer'
  * step and `onClose` alone clears `morph.picker`. The first step also puts its generator on the stage.
  * The browse-panel version it replaces is in `_tmp/2026-10-08-step-picker-browse/`.
  */
-function stepFromPreset(p) {
+export function stepFromPreset(p) {
   const group = groupOfPreset(p.id)
   const schema = loopById(p.loop)?.params ?? []
   return { loopId: p.loop, loopGroup: group, presetId: p.id, presetLabel: p.label, params: pickParams(presetParams(p), schema), source: { kind: 'preset', id: p.id, label: p.label } }
@@ -53,7 +53,7 @@ export default function StepPicker() {
       rows.push({ id: 'stage', label: layer.presetLabel || 'Current stage', group: 'Current stage', hint: groupById(layer.loopGroup)?.label })
       make.set('stage', () => stepFromLayer(layer))
     }
-    for (const it of loadLibrary().preset ?? []) {
+    for (const it of (loadLibrary().preset ?? []).filter((x) => !x.shipped)) {
       if (it.mode === 'morph' || !(only ? loopSnapshot(it, only) : (it.layers ?? []).some((x) => x?.type === 'loop'))) continue
       const id = `file:${it.id}`
       rows.push({ id, label: it.name || 'Untitled', group: 'My files' })

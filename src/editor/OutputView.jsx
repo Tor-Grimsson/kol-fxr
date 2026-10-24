@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { EditorProviders } from './Editor'
 import Canvas, { CANVAS_VIRTUAL_W } from './shell/Canvas'
 import LayerRenderer from './compose/LayerRenderer'
@@ -6,6 +6,7 @@ import { resolveColor, useComposeState } from './compose/state'
 import { transport } from './params/transport'
 import { useTheme } from '@kolkrabbi/kol-framework'
 import { OUTPUT_SNAPSHOT_KEY } from './compose/useComposeFile'
+import { findFile } from './library/shipped'
 
 /**
  * OutputView — the composition rendered full-screen with ZERO editor chrome,
@@ -31,7 +32,16 @@ function fillWithAlpha(fill, alpha) {
  * NO backdrop, so the caller owns that. Labs mode (`./labs/LabsView`) mounts
  * this one directly inside the EditorShell canvas cell — a viewport-fixed
  * wrapper there would cover the rails. */
-export function OutputCanvas({ fit = 'contain' }) {
+/* `overlay(toVirtual)` — mode chrome drawn in the stage's virtual px over the layers (labs' Edit on canvas, plan 40
+   § 4.2); `toVirtual(clientX, clientY)` → `{ vx, vy }`, CanvasArea's convention */
+export function OutputCanvas({ fit = 'contain', overlay }) {
+  const stageRef = useRef(null)
+  const toVirtual = useCallback((clientX, clientY) => {
+    const r = stageRef.current?.getBoundingClientRect()
+    if (!r?.width) return { vx: 0, vy: 0 }
+    const k = CANVAS_VIRTUAL_W / r.width
+    return { vx: (clientX - r.left) * k, vy: (clientY - r.top) * k }
+  }, [])
   const { aspect, canvasW, canvasH, layers, palette, canvasFill, canvasFillOpacity } = useComposeState()
   const fillHex = resolveColor(canvasFill, palette)
   const bgColor = fillHex
@@ -53,6 +63,7 @@ export function OutputCanvas({ fit = 'contain' }) {
           box. CanvasArea owns the editor's copy; this covers output/labs/
           randomizer, which never mount it. */}
       <div
+        ref={stageRef}
         className="relative w-full h-full"
         onPointerMove={(e) => {
           const r = e.currentTarget.getBoundingClientRect()
@@ -78,6 +89,7 @@ export function OutputCanvas({ fit = 'contain' }) {
         {layers.map((layer) => (
           <LayerRenderer key={layer.id} layer={layer} palette={palette} />
         ))}
+        {overlay?.(toVirtual)}
       </div>
     </Canvas>
   )
@@ -102,8 +114,12 @@ function OutputBody() {
   useTheme()
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(OUTPUT_SNAPSHOT_KEY)
-      const env = raw ? JSON.parse(raw) : null
+      /* `?open=<id>` renders that saved file — the cover generator's surface (scripts/generate-file-thumbs.mjs);
+         otherwise the one-shot snapshot the Open output button wrote */
+      const open = new URLSearchParams(window.location.search).get('open')
+      const file = open && findFile(open)
+      const raw = file ? null : localStorage.getItem(OUTPUT_SNAPSHOT_KEY)
+      const env = file ? { spec: file } : raw ? JSON.parse(raw) : null
       if (env?.spec) loadPreset(env.spec)
     } catch { /* no/invalid snapshot — render whatever the stack seeds */ }
     transport.play()

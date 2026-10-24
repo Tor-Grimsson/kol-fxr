@@ -88,7 +88,7 @@ function ChipsRow({ options, active, onPick, spread = false, pills = false }) {
      and the source strip (gone — the File tab has every source action). They are the DS strip now,
      the selected sibling lit; `spread` is the strip's own equal cells. */
   return (
-    <SegmentedToggle tone="sunken"
+    <SegmentedToggle
       value={active ?? null}
       onChange={onPick}
       options={options}
@@ -196,7 +196,7 @@ function EffectSurface({ layer, showMod }) {
       })),
     ]
     return (
-      <Surface title="Effects" fx tabStrip={<SegmentedToggle tone="sunken" value={tab} onChange={setTab} options={LABS_TABS} size={cs} className={stripClamp(cs)} />}>
+      <Surface title="Effects" fx tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size={cs} className={stripClamp(cs)} />}>
         {tab === 'effect' && (
           <>
             <LabeledControlSection label="Effect stack" divided>
@@ -229,7 +229,7 @@ function EffectSurface({ layer, showMod }) {
   /* Bare photo (uploaded, no effect picked yet): fit params, nothing else. */
   if (!stage) {
     return (
-      <Surface chips={chips} active={null} onPick={onChip} spread={isTrio} fx tabStrip={<SegmentedToggle tone="sunken" value={tab} onChange={setTab} options={LABS_TABS} size={cs} className={stripClamp(cs)} />}>
+      <Surface chips={chips} active={null} onPick={onChip} spread={isTrio} fx tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size={cs} className={stripClamp(cs)} />}>
         <AutoControls schema={PHOTO_SCHEMA} layer={layer} setProp={edit.setProp} palette={palette} renderAnimate={(p) => <BindDot layer={layer} param={p} setProp={edit.setProp} />} tab={tab === 'anim' ? 'anim' : 'style'} emptyHint="Pick an effect from the nav." />
       </Surface>
     )
@@ -258,7 +258,7 @@ function EffectSurface({ layer, showMod }) {
   const auto = { layer: paramsView, setProp: setStageProp, palette, renderAnimate, inline: true }
   return (
     <Surface chips={chips} active={stage.id} onPick={onChip} spread={isTrio} title={title} fx
-      tabStrip={<SegmentedToggle tone="sunken" value={tab} onChange={setTab} options={LABS_TABS} size={cs} className={stripClamp(cs)} />}>
+      tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={LABS_TABS} size={cs} className={stripClamp(cs)} />}>
       {tab === 'effect' && (
         <>
           {head.length > 0 && <AutoControls schema={head} {...auto} />}
@@ -457,7 +457,7 @@ function GenerativeSurface({ layer, showMod, tree }) {
   return (
     <Surface
       title={groupLabel} chips={chips} active={layer.presetId} onPick={onChip} pills
-      tabStrip={<SegmentedToggle tone="sunken" value={tab} onChange={setTab} options={cs === 'sm' ? GEN_TABS : GEN_TABS_TOUCH} size={cs} className={stripClamp(cs)} />}
+      tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={cs === 'sm' ? GEN_TABS : GEN_TABS_TOUCH} size={cs} className={stripClamp(cs)} />}
     >
       <LoopFields
         layer={layer} setProp={edit.setProp} patch={edit.patch} updateLayer={updateLayer}
@@ -495,7 +495,7 @@ function KineticSurface({ layer, showMod }) {
   )
 
   return (
-    <Surface title={title} tabStrip={<SegmentedToggle tone="sunken" value={tab} onChange={setTab} options={cs === 'sm' ? GEN_TABS : GEN_TABS_TOUCH} size={cs} className={stripClamp(cs)} />}>
+    <Surface title={title} tabStrip={<SegmentedToggle value={tab} onChange={setTab} options={cs === 'sm' ? GEN_TABS : GEN_TABS_TOUCH} size={cs} className={stripClamp(cs)} />}>
       <KineticPanel
         layer={layer} setProp={edit.setProp} updateLayer={updateLayer} palette={palette}
         /* noop, not undefined — MorphBlendKnob calls it unconditionally */

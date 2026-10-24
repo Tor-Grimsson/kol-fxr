@@ -3,7 +3,7 @@
 **Filed:** 2026-09-03 → **kol-ds-ui**
 **Entry:** `~/dev/projects/kol-ds-ui/lobby/inbox/editor-chrome-review.md`
 **Ledger:** `~/dev/projects/kol-ds-ui/lobby/INDEX.md` — **the truth about this ticket**
-**Last known:** 🟠 `addressed` — seven of thirteen shipped (component 0.205.0 · theme 0.144.0 · design-editor 0.12.0 + 0.13.0); the rest are the user's (synced 2026-10-07)
+**Last known:** ⚫ `retired` · 2026-10-24 — user ruling: fxr no longer consumes `@kolkrabbi/design-editor`
 
 ## Why it went there
 
@@ -43,5 +43,11 @@ used for active tabs and warnings. Palette at
 Nothing — no editor source in this repo since the move. One item, the transport
 bar, may be app-tier by the earlier ruling; flagged in the ticket rather than
 assigned.
+
+**Remainder here:** none.
+
+## ⚫ RETIRED — 2026-10-24
+
+User ruling: about `@kolkrabbi/design-editor`, which fxr stopped consuming when the editor came back into this repo on 2026-10-08. Nothing here or there to adopt.
 
 **Remainder here:** none.

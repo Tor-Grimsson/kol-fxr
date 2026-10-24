@@ -209,7 +209,7 @@ export function ModulationEditor({ layer, param, setProp }) {
       </LabeledControl>
       <div className="grid grid-cols-2 gap-2">
         <LabeledControl label="Invert">
-          <SegmentedToggle tone="sunken" size={cs} className="w-full"
+          <SegmentedToggle size={cs} className="w-full"
             options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
             value={tr?.invert ? 'on' : 'off'}
             onChange={(v) => patchTransform({ invert: v === 'on' })}

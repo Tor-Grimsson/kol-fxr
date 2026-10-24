@@ -234,12 +234,13 @@ function KineticLayer({ layer, layerStyle }) {
    * the morph without touching the stored comp. Absent prop = stored comp
    * untouched (identity passthrough). */
   const comp = useMemo(() => {
-    const c = layer.comp
+    /* every modulated knob (`kin:<element>:<key>`, kinetic/knobs.js applyKnobBridges) — the same bridge, per knob */
+    const c = pack('motion').applyKnobBridges(layer.comp, layer)
     const blend = layer.morphBlend
     if (typeof blend !== 'number' || !c?.instances?.some((x) => x?.morph?.on)) return c
     const b = Math.max(0, Math.min(1, blend))
     return { ...c, instances: c.instances.map((x) => (x.morph?.on ? { ...x, morph: { ...x.morph, blend: b } } : x)) }
-  }, [layer.comp, layer.morphBlend])
+  }, [layer])
 
   useEffect(() => {
     if (!hostRef.current) return undefined

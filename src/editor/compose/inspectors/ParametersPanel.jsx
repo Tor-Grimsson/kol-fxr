@@ -86,9 +86,9 @@ function LayerParameters({ layer }) {
   /* `inline` — the rail's one row, one label voice, one strip (spec R5, R6.5): the editor's
    * Parameters tab renders the same skin as the labs rail. */
   const shared = { layer, setProp, patch: edit.patch, updateLayer, palette, renderAnimate, tab, inline: true }
-  /* the mode strip on the rail's rung, sunken (spec R3.2, R6.3 — the user's 18: it was the DS
+  /* the mode strip on the rail's rung (spec R3.2, R6.3 — the user's 18: it was the DS
    * default md, 32px beside 26px fields) */
-  const tabStrip = <SegmentedToggle tone="sunken" size={cs} className="w-full" value={tab} onChange={setTab} options={SUBTAB_OPTIONS} />
+  const tabStrip = <SegmentedToggle size={cs} className="w-full" value={tab} onChange={setTab} options={SUBTAB_OPTIONS} />
 
   let body = null
   /* Loop places the strip itself — Category/Preset stay above it. */

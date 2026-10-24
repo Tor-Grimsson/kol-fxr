@@ -32,3 +32,9 @@
 
 ## Next Steps
 1. Plan 38: text frames + Character / Paragraph panels.
+
+## Amended — 2026-10-23
+
+- 0.295.0 walked on Home at 1280: date · size whole, cover download no longer opens the file, 0 console errors (`_tmp/2026-10-23-bump-0295-walk/`).
+- **Dev page restored** — `src/pages/DevCards.jsx` back from `_tmp/2026-10-22-dev-page-retired/` on the DS `app` card, `/dev` route in `App.jsx`, `dev={{ tabs }}` on `AppHub`. It is the user's and stays even empty — never retire it (memory `dev-tab-is-permanent`).
+- Icons audited: fxr has no local icon set (all 15 imports are `@kolkrabbi/kol-icons`), every name used exists there, no DS duplicate-drawing pair is used as two things. The duplicate-icons issue is mirror's local `components/icons/svg/`.

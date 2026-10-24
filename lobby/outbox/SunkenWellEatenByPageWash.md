@@ -3,7 +3,7 @@
 **Filed:** 2026-08-30 → **kol-ds-ui**
 **Entry:** `~/dev/projects/kol-ds-ui/lobby/inbox/SunkenWellEatenByPageWash.md`
 **Ledger:** `~/dev/projects/kol-ds-ui/lobby/INDEX.md` — **the truth about this ticket**
-**Last known:** 🟠 `reopened` 2026-08-30 — returned as kol-theme 0.108.0, then **0.109.0 reverted it** as the wrong layer. The light-mode collision is live again; the dark-theme half stands.
+**Last known:** ⚫ `retired` · 2026-10-24 — user ruling: outdated, the `/settings` page it measured is gone
 
 ## Why it went there
 
@@ -136,3 +136,9 @@ line changing.
 
 All six kol-* deps are now **pinned EXACT**, which is the rule AGENT-CONTEXT
 already states for 0.x packages and which only `kol-media-client` was following.
+
+## ⚫ RETIRED — 2026-10-24
+
+User ruling: outdated. Measured on kol-theme 0.109.0 against the `/settings` page, which no longer exists — settings is a rail now. If sunken pills vanish on the rail in light, that is a new ticket.
+
+**Remainder here:** none.

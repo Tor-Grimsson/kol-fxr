@@ -3,7 +3,7 @@
 **Filed:** 2026-10-07 → **kol-ds-ui**
 **Entry:** `~/dev/projects/kol-ds-ui/lobby/inbox/library-reader-for-a-hub-home.md`
 **Ledger:** `~/dev/projects/kol-ds-ui/lobby/INDEX.md` — **the truth about this ticket**
-**Last known:** 🟠 `addressed` 2026-10-07 — **design-editor 0.22.0** exports `loadLibrary()`; closes on fxr adopting it (synced 2026-10-07)
+**Last known:** ⚫ `retired` · 2026-10-24 — user ruling: fxr no longer consumes `@kolkrabbi/design-editor`
 
 ## Why it went there
 
@@ -49,3 +49,9 @@ Verified in a browser: File → Save… in `/editor`, ⌥1, SAVED lists it in th
 with its own `.hidden` (same `@layer utilities`, later in source) — the strip vanished after a visit to
 `/editor`; the stylesheet is imported first in `index.css` now. Worth a line in the DS's consumer
 notes: any host that lazy-loads `design-editor/style.css` beside its own Tailwind has this.
+
+## ⚫ RETIRED — 2026-10-24
+
+User ruling: about `@kolkrabbi/design-editor`, which fxr stopped consuming when the editor came back into this repo on 2026-10-08. Nothing here or there to adopt.
+
+**Remainder here:** none.

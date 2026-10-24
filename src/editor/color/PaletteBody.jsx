@@ -58,7 +58,7 @@ export function PaletteBody() {
   return (
     <div className="p-4 flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <Dropdown className="flex-1 min-w-0" size={cs} tone="sunken" aria-label="Relationship"
+        <Dropdown className="flex-1 min-w-0" size={cs} aria-label="Relationship"
           options={RELATIONS.map((r) => ({ value: r.id, label: r.label }))} value={relation} onChange={setRelation} />
         <Button tone="grey" size={cs} onClick={roll}>Roll</Button>
       </div>
@@ -77,7 +77,7 @@ export function PaletteBody() {
         <span className="kol-helper-10 text-meta inline-flex items-center gap-1"><Icon name="info" size={12} />Ink on background is under 4.5:1</span>
       )}
 
-      <Dropdown size={cs} tone="sunken" aria-label="Load palette" value=""
+      <Dropdown size={cs} aria-label="Load palette" value=""
         options={[{ value: '', label: 'Load palette…' }, ...saved.map((p) => ({ value: p.id, label: p.name }))]} onChange={(v) => v && load(v)} />
 
       <Button tone="grey" size={cs} onClick={() => addItem('palette', { name: palette.name === 'Rolled' ? `${RELATIONS.find((x) => x.id === palette.relation)?.label ?? 'Palette'}` : palette.name, colors: palette.colors })}>Save</Button>

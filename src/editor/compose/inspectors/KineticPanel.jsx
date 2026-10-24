@@ -10,7 +10,7 @@ import { isBinding } from '../../params/resolve'
 import { mulberry32 } from '../../lib/rng'
 import { useRollSeed, SeedField } from '../../params/rolls'
 import { KINETIC_PRESETS, KINETIC_TREE, presetComp, mergeInstance } from '../../../kinetic/presets'
-import { KINETIC_KNOBS, knobOptions, knobRange, randomiseComp } from '../../../kinetic/knobs'
+import { KINETIC_KNOBS, knobOptions, knobRange, randomiseComp, knobBridgeKey } from '../../../kinetic/knobs'
 import { OPENTYPE_FEATURES } from '../../../kinetic/features'
 import { DEFAULT_POINTS, buildPath } from '../../../kinetic/paths'
 import { THEME_OPTIONS, DEFAULT_THEME, resolveTheme } from '../../../loops/lib/themes'
@@ -189,9 +189,10 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
    * the seed persists on the layer (`_rollSeed`) and a manually-typed seed
    * reproduces the roll once. Discrete history entry, like a preset pick. */
   const seed = useRollSeed(layer)
-  const onRandomise = () => {
+  /* `tabs` narrows a roll to one scope: 'style' is the Type cell, 'anim' the Motion cell (the knob catalog's tabs) */
+  const onRandomise = (tabs = null) => {
     const s = seed.take()
-    updateLayer(layer.id, { comp: randomiseComp(comp, idx, mulberry32(s >>> 0)), _rollSeed: s })
+    updateLayer(layer.id, { comp: randomiseComp(comp, idx, mulberry32(s >>> 0), tabs), _rollSeed: s })
   }
   const onRandomiseAll = () => {
     const s = seed.take()
@@ -200,6 +201,18 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
     insts.forEach((_, i) => { next = randomiseComp(next, i, rng) })
     updateLayer(layer.id, { comp: next, _rollSeed: s })
   }
+  /* THE LOOP RAIL'S ROLLS FOR TYPE (plan 40 § 4.3, user 2026-10-24: *"kinetic and type dont have any ranomise
+     options"*): another preset of this category · a theme + invert · back to the preset */
+  const onRollPreset = () => {
+    const here = KINETIC_PRESETS.find((p) => p.id === layer.presetId)
+    const pool = KINETIC_PRESETS.filter((p) => p.id !== here?.id && (!here || p.sub === here.sub))
+    if (pool.length) applyPreset(pool[Math.floor(mulberry32(seed.take() >>> 0)() * pool.length)])
+  }
+  const onRollColor = () => {
+    const rng = mulberry32(seed.take() >>> 0)
+    applyTheme(THEME_OPTIONS[Math.floor(rng() * THEME_OPTIONS.length)].value, rng() < 0.5)
+  }
+  const onReset = () => applyPreset(KINETIC_PRESETS.find((p) => p.id === layer.presetId) ?? KINETIC_PRESETS[0])
 
   /* Theme / invert quick-set (ParametersPanel's loop-theme semantics, applied
    * comp-natively): resolveTheme → frame bg + every element's fill. Discrete. */
@@ -227,6 +240,9 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
 
       {picker && <KineticPicker layer={layer} onPreset={applyPreset} />}
 
+      {/* ELEMENTS ON GENERATE ONLY (plan 40 § 4.1, user 2026-10-24: *"Elements is in both GENERATE and STYLE and
+          ANIMATE? why?"*) — Style and Animation act on the element picked here, and say which */}
+      {(tab === 'generate' || tab === 'labs-effect') ? (
       <div className="flex flex-col gap-1">
         <span className="kol-eyebrow text-fg-80">Elements</span>
         <ElementList
@@ -240,6 +256,9 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
           Edit on canvas
         </Button></Tooltip>
       </div>
+      ) : insts.length > 1 && (
+        <span className="kol-helper-12 text-meta truncate">Element {idx + 1} · {selInst?.text || '—'}</span>
+      )}
 
       {(tab === 'generate' || tab === 'labs-effect') && (
         <>
@@ -261,7 +280,7 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
               />
             </SettingsRow>
             <SettingsRow label="Invert" align="fill" labelWidth={RAIL_LABEL_W}>
-              <SegmentedToggle tone="sunken" size={cs} className="w-full"
+              <SegmentedToggle size={cs} className="w-full"
                 options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
                 value={layer.themeInvert ? 'on' : 'off'}
                 onChange={(v) => applyTheme(layer.themeId ?? DEFAULT_THEME, v === 'on')}
@@ -275,13 +294,16 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
             onChange={(v) => onAllFill(resolveColor(v, palette) ?? v)}
             palette={palette}
           />
+          <Button tone="primary" size={cs} className="w-full" onClick={onRollPreset}>Randomize preset</Button>
+          <div className="flex gap-2">
+            <Button tone="primary" size={cs} className="flex-1 min-w-0" onClick={() => onRandomise()}>Randomize all</Button>
+            <Tooltip label="Reset to defaults"><Button tone="primary" size={cs} iconOnly="refresh" aria-label="Reset to defaults" onClick={onReset} className="shrink-0" /></Tooltip>
+          </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button tone="primary" size={cs} onClick={onRandomise}>
-              Randomize
-            </Button>
-            <Button tone="primary" size={cs} onClick={onRandomiseAll}>
-              All elements
-            </Button>
+            <Button tone="primary" size={cs} onClick={onRollColor}>Color</Button>
+            <Button tone="primary" size={cs} onClick={() => onRandomise(['style'])}>Type</Button>
+            <Button tone="primary" size={cs} onClick={() => onRandomise(['anim'])}>Motion</Button>
+            <Button tone="primary" size={cs} onClick={onRandomiseAll}>All elements</Button>
           </div>
           <SeedField seed={seed} />
         </>
@@ -318,7 +340,9 @@ export default function KineticPanel({ layer, setProp, updateLayer, palette, ren
           {k.section && k.section !== knobs[i - 1]?.section && (
             <span className="kol-eyebrow text-fg-80">{k.section}</span>
           )}
-          <KineticKnob knob={k} comp={viewFor(k)} idx={idx} palette={palette} onWrite={writeKnob} />
+          <KineticKnob knob={k} comp={viewFor(k)} idx={idx} palette={palette} onWrite={writeKnob}
+            /* a motion-layer view (stack entry 2+) is a swap-in over the comp — no flat key can address it */
+            bridge={MOTION_KEYS.has(k.key) && mIdx > 0 ? null : { layer, setProp, renderAnimate, key: knobBridgeKey(idx, k.key) }} />
           {/* custom-arrangement point editor — the labs CustomPathEditor as a
               rail mini editor, anchored under the arrangement toggles. */}
           {k.key === 'showPath' && selInst?.path?.type === 'custom' && (
@@ -403,7 +427,7 @@ function ElementList({ insts, idx, onSelect, onWrite, marked, onMark, onGroup, o
               onClick={() => onSelect(i)}
               className={`flex items-center gap-2 pl-2 pr-1 py-1 rounded cursor-pointer kol-helper-12 ${
                 i === idx
-                  ? 'bg-[color-mix(in_srgb,var(--kol-accent-primary)_26%,transparent)] text-emphasis'
+                  ? 'bg-oq-08 text-emphasis'
                   : 'text-body hover:bg-oq-04 hover:text-emphasis'
               }`}
             >
@@ -462,7 +486,7 @@ function ElementList({ insts, idx, onSelect, onWrite, marked, onMark, onGroup, o
  * literal hex at write time — the SVG engine paints raw fill strings (same
  * trade-off as "Edit in Pattern mode"). min/max resolve via knobRange (the
  * VF axis knobs track the instance font's real fvar range). */
-function KineticKnob({ knob: k, comp, idx, palette, onWrite }) {
+function KineticKnob({ knob: k, comp, idx, palette, onWrite, bridge }) {
   const cs = useControlSize()
   const value = k.get(comp, idx)
   const write = (v) => onWrite(k, v)
@@ -477,9 +501,22 @@ function KineticKnob({ knob: k, comp, idx, palette, onWrite }) {
     )
   }
   const { min, max } = knobRange(k, comp, idx)
+  /* the modulate dot (plan 40 § 5.1): bound → graph-driven, read-only (the AutoControls convention); a number left by
+     an unbind is the knob's value until the next edit moves it back into the comp */
+  const raw = bridge && bridge.layer[bridge.key]
+  const bound = isBinding(raw)
+  const shown = typeof raw === 'number' ? raw : value
+  const slide = typeof raw === 'number' ? (v) => bridge.setProp(bridge.key, v) : write
   return (
     <SettingsRow label={k.label} align="fill" labelWidth={RAIL_LABEL_W}>
-      <Slider min={min} max={max} step={k.step ?? 1} value={typeof value === 'number' ? value : min} onChange={write} displayWidth={String(max).length} className="flex-1" />
+      <div className="flex flex-1 items-center gap-2">
+        <div className="flex-1 min-w-0">
+          {bound
+            ? <div className="kol-helper-12 text-meta italic px-1">animated</div>
+            : <Slider min={min} max={max} step={k.step ?? 1} value={typeof shown === 'number' ? shown : min} onChange={slide} displayWidth={String(max).length} className="flex-1" />}
+        </div>
+        {bridge?.renderAnimate?.({ key: bridge.key, label: k.label, type: 'range', min, max, step: k.step ?? 1, default: typeof value === 'number' ? value : min })}
+      </div>
     </SettingsRow>
   )
 }
@@ -498,7 +535,7 @@ function MotionStack({ motions, mIdx, onSelect, onAdd, onRemove }) {
       <span className="kol-eyebrow text-fg-80">Motion layers</span>
       <div className="flex items-center gap-1">
         <div className="flex-1 min-w-0">
-          <SegmentedToggle tone="sunken" size={cs} value={String(mIdx)} onChange={(v) => onSelect(Number(v))} options={options} />
+          <SegmentedToggle size={cs} value={String(mIdx)} onChange={(v) => onSelect(Number(v))} options={options} />
         </div>
         <Tooltip label="Add motion layer"><Button
           tone="ghost" size={cs} quiet iconOnly="plus" iconSize={12}

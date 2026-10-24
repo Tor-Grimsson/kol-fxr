@@ -58,7 +58,6 @@ export const SECTION_ICONS = {
   generative: 'layers',
   vector: 'pen-nib',
   composition: 'type',
-  modulation: 'frequency',
   mode: 'mode-toggle-01',
 }
 
@@ -265,15 +264,5 @@ export function buildLabsCatalog({ layer, setOnly, addFilter, patchFilter, carri
       icon: GROUP_ICONS[`misc:${entry.label}`] ?? 'square',
       pages: entry.groups.flatMap((gid) => leafRows(gid, 'misc')),
     })),
-
-    /* Modulation has no nav target of its own: every param's bind dot is the
-       entry point and the shaping UI is the rail's Motion tab. One hop. */
-    { id: 'sec:modulation', label: 'Modulation' },
-    {
-      id: 'mod:animation',
-      label: 'Animation',
-      icon: 'frequency',
-      onSelect: () => window.dispatchEvent(new CustomEvent('kol:open-params')),
-    },
   ]
 }

@@ -66,7 +66,7 @@ function Row({ inline, label, align = 'fill', children }) {
 const ONOFF = [{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]
 function OnOff({ inline, cs, on, onChange }) {
   return inline
-    ? <SegmentedToggle tone="sunken" size={cs} className={`w-full ${stripClamp(cs) ?? ''}`} options={ONOFF} value={on ? 'on' : 'off'} onChange={(v) => onChange(v === 'on')} />
+    ? <SegmentedToggle size={cs} className={`w-full ${stripClamp(cs) ?? ''}`} options={ONOFF} value={on ? 'on' : 'off'} onChange={(v) => onChange(v === 'on')} />
     : <ViewToggle size={cs} options={ONOFF} viewMode={on ? 'on' : 'off'} onViewChange={(v) => onChange(v === 'on')} />
 }
 
@@ -174,7 +174,9 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
   const cameraKeys = loop?.orbit ? { yaw: 1, dist: 1 } : resolveCameraKeys(loop)
   const cameraHint = cameraKeys ? (
     <p className={`kol-mono-10 text-meta${inline ? '' : ' col-span-2'}`}>
-      Press C (Orbit tool) to move the camera — {loop?.orbit ? 'drag to orbit, scroll to zoom' : cameraKeys.yaw ? 'drag to rotate, scroll to zoom' : 'scroll to zoom'}.
+      {/* SAYS ONLY WHAT C DOES HERE (plan 40 § 7.1, user 2026-10-24: *"press C does not orbit camera, bug?"*) — a 2D
+          loop has no camera to orbit; C arms the tool and the wheel zooms (and a field loop's drag rotates) */}
+      {loop?.orbit ? 'Press C, then drag to orbit the camera and scroll to zoom.' : cameraKeys.yaw ? 'Press C, then drag to rotate and scroll to zoom.' : 'Press C, then scroll to zoom.'}
     </p>
   ) : null
 
@@ -291,7 +293,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
             {/* RESET, VISIBLE (the user, 2026-10-09: "we need something for reset") — it was only ⌥ on
                 Randomize all. The host's reset when it has one (labs: back to the preset, same as R),
                 else the schema's defaults. */}
-            <Tooltip label="Reset to defaults" shortcut="R"><Button tone="primary" size={cs} iconOnly="rotate-left" aria-label="Reset to defaults" onClick={onReset ?? (() => resetScope(allScopeParams(schema, layer)))} className="shrink-0" /></Tooltip>
+            <Tooltip label="Reset to defaults" shortcut="R"><Button tone="primary" size={cs} iconOnly="refresh" aria-label="Reset to defaults" onClick={onReset ?? (() => resetScope(allScopeParams(schema, layer)))} className="shrink-0" /></Tooltip>
           </div>
           <RollScopesDialog open={scopesOpen} onClose={() => setScopesOpen(false)} schema={schema} layer={layer} size={cs} />
           {scopes.length > 0 && (
@@ -395,7 +397,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
       {/* Para-Type misc layer: flatten-to-vector (Generate) + XY explore
           pad (Style) — self-gates on loopId + tab. labs-effect maps to Style
           (the XY pad; flatten is a compositor action labs doesn't need). */}
-      <ParatypeTools layer={layer} patch={patch} tab={tab === 'labs-effect' ? 'style' : tab} />
+      <ParatypeTools layer={layer} patch={patch} renderAnimate={renderAnimate} tab={tab === 'labs-effect' ? 'style' : tab} />
     </>
   )
 }

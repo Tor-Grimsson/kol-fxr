@@ -16,3 +16,9 @@ Swap the local `Section` in `src/pages/DevCards.jsx` for the DS component and re
 Shipped as a level, not a new component (user ruling: the header levels belong on `SectionText`, the section text block; `PageHeader` is now its deprecated alias, same props and render). `<SectionText level="content" eyebrow="Home" headline="Grid — catalog" body="…" />`: `kol-eyebrow text-fg-48` · h3 `kol-sans-heading-04 text-fg-96` · p `kol-sans-body-01 text-fg-64` at 64ch, gap 8, 16px to the content below. The section's body is a sibling after it — no `children` slot. Names map from the spec: `title` → `headline`, `description` → `body`.
 
 **Remainder here:** bump kol-component@0.285.0; swap the local `Section` header for `SectionText level="content"`, retire `Section` to `_tmp/`.
+
+## ✅ ADOPTED — 2026-10-22
+
+`Section` in `src/pages/DevCards.jsx` is a thin wrapper over `SectionText level="content"` (the section body as its sibling) — the DS draws the header.
+
+**Remainder here:** none.

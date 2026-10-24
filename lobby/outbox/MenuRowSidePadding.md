@@ -16,3 +16,9 @@ Nothing — a bump.
 kol-component 0.288.0: `MenuDropdownItem` rows at sm · md · lg are 8px left and right (`px-2`), so every MenuItem dropdown and ContextMenu.
 
 **Remainder here:** bump kol-component@0.288.0.
+
+## ✅ ADOPTED — 2026-10-22
+
+kol-component 0.290.0 pinned (0.298.0 today).
+
+**Remainder here:** none.

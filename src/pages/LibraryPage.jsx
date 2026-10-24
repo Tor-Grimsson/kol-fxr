@@ -1,8 +1,11 @@
-import { useState } from 'react'
-import { Button, EmptyState, usePlaceholders } from '@kolkrabbi/kol-component'
-import { bytesOf, downloadFile } from '../components/FileCard'
-import { CatalogPage } from '@kolkrabbi/kol-shell'
-import { openNewFile } from '../components/NewFileDialog'
+import { useMemo, useState, useSyncExternalStore } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { EmptyState } from '@kolkrabbi/kol-component'
+import { CHROMES, bytesOf, downloadFile } from '../components/FileCard'
+import FileCover, { setUploadedCover } from '../editor/library/FileCover'
+import { saveSpot, readSpot, writeSpot, useRestoreScroll } from '../editor/library/returnSpot'
+import { listShipped, readShippedRaw, subscribeShipped, renameShipped, removeShipped } from '../editor/library/shipped'
+import { CatalogPage, StudioDetail } from '@kolkrabbi/kol-shell'
 import {
   GeneratorLibraryProvider,
   useGeneratorLibrary,
@@ -10,22 +13,18 @@ import {
 } from '../index.jsx'
 
 /**
- * LibraryPage — `/library`, on kol-shell's `CatalogPage` (ShellHomeSystem,
- * shipped 2026-08-27 from this repo's own hand-rolled version): one pooled list
- * of the four saved slots, each slot a FILTER GROUP with its own tag chips,
- * RECENT / SAVED in the header, LIST / GRID below.
+ * LibraryPage — `/library`, WHAT FXR SHIPS, by chrome (plan home-library-detail-one-card § 2, user 2026-10-24:
+ * *"each category in labs IS A CATEGORY … THESE ARE ALL SAVED PRESETS IN LABS"* · *"EVERY CARD HAS THE SAME FIELDS
+ * AND ICONS"*). Home is the user's saves; the Library is the shipped files (`editor/library/shipped.js`), the view
+ * strip the chromes — EDITOR · LABS · RANDOMISER · MORPH — landing on LABS, filtered by Group and Category.
  *
- * It surfaces the store that already existed: `LibraryProvider`'s four
- * localStorage slots (palette · pattern · type · preset). See
- * `docs/documentation/11-persistence/03-saved-library.md`. NOT the CDN media
- * library (`editor/library/mediaLibrary.js`).
+ * EDITOR also lists the user's Type · Palettes · Patterns saves (the provider's slots, plan 39) under a Kind group:
+ * they are parts of editor files, not a view of their own, and do not open on a click.
  *
- * THE PROVIDER IS MOUNTED HERE. `Editor.jsx` mounts its own inside the compose
- * stack; this page is outside every chrome, so it wraps itself.
+ * THE PROVIDER IS MOUNTED HERE and is the page's one reader and writer — this page is outside every chrome, so it
+ * wraps itself. Its verbs re-render it; a write around it (libraryOps) would be overwritten by its next save.
  *
- * Your files (the `preset` slot) list on Home, not here (plan 39). Palettes, patterns and type have no
- * chrome of their own and do not open on a click. Rename · duplicate · delete
- * are store work, on the cog, the trash and right-click (the approved file card, 2026-10-22).
+ * `/library/<chrome>/<id>` is a file's own page, on kol-shell's `StudioDetail`; Open lands in the chrome.
  */
 
 const SLOT_LABELS = {
@@ -35,9 +34,8 @@ const SLOT_LABELS = {
   type: 'Type',
 }
 
-/* Slot order is presentation, not the store's — Type first (user, 2026-08-27). The `preset` slot is your
-   FILES and lists on Home, not here (plan 39, user 2026-10-23: *"Library is saved presets … you can set
-   different chrome saves in library that you wouldnt in USER HOME"*) — Library is the chrome saves. */
+/* Slot order is presentation, not the store's — Type first (user, 2026-08-27). The `preset` slot is files: the
+   user's on Home, the shipped ones in the views below. */
 const SLOT_ORDER = ['type', 'palette', 'pattern']
 
 /* ponytail: the one check. SLOT_ORDER is hand-typed against the provider's
@@ -48,34 +46,12 @@ if (import.meta.env.DEV) {
   if (missing.length) console.warn('LibraryPage: slots with no tab —', missing)
 }
 
-
-/* Display-only stand-ins for an empty slot (user, 2026-08-27) — never written
-   to the store, no Delete, so the page has a body before anything is saved. */
-/* placeholder TAG counts per group — 3 · 8 · 16 · 8 in SLOT_ORDER (user, 2026-08-27);
-   one item per tag, so every chip has something behind it */
-const PLACEHOLDER_TAGS = { type: 3, preset: 8, palette: 16, pattern: 8 }
-const placeholdersFor = (slot) => Array.from({ length: PLACEHOLDER_TAGS[slot] ?? 6 }, (_, i) => ({
-  id: `${slot}-placeholder-${i + 1}`,
-  name: `Placeholder ${i + 1}`,
-  slot,
-  placeholder: true,
-  tag: `Placeholder ${i + 1}`,
-}))
-
-/* EACH CATEGORY IS A FILTER GROUP with its own tag chips (user, 2026-08-27):
-   the group key is the slot, the chip value is the item's own field. */
-const tagOf = (slot, item) => {
-  if (item.placeholder) return item.tag
-  if (slot === 'preset') return item.aspect ?? '1:1'
-  if (slot === 'palette') return `${item.colors?.length ?? 0} colors`
-  if (slot === 'pattern') return item.shapeId ?? 'Pattern'
-  return item.family ?? 'Type'
-}
-
 /* A CHROME SAVE'S COVER (plan 39): a palette is its colours, a type save its own text in its face; a pattern keeps the
-   placeholder until it carries a thumb */
+   placeholder until it carries a thumb. A shipped file is drawn from its engine (FileCover). */
 const hexOf = (c) => (typeof c === 'string' ? c : c?.hex)
 const coverOf = (item) => {
+  /* a shipped file's cover is drawn on demand from the engine (FileCover) — never stored */
+  if (item.shipped) return <FileCover file={item} />
   if (item.thumb) return item.thumb
   if (item.slot === 'palette' && item.colors?.length) {
     return <div className="size-full flex">{item.colors.map(hexOf).filter(Boolean).map((c, i) => <div key={i} className="flex-1" style={{ background: c }} />)}</div>
@@ -86,75 +62,131 @@ const coverOf = (item) => {
   return undefined
 }
 
-const VIEWS = [
-  { value: 'recent', label: 'RECENT' },
-  { value: 'saved', label: 'SAVED' },
+const VIEWS = ['editor', 'labs', 'randomiser', 'morph'].map((v) => ({ value: v, label: CHROMES[v].label.toUpperCase() }))
+
+/* the cog's rail — every card the same rows */
+const detailsOf = (item) => [
+  ...(item.group ? [{ label: 'Group', value: item.group }] : []),
+  ...(item.sub ? [{ label: 'Category', value: item.sub }] : []),
+  ...(item.slot ? [{ label: 'Kind', value: item.kind }] : [{ label: 'Layers', value: item.layers?.length ?? 0 }, { label: 'Aspect', value: item.aspect ?? '1:1' }]),
+  ...(item.morph?.steps ? [{ label: 'Steps', value: item.morph.steps.length }] : []),
 ]
 
+/* the filter groups a view has — Category only where its files carry one */
+const filterGroupsOf = (items, view) => {
+  const values = (key) => [...new Set(items.map((i) => i[key]).filter(Boolean))]
+  return [
+    ...(view === 'editor' ? [{ label: 'Kind', key: 'kind', stack: true, values: values('kind') }] : []),
+    { label: 'Group', key: 'group', stack: view !== 'editor', values: values('group') },
+    ...(values('sub').length ? [{ label: 'Category', key: 'sub', values: values('sub') }] : []),
+  ]
+}
+
+function FilePage({ item, chrome, onDuplicate }) {
+  const navigate = useNavigate()
+  if (!item) return <StudioDetail notFound={{ title: 'File not found', subtitle: chrome }} />
+  const label = CHROMES[chrome]?.label ?? 'Editor'
+  const where = [item.group, item.sub].filter(Boolean).join(' › ')
+  return (
+    <StudioDetail
+      back={{ onClick: () => ((window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate('/library')) }}
+      title={item.name}
+      subtitle={where ? `${label} — ${where}` : label}
+      description={item.mode === 'morph'
+        ? `A ${label} file: ${item.morph?.steps?.length ?? 0} steps of one generator, tweened.`
+        : `A ${label} file of ${item.layers?.length ?? 0} ${item.layers?.length === 1 ? 'layer' : 'layers'}, shipped with FXR.`}
+      sections={[
+        { label: 'Specifications', rows: detailsOf(item).map((d) => ({ label: d.label, value: String(d.value) })) },
+        ...(item.morph?.steps ? [{ label: 'Steps', rows: item.morph.steps.map((s, i) => ({ label: `${i + 1}`, value: s.presetLabel })) }] : []),
+        ...(item.tags?.length ? [{ label: 'Tags', text: item.tags.join(', ') }] : []),
+      ]}
+      preview={<FileCover file={item} />}
+      actions={[
+        { label: 'Open', onClick: () => navigate(`/${chrome}?open=${encodeURIComponent(item.id)}`) },
+        { label: 'Duplicate', onClick: onDuplicate },
+      ]}
+    />
+  )
+}
 
 function LibraryBody() {
-  const { library, removeItem, renameItem, duplicateItem } = useGeneratorLibrary()
-  /* the provider's verbs for one item — the DS `app` card asks before it acts */
-  const verbsFor = (item) => ({
-    rename: (name) => renameItem(item.slot, item.id, name),
-    duplicate: () => duplicateItem(item.slot, item.id),
-    remove: () => removeItem(item.slot, item.id),
-  })
-  const [view, setView] = useState('recent')
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const { library, removeItem, renameItem, duplicateItem, addItem, setThumb } = useGeneratorLibrary()
+  /* Back lands on the card (plan 40 § 2.2): the view is remembered for the tab, the scroll restored on a Back */
+  const [view, setViewState] = useState(() => readSpot('library').view ?? 'labs')
+  const setView = (v) => { writeSpot('library', { view: v }); setViewState(v) }
+  useRestoreScroll('library', !/^\/library\/[^/]+\/[^/]+$/.test(pathname))
+  /* ponytail: tags and notes are this session's until the library carries them (it has no write for either) */
+  const [extra, setExtra] = useState({})
+  const edit = (key, patch) => setExtra((x) => ({ ...x, [key]: { ...x[key], ...patch } }))
 
-  /* placeholders only while the library holds NOTHING real (plan 08) — once anything is saved, an
-     empty slot is just empty, not 16 fake cards burying the real ones */
-  const anyReal = SLOT_ORDER.some((slot) => (library[slot] ?? []).length > 0)
-  /* …and only while the DS's placeholder switch is ON (`I`-era `toggle-hints`, now ⇧I): off — the
-     default — an empty library is an empty state, not seventy stand-ins a signed-out user reads as
-     real (audit A6, 2026-10-09). The stand-ins keep the 2026-08-27 shape for whoever switches them on. */
-  const { shown: placeholdersOn } = usePlaceholders()
-  const pooled = SLOT_ORDER.flatMap((slot) => {
-    const saved = library[slot] ?? []
-    return (saved.length ? saved.map((item) => ({ ...item, slot })) : (anyReal || !placeholdersOn) ? [] : placeholdersFor(slot))
-      .map((item) => ({ ...item, [slot]: tagOf(slot, item) }))
-  })
-  /* RECENT = newest first; SAVED = store order */
-  const items = view === 'recent' ? [...pooled].sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0)) : pooled
-  /* THE PRINTS SHAPE (user, 2026-08-27, kol-website /prints): the FIRST group
-     hugs its chips — narrow — and every group after it flows across the rest
-     of the row. Pinned explicitly so chip counts never change the shape. */
-  const filterGroups = SLOT_ORDER.map((slot, i) => ({
-    label: SLOT_LABELS[slot],
-    key: slot,
-    stack: i === 0,
-    values: [...new Set(pooled.filter((i) => i.slot === slot).map((i) => i[slot]))],
-  }))
+  /* the shipped files are built in memory (library/shipped.js); only this device's removals and renames are stored */
+  const shippedRaw = useSyncExternalStore(subscribeShipped, readShippedRaw, () => null)
+  const shipped = useMemo(() => listShipped(), [shippedRaw])
+  /* Duplicate makes it the user's: a real save in the library, listed on Home */
+  const copyShipped = (item) => {
+    const { id: _id, shipped: _s, savedAt: _a, updatedAt: _u, ...spec } = item
+    return addItem('preset', { ...spec, name: `${item.name} copy` })
+  }
+  const verbsOf = (item, slot) => (item.shipped
+    ? { rename: (name) => renameShipped(item.id, name), duplicate: () => copyShipped(item), remove: () => removeShipped(item.id) }
+    : { rename: (name) => renameItem(slot, item.id, name), duplicate: () => duplicateItem(slot, item.id), remove: () => removeItem(slot, item.id) })
+
+  /* `/library/<chrome>/<id>` — a file's own page */
+  const m = /^\/library\/(editor|labs|randomiser|morph)\/([^/]+)$/.exec(pathname)
+  if (m) {
+    const id = decodeURIComponent(m[2])
+    const item = shipped.find((p) => p.id === id)
+    return <FilePage item={item && { ...item, ...extra[id] }} chrome={m[1]} onDuplicate={() => item && copyShipped(item)} />
+  }
+
+  const slotSaves = view === 'editor'
+    ? SLOT_ORDER.flatMap((slot) => (library[slot] ?? []).map((item) => ({ ...item, slot, kind: SLOT_LABELS[slot], mode: 'editor' })))
+    : []
+  const items = [
+    ...shipped.filter((p) => p.mode === view).map((p) => ({ ...p, slot: null, kind: view === 'editor' ? 'Files' : null })),
+    ...slotSaves,
+  ].map((it) => ({ ...it, ...extra[`${it.slot ?? 'preset'}:${it.id}`] }))
 
   return (
     <>
     <CatalogPage
-      header={{ title: 'Library', subtitle: 'Everything saved on this device.', size: 'sm', voice: 'mono' }}
+      /* a chip from one view must not survive into the next and filter everything out */
+      key={view}
+      header={{ title: 'Library', subtitle: 'Everything saved on this device.' }}
       items={items}
-      filtersTitle="All Saved"
-      filterGroups={filterGroups}
+      filtersTitle={`All ${CHROMES[view].label}`}
+      filterGroups={filterGroupsOf(items, view)}
       views={VIEWS}
       view={view}
       onViewChange={setView}
-      /* THE APPROVED FILE CARD (2026-10-22), the DS's since 0.291.0 (CatalogAppVariant): `preset="app"`
-         draws download on the cover, the size, cog over trash and the one menu on right-click. Nothing here
-         opens on a click — palettes, patterns and type have no chrome to open in. */
+      /* THE ONE CARD (user 2026-10-24): title · date · size · cover with download · cog (the rail) · trash, the chrome
+         as the cover's mark. A shipped file opens its page; a Type · Palette · Pattern save has no chrome to open in. */
       preset="app"
       toCard={(item) => {
-        if (item.placeholder) return { key: item.id, title: item.name, detail: 'Placeholder' }
+        const slot = item.slot ?? 'preset'
+        const key = `${slot}:${item.id}`
         return {
-          key: item.id,
-          title: item.name || `Untitled ${SLOT_LABELS[item.slot].slice(0, -1).toLowerCase()}`,
+          key,
+          title: item.name || `Untitled ${SLOT_LABELS[slot].slice(0, -1).toLowerCase()}`,
           date: item.updatedAt ?? item.savedAt,
           size: bytesOf(item),
           media: coverOf(item),
-          verbs: verbsFor(item),
+          mark: CHROMES[item.mode] ?? CHROMES.editor,
+          details: detailsOf(item),
+          tags: item.tags,
+          onTags: (tags) => edit(key, { tags }),
+          note: item.note,
+          onNote: (note) => edit(key, { note }),
+          /* Upload image on EVERY file (user: every card the same fields) — a shipped file's upload goes on the covers
+             shelf in IndexedDB (FileCover), a save's into its `thumb` as before */
+          onCover: (src) => (item.shipped ? setUploadedCover(item.id, src) : setThumb(slot, item.id, src)),
+          verbs: verbsOf(item, slot),
           download: () => downloadFile(item),
+          ...(item.slot ? {} : { onClick: () => { saveSpot('library'); navigate(`/library/${item.mode}/${encodeURIComponent(item.id)}`) } }),
         }
       }}
-      actions={
-        <Button tone="grey" size="md" onClick={openNewFile}>New File</Button>
-      }
     />
     {/* the empty state the page had none of (audit A6) — the header and its strip stay above it */}
     {items.length === 0 && (

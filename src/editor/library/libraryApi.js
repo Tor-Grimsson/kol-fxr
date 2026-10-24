@@ -67,8 +67,19 @@ function restoreSession() {
   let stored = null
   try { stored = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null') } catch { /* unreadable — signed out */ }
   if (!stored?.token || stored.base !== apiBase || !(stored.expiresAt > Date.now())) return
-  session = { backend: createD1Backend(apiBase, stored.token) }
+  const backend = createD1Backend(apiBase, stored.token)
+  session = { backend }
   emit()
+  /* a restored session merges the cloud files into storage NOW, as sign-in does — before, only a
+     mounted provider (a chrome, /library) hydrated, so Home on a fresh load listed nothing until one did */
+  backend.hydrate().then((rows) => {
+    const { next, pushes } = mergeRemote(loadLibrary(), rows)
+    saveLibrary({ ...loadLibrary(), ...next })
+    for (const op of pushes) backend.push(op).catch(() => {})
+  }).catch((e) => {
+    if (e instanceof UnauthorizedError) signOutLibrary()
+    else console.warn('library sync: hydrate failed —', e?.message || e)
+  })
 }
 export async function signInLibrary(password) {
   if (!apiBase) throw new Error('no library api')

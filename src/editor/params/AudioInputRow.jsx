@@ -60,7 +60,7 @@ export default function AudioInputRow() {
     <div className="flex flex-col gap-1 mt-3">
       <div className="flex items-center gap-2">
         <span className="kol-helper-10 text-meta shrink-0">Audio</span>
-        <SegmentedToggle tone="sunken" value={kind} onChange={onPick} options={OPTIONS} size={cs} className="flex-1" />
+        <SegmentedToggle value={kind} onChange={onPick} options={OPTIONS} size={cs} className="flex-1" />
         <input ref={fileRef} type="file" accept="audio/*" onChange={onFile} className="hidden" />
       </div>
       {err && <span className="kol-mono-10 text-fg-64">{err}</span>}
