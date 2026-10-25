@@ -264,7 +264,7 @@ export function DisplaySettingsDrawer({ open, onClose, children }) {
   return (
     <SettingsPanel
       open={open}
-      variant="drawer"
+      variant="rail"
       title="Display settings"
       onClose={onClose}
       footer={<SettingsFooter onReset={reset} />}

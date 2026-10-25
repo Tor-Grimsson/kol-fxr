@@ -24,8 +24,13 @@
  * left the ladders unconverged as policy rather than gesture — this is that
  * policy call, made here because it is this app's two rails that sit together. */
 :root {
-  --kol-rail-w: var(--kol-sidenav-w);
+  --kol-rail-w: var(--kol-rail-w-app);
   --kol-rail-w-collapsed: 48px;
+}
+
+/* The app tier's inset (kol-theme 0.190.0) — labs only; the editor keeps its own. */
+.kol-editor-labs :is(.kol-compose-inspector-body, .kol-inspector-rail-body) {
+  padding: var(--kol-pad-rail-app, 16px);
 }
 
 /* PARAM DENSITY + SECTION HAIRLINE — GONE, adopted 2026-08-15.
