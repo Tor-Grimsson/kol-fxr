@@ -3,6 +3,7 @@ import { groupById, presetsInGroup, presetsInSub, presetLayerPatch } from '../..
 import { KINETIC_TREE, KINETIC_PRESETS, presetComp } from '../../kinetic/presets'
 import { FILTERS } from '../../filters'
 import { effectCategories, FX_RACK_GROUPS } from '../compose/inspectors/effectCategories'
+import { openColorModes } from '../color/ColorModesWindow'
 
 /**
  * The labs CATALOG — the section/group/category tree and its pick semantics,
@@ -37,10 +38,11 @@ export const GROUP_ICONS = {
   'gen:Loops': 'refresh',
   'gen:Math': 'sum',
   'gen:Penrose': 'a-framed',
+  'gen:Flow': 'wave',                /* plan 37's intake had none — fell back to a square (plan 41 § 7.1) */
+  'gen:Letter Gap': 'letter-spacing',
   'gen:Drift': 'dith-flow',
   'gen:Gradients': 'circle',
   'gen:Soft Forms': 'paint-drop',
-  'gen:Soft Forms 3D': 'ball',
   'gen:3D Scene': 'ball',
   'kin:Type': 'font-01',
   'kin:Kinetic': 'font-01',
@@ -188,6 +190,11 @@ export function buildLabsCatalog({ layer, setOnly, addFilter, patchFilter, carri
   })
 
   return [
+    /* COLOR (plan 41 § 6.1) — Color Modes' home in Labs: a row at the section level that opens the
+       one palette window (`color/ColorModesWindow`), not a section. First in the stream because the
+       rail folds a row after a section marker into that section. */
+    { id: 'color', label: 'Color', icon: 'clr-tri', onSelect: openColorModes, pages: [] },
+
     { id: 'sec:effects', label: 'Effects' },
     ...effectCategories(FILTERS).map((cat) => ({
       id: `fx:${cat.id}`,

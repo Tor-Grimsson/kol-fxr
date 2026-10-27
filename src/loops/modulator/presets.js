@@ -11,10 +11,10 @@ const P = (id, label, loop, params = {}, sub) => ({ id, label, loop, params, sub
 export const MODULATOR_PRESETS = [
   // Pulse — breath-led
   P('mod-pulse', 'Pulse', 'modulator-rings', {}, 'Pulse'),
-  P('mod-pulse-deep', 'Pulse · deep', 'modulator-rings', { breathAmp: 25, separation: 24, rings: 4 }, 'Pulse'),
-  P('mod-pulse-soft', 'Pulse · soft', 'modulator-rings', { intensity: 80, breathAmp: 6, rings: 2, weight: 3 }, 'Pulse'),
+  P('mod-pulse-deep', 'Deep', 'modulator-rings', { breathAmp: 25, separation: 24, rings: 4 }, 'Pulse'),
+  P('mod-pulse-soft', 'Soft', 'modulator-rings', { intensity: 80, breathAmp: 6, rings: 2, weight: 3 }, 'Pulse'),
   // Weave — frequency-led
   P('mod-weave', 'Weave', 'modulator-rings', { frequency: 180, intensity: 120, rings: 5, separation: 8 }, 'Weave'),
-  P('mod-weave-fine', 'Weave · fine', 'modulator-rings', { frequency: 200, intensity: 60, rings: 8, separation: 5, weight: 1 }, 'Weave'),
-  P('mod-weave-drift', 'Weave · drift', 'modulator-rings', { drift: 4, frequency: 140, rings: 3 }, 'Weave'),
+  P('mod-weave-fine', 'Fine', 'modulator-rings', { frequency: 200, intensity: 60, rings: 8, separation: 5, weight: 1 }, 'Weave'),
+  P('mod-weave-drift', 'Drift', 'modulator-rings', { drift: 4, frequency: 140, rings: 3 }, 'Weave'),
 ]

@@ -28,7 +28,7 @@ import Compose from './Compose'
  * ToolProvider > Compose > Palette > Pattern > Type) — the color modal and
  * library flows read palette state, and pattern / type state can still back
  * library items. ColorModesWindow (the one palette generator, plan 39 § 4.1)
- * mounts inside the stack so it sees compose state; opens on
+ * mounts in EditorProviders so every chrome (editor, Labs) has it; opens on
  * `kol:open-color-modes`.
  */
 /* a file picked in the rail's Media library lands as a photo layer (plan 15 § 4) */
@@ -60,7 +60,6 @@ function EditorBody() {
     <>
       <Compose />
       <MediaPickSink />
-      <ColorModesWindow />
       {/* mounted once, inside the providers — the two File surfaces open it
           through a store rather than owning it (FilesDialog, kol-fxr) */}
       <FilesDialogHost />
@@ -95,6 +94,8 @@ export function EditorProviders({ children, persistDraft = true, draftKey }) {
                   <TypeStateProvider>
                     <UrlIntents />
                     {children}
+                    {/* in the shared stack, not EditorBody, so Labs' Color row opens it too (plan 41 § 6.1) */}
+                    <ColorModesWindow />
                   </TypeStateProvider>
                 </PatternStateProvider>
               </PaletteStateProvider>

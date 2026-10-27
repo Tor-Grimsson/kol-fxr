@@ -15,7 +15,9 @@ import { useMorph, setMorph } from '../morph/morphStore'
 import { urlIntent } from '../library/UrlIntents'
 import FilesDialogHost from '../library/FilesDialogHost'
 import TimelineDock from '../params/TimelineDock'
-import TransportFab from '../params/TransportFab'
+import { PhoneNav, TransportPill } from '@kolkrabbi/kol-shell'
+import { useTransport } from '../params/transport'
+import { openTab } from '../shell/openTab'
 import { consumeMediaPicks } from '../library/mediaPick'
 import { useDragResize } from '@kolkrabbi/kol-framework'
 import { isTyping } from '../state/keymap'
@@ -25,10 +27,10 @@ import { LabsSourceCard } from './LabsSourcePicker'
 import { transport } from '../params/transport'
 import { getAppSettings } from '../lib/appSettings'
 import { groupOfPreset, loopById, presetById, presetLayerPatch } from '../../loops/registry'
-import { PanelHeader, PanelPills, SheetGrab, SHEET_H, SHEET_MIN } from '../components/PanelHeader'
+import { SheetGrab, SHEET_H, SHEET_MIN } from '../components/PanelHeader'
 import LabsCatalogCard from './LabsCatalogCard'
 import { useLabsLayer } from './useLabsLayer'
-import { setMountedView } from '../mode'
+import { setMountedView, navigateTo } from '../mode'
 import { sheetLabels } from './sheetLabels'
 import { isMobileDevice, wantsDesktop, useBelow, LABS_BELOW } from '../mobile/device'
 import { ControlSizeContext } from '../params/controlSize'
@@ -346,14 +348,6 @@ function LabsRail() {
  * touch="drawer"`, the hamburger top-right, labs' catalog rows riding it as on a desk. */
 const TouchRails = createContext(null)
 
-function LabsSheetHeader() {
-  const { collapseParams, catalog, toggleCatalog } = useContext(TouchRails)
-  const { layer } = useLabsLayer()
-  /* the randomiser's "Start over" seat, with labs' one action: the catalog card in and out */
-  const action = <Button tone="ghost" quiet size="sm" pressed={catalog} onClick={toggleCatalog}>Catalog</Button>
-  return <PanelHeader title={sheetLabels(layer).title} onCollapse={collapseParams} className="px-4" action={action} />
-}
-
 /* the sheet's first row: the grabber (PanelHeader.jsx) */
 function LabsSheetGrab() {
   const { tall, setTall, collapseParams, setSheetPx } = useContext(TouchRails)
@@ -367,6 +361,45 @@ function LabsSheetGrab() {
       onResize={(px) => setSheetPx(Math.max(SHEET_MIN, Math.min(window.innerHeight * 0.92, px)))}
       onResizeEnd={(px) => { if (px < SHEET_MIN) { setSheetPx(null); collapseParams() } }}
     />
+  )
+}
+
+/* THE PHONE CHROME (plan 41 W4, frame E approved 2026-10-27): kol-shell's PhoneNav at the TOP picks
+ * the panel — Home leaves Labs (the way out the phone never had), Catalog, Params and Transport toggle,
+ * More lists Output and File without closing anything — and the transport is kol-shell's TransportPill
+ * floating at the bottom over the panel, its own toggle. Both fold sideways to an edge tab. */
+const LOOP_LENGTHS = [2, 4, 8, 12, 16]
+function LabsPhoneChrome({ paramsOpen, setParamsOpen, catalog, toggleCatalog }) {
+  const { playing, loopSeconds, play, pause, stop, rewind, setLoopSeconds } = useTransport()
+  const [transportOn, setTransportOn] = useState(true)
+  const items = [
+    { icon: 'home-01', path: '#home', label: 'Home', onPress: () => navigateTo('/') },
+    { icon: 'grid', path: '#catalog', label: 'Catalog', onPress: toggleCatalog, selected: catalog },
+    { icon: 'slider-01', path: '#params', label: 'Params', onPress: () => setParamsOpen((v) => !v), selected: paramsOpen },
+    { icon: 'play', path: '#transport', label: 'Transport', onPress: () => setTransportOn((v) => !v), selected: transportOn },
+  ]
+  /* the footer's tabs, as More's rows: the panel opens with them (they render in its foot) */
+  const actions = [
+    { icon: 'download', label: 'Output', onPress: () => { setParamsOpen(true); openTab('Output') } },
+    { icon: 'file', label: 'File', onPress: () => { setParamsOpen(true); openTab('File') } },
+  ]
+  return (
+    <>
+      <PhoneNav shape="pill" placement="top" border={false} active="circle" foldable moreKeepsOpen items={items} actions={actions} currentPath="#none" />
+      {transportOn && (
+        <TransportPill
+          foldable
+          items={[
+            { id: 'play', icon: 'play', label: 'Play', onPress: play, selected: playing },
+            { id: 'pause', icon: 'pause', label: 'Pause', onPress: pause, selected: !playing },
+            { id: 'loop', icon: 'stopwatch-solid', label: 'Loop length' },
+            { id: 'stop', icon: 'stop', label: 'Stop', onPress: stop },
+            { id: 'rewind', icon: 'rewind', label: 'Rewind', onPress: rewind },
+          ]}
+          sheetFor={{ loop: LOOP_LENGTHS.map((n) => ({ label: `${n} s`, checked: loopSeconds === n, onPress: () => setLoopSeconds(n) })) }}
+        />
+      )}
+    </>
   )
 }
 
@@ -409,9 +442,8 @@ const LABS_REGISTRY_TOUCH = {
   ...LABS_REGISTRY,
   panels: [
     { slot: 'right.header', order: 0, Component: LabsSheetGrab },
-    { slot: 'right.header', order: 1, Component: LabsSheetHeader },
-    /* the transport is a floating play button over the stage on touch (plan 15 § 2) */
-    { slot: 'canvas.overlay', order: 0, Component: TransportFab },
+    /* the sheet's title row and the floating play button are gone (plan 41 W4): Catalog and the
+       collapse ride the top PhoneNav, the transport is its own pill (LabsPhoneChrome below) */
     ...LABS_REGISTRY.panels.map((p) => (p.Component === LabsRail ? { ...p, Component: LabsTouchRail } : p)),
   ],
 }
@@ -603,7 +635,7 @@ function LabsBody() {
           <ControlSizeContext.Provider value="md">
             <EditorShell registry={LABS_REGISTRY_TOUCH} />
           </ControlSizeContext.Provider>
-          {!paramsOpen && <PanelPills tone="grey" label={sheetLabels(layer).pill} onOpen={() => setParamsOpen(true)} />}
+          <LabsPhoneChrome paramsOpen={paramsOpen} setParamsOpen={setParamsOpen} catalog={catalog} toggleCatalog={() => setCatalog((v) => !v)} />
         </TouchRails.Provider>
       ) : (
         <EditorShell registry={LABS_REGISTRY} />

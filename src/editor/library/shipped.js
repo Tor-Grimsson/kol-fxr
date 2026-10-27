@@ -61,7 +61,7 @@ const LABS_PICKS = [
   ['Composition', 'Para Type', 'paratype', null, 'misc'],
 ]
 const RANDOMISER_PICKS = ['scanline', 'pattern', 'shape', 'field', 'math', 'penrose', 'flow', 'lettergap', 'gradients', 'softforms']
-const CATEGORY_OF = { scanline: 'Scanline', pattern: 'Pattern', shape: 'Loops', field: 'Loops', math: 'Math', penrose: 'Penrose', flow: 'Flow', lettergap: 'Letter Gap', gradients: 'Gradients', softforms: 'Soft Forms' }
+const CATEGORY_OF = { scanline: 'Scanline', pattern: 'Pattern', shape: 'Loops', field: 'Pattern', math: 'Math', penrose: 'Penrose', flow: 'Flow', lettergap: 'Letter Gap', gradients: 'Gradients', softforms: 'Soft Forms' }
 
 const labsAndRandomiser = () => {
   const visual = (gid) => presetsInGroup(gid).filter((p) => !isToolPreset(p))

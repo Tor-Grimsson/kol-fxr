@@ -52,10 +52,10 @@ METHOD is never a picker — it's implied by what you're doing.
 
 The children of a method (labs called these pages; the level is named **Type**).
 
-**Generative types (12, labs sidebar order):** Scanline · Pattern · Loops · Math · Penrose · Flow · Letter Gap · Drift · Gradients · Soft Forms · Soft Forms 3D · 3D Scene
+**Generative types (11, labs sidebar order):** Scanline · Pattern · Loops · Math · Penrose · Flow · Letter Gap · Drift · Gradients · Soft Forms · 3D Scene (Soft Forms 3D is 3D Scene's "Soft forms" since 2026-10-27)
 
 **Flow** (2026-10-22, plan 37 W6) — the field-core loops: Streamlines (Obstacle flow · Charge lines) · Glyphs (Glyph vortex) · Cells (Voronoi pulse), on `src/loops/flow/fieldCore.js`. **Letter Gap** — a word list whose letter gaps breathe, decorated rule · box · tick · dot.
-Data: `GENERATIVE_TREE` in `src/loops/taxonomy.js`. Two types span several flat registry groups and get a second dropdown: **Loops** → Simple / Field / Pattern Loops (`shape` / `field` / `patternloop`); **3D Scene** → Primitive / Ribbon / Forms / Environment / Abstract (`scene` / `ribbon` / `forms` / `environment` / `abstract`, `scene` relabelled to "Primitive").
+Data: `GENERATIVE_TREE` in `src/loops/taxonomy.js`. Two types span several flat registry groups and get a second dropdown: **Pattern** → Rules / Pattern Loops / Field (`pattern` / `patternloop` / `field`, `pattern` relabelled to "Rules"; Field and Pattern Loops moved here from Loops on 2026-10-27); **3D Scene** → Primitive / Ribbon / Forms / Environment / Abstract / Soft forms (`scene` / `ribbon` / `forms` / `environment` / `abstract` / `softforms3d`, `scene` relabelled to "Primitive"). **Loops** is Simple (`shape`) alone.
 
 **Vector types (2, added 2026-09-01 — the kol-apps ports):** Distressor (`distress` — SVG path distress, source via the labs source picker's SVG mode) · Modulator (`modulator` — warped concentric ring instrument). Labs-only: both live in the labs catalog's VECTOR section (`src/editor/labs/catalog.js`), stay out of `GENERATIVE_TREE`/`PICKER_TREE`, and resolve read-only in the editor inspector via `LEGACY_GROUP_LABELS`.
 

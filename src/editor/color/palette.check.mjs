@@ -4,7 +4,7 @@
 import { createServer } from 'vite'
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error', ssr: { noExternal: [/^@kolkrabbi\//] }, optimizeDeps: { noDiscovery: true, include: [] } })
 const load = (p) => vite.ssrLoadModule(new URL(p, import.meta.url).pathname)
-const { rollPalette, RELATIONS, okL } = await load('./palette.js')
+const { rollPalette, RELATIONS, okL, generatePalette, assignRoles, hexToOklch } = await load('./palette.js')
 const { mulberry32, randomizeSchema } = await load('../lib/rng.js')
 const { themeParams } = await load('../../loops/theme.js')
 const { THEMES, resolveTheme } = await load('../../loops/lib/themes.js')
@@ -20,6 +20,18 @@ for (let seed = 1; seed <= 60; seed++) for (const r of RELATIONS) {
   const p = rollPalette(mulberry32(seed), r.id)
   const L = okL(p.roles.accent)
   ok(L > 0.6 && L < 0.72, `seed ${seed} ${r.id}: accent OKLab L ${L.toFixed(3)} outside 0.60–0.72`)
+}
+
+/* one colour generates the palette (plan 41 § 6.2): base kept as colour 0, the count honoured,
+   the same seed the same list; roles by meaning — bg darkest, ink lightest, accent most saturated */
+for (const r of RELATIONS) for (let n = 2; n <= 8; n++) {
+  const g = generatePalette(mulberry32(n), { base: '#3366CC', relation: r.id, count: n })
+  ok(g.length === n && g[0] === '#3366cc', `${r.id} ×${n}: count or base wrong`)
+  ok(g.every((c) => /^#[0-9a-f]{6}$/.test(c)), `${r.id} ×${n}: a colour is not hex`)
+  ok(JSON.stringify(g) === JSON.stringify(generatePalette(mulberry32(n), { base: '#3366CC', relation: r.id, count: n })), `${r.id} ×${n}: not seeded`)
+  const roles = assignRoles(g)
+  ok(g.every((c) => okL(roles.bg) <= okL(c) && okL(roles.fg) >= okL(c)), `${r.id} ×${n}: bg not darkest or ink not lightest`)
+  if (n >= 3) ok(g.filter((c) => c !== roles.bg && c !== roles.fg).every((c) => hexToOklch(roles.accent)[1] >= hexToOklch(c)[1]), `${r.id} ×${n}: accent not the most saturated`)
 }
 
 const schema = [{ key: 'a', type: 'color', role: 'bg' }, { key: 'b', type: 'color' }, { key: 'c', type: 'color' }]

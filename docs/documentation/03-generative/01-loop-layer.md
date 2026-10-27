@@ -63,7 +63,7 @@ Each family is a registry **group**; a loop layer's `loopGroup` selects it. Grou
 | **Drift** | `drift` | GL engine (`phase`) | Air / Water / Cloth shader fields (one loop per family, `family` picks the fragment shader). |
 | **Gradients** | `gradients` | GL engine (`dt`) | `iridescent` (cat×type shader) + `meshgradient` (single-tile / grid-of-9). |
 | **Soft Forms** | `softforms` | GL engine (`dt`) | 2D SDF metaball scenes (`forms` array carried as an opaque param). |
-| **Soft Forms 3D** | `softforms3d` | GL engine (`dt`) | 3D SDF scenes, drag-orbit camera (`camTheta`/`camPhi`/`camDist`). |
+| **Soft Forms 3D** (under 3D Scene as "Soft forms") | `softforms3d` | GL engine (`dt`) | 3D SDF scenes, drag-orbit camera (`camTheta`/`camPhi`/`camDist`). |
 | **3D Scene** | `scene` | GL engine (`seek`) | `PrimitiveEngine` — geometry × material × pose, keyframes, orbit. |
 | **Forms** | `forms` | GL engine (`seek`) | Point-cloud forms (helix, torus, grid creatures). |
 | **Environment** | `environment` | GL engine (`seek`) | Environment scenes (mountain, tunnel, …). |

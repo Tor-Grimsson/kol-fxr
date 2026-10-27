@@ -18,8 +18,12 @@
  */
 export const GENERATIVE_TREE = [
   { label: 'Scanline',      groups: ['scanline'] },
-  { label: 'Pattern',       groups: ['pattern'] },
-  { label: 'Loops',         groups: ['shape', 'field', 'patternloop'] },
+  /* PATTERN TAKES THE FIELDS AND THE PATTERN LOOPS (plan 41 § 7.10, user 2026-10-26: "isnt field and
+   * pattern loops just patterns?") — the rule-driven patterns read "Rules" beside them. Loops keeps
+   * Simple (shape loops: discs, curves, rings, grids, lines, particles). */
+  { label: 'Pattern',       groups: ['pattern', 'patternloop', 'field'],
+    labels: { pattern: 'Rules' } },
+  { label: 'Loops',         groups: ['shape'] },
   { label: 'Math',          groups: ['math'] },
   { label: 'Penrose',       groups: ['penrose'] },
   /* the effects intake (plan 37 W6): the field-core loops, and the letter-gap type study */
@@ -28,11 +32,12 @@ export const GENERATIVE_TREE = [
   { label: 'Drift',         groups: ['drift'] },
   { label: 'Gradients',     groups: ['gradients'] },
   { label: 'Soft Forms',    groups: ['softforms'] },
-  { label: 'Soft Forms 3D', groups: ['softforms3d'] },
   /* `scene` is labs' Primitive sub-page; its registry label ('3D scene')
-   * would read as a duplicate under this type. */
-  { label: '3D Scene',      groups: ['scene', 'ribbon', 'forms', 'environment', 'abstract'],
-    labels: { scene: 'Primitive' } },
+   * would read as a duplicate under this type. Soft Forms 3D was its own type
+   * until plan 41 § 7.6 (user 2026-10-26: "why wouldnt we just call this 3d
+   * scene? and use categories?") — it is 3D Scene's "Soft forms" now. */
+  { label: '3D Scene',      groups: ['scene', 'ribbon', 'forms', 'environment', 'abstract', 'softforms3d'],
+    labels: { scene: 'Primitive', softforms3d: 'Soft forms' } },
 ]
 
 /* The `misc` layer's tree — home of the oddball rule-driven generators that

@@ -1,9 +1,10 @@
-// Iridescent gradient engine — one fullscreen ShaderMaterial covering 12 gradient
-// explorations across 3 category branches (uCat) × 4 sub-types (uType):
+// Iridescent gradient engine — one fullscreen ShaderMaterial covering 15 gradient
+// explorations across 4 category branches (uCat) × sub-types (uType):
 //
 //   Field  (0)  linear · stripe · radial · conic      — flat colour gradients
 //   Pole   (1)  monopole · multipole · mesh · aurora  — influence fields
 //   Volume (2)  blobs · spiral · dome · ripple         — glossy 3D-reading forms
+//   Tunnel (3)  tunnel · halo · horizon                — soft rings in depth
 //
 // All share one palette / spectral / iridescence / surface model. three.js.
 
@@ -11,7 +12,7 @@ import * as THREE from 'three'
 
 // 5-stop palettes for the "Ramp" colour mode ("Spectral" sweeps a cosine rainbow).
 export { GRAD_PALETTES, BACKDROPS } from './gradEnums.js'
-import { GRAD_PALETTES, BACKDROPS, GRAD_LOOKS } from './gradEnums.js'
+import { GRAD_PALETTES, BACKDROPS, GRAD_LOOKS, TUNNEL_SHAPES } from './gradEnums.js'
 import { previewScale } from '../../editor/lib/previewScale.js'
 
 const VERT = `
@@ -25,6 +26,8 @@ const FRAG = `
   uniform float uTime, uAspect, uSize, uSpread, uIrid, uHue, uSheen, uGloss;
   uniform float uRelief, uWarp, uGrain, uSpectral, uAngle, uFreq;
   uniform float uWinds, uPitch, uPetals, uSpin, uMouth;
+  uniform float uSquash, uDrop, uPosX, uSoft, uLines, uSides;
+  uniform int uShape;
   uniform int uCat, uType, uCount;
   uniform vec3 uBg;
   uniform vec3 uColors[5];
@@ -195,6 +198,50 @@ const FRAG = `
     return col * mix(1.0, smoothstep(1.75, 0.1, length(p)), 0.3);
   }
 
+  // ── Tunnel — soft gradient rings in depth ──
+  // Ring index i paints tint(uHue + i * 0.25 * uIrid); at irid 2 that steps
+  // two palette stops per ring, so the rings alternate. One ring passes per
+  // 4s at spin 1, so the 8s loop is seamless at whole-number spins.
+  vec3 bands(float t){
+    float i = floor(t);
+    float k = smoothstep(1.0 - uSoft, 1.0, fract(t));
+    return mix(tint(uHue + i * 0.25 * uIrid), tint(uHue + (i + 1.0) * 0.25 * uIrid), k);
+  }
+  // The ring's form = how distance from the centre is measured; its level sets are the rings.
+  float shapeR(vec2 d){
+    if (uShape == 1) return pow(pow(abs(d.x), 4.0) + pow(abs(d.y), 4.0), 0.25);   // rounded square
+    float a = atan(d.y, d.x) - 1.5708;   // a vertex / point straight up
+    // polygon — inscribed in the circle of the same size (vertex at r), so the forms read the same scale
+    if (uShape == 2) { float s = 6.28318 / uSides; return length(d) * cos(mod(a, s) - s * 0.5) / cos(s * 0.5); }
+    if (uShape == 3) return length(d) * (1.0 - 0.35 * cos(uSides * a)) / 0.65;      // star, tips at r
+    return length(d);                                                                 // circle
+  }
+  vec3 tunnelCol(vec2 q){
+    vec2 d = (q - vec2(uPosX, uDrop)) * vec2(1.0, uSquash);
+    float r = shapeR(d) + 1e-3;
+    float run = uTime * 0.25 * uSpin;
+    vec3 far = tint(uHue + 0.75);
+    if (uType == 0) { // tunnel — depth = 1/r, rings fly toward the camera
+      vec3 col = bands(uSize / r * uFreq * 0.5 + run);
+      return mix(far, col, smoothstep(0.05, 0.45 * uSize, r)); // vanishing point fades to light
+    }
+    if (uType == 1) { // halo — one breathing disc, inside and outside swap colour
+      float ph = uTime * 0.785398 * uSpin;
+      float e = r / (uSize * 0.6 * (1.0 + 0.12 * sin(ph)));
+      float k = 0.5 + 0.5 * cos(ph);
+      vec3 a = tint(uHue), b = tint(uHue + 0.5 * uIrid);
+      vec3 col = mix(mix(a, b, k), mix(b, a, k), smoothstep(1.0 - uSoft, 1.0 + uSoft, e));
+      float rim = exp(-pow((e - 1.0) / (uSoft * 0.5 + 0.02), 2.0));
+      return col + rim * uSheen * 0.6 * far;
+    }
+    // horizon — a floor of bands rolling toward the viewer, sky above
+    float below = uDrop - q.y;
+    vec3 sky = tint(uHue + 0.75 - clamp(-below, 0.0, 1.0) * 0.5); // light at the line, deep overhead, never wraps
+    if (below <= 0.0) return sky;
+    vec3 floorCol = bands(uSize / (below * uSquash) * uFreq * 0.25 + run);
+    return mix(far, floorCol, smoothstep(0.0, 0.6 * uSize + 0.1 * uSoft, below)); // haze at the line
+  }
+
   void main(){
     vec2 p = vUv * 2.0 - 1.0;
     p.x *= uAspect;
@@ -204,7 +251,10 @@ const FRAG = `
     vec3 col;
     if (uCat == 0) col = fieldCol(q, p);
     else if (uCat == 1) col = poleCol(q);
-    else col = volumeCol(q, p);
+    else if (uCat == 2) col = volumeCol(q, p);
+    else col = tunnelCol(q);
+
+    col *= 1.0 - uLines * (0.5 + 0.5 * sin(vUv.y * 2200.0)); // VHS scanlines
 
     col += (hash(vUv * vec2(1920.0, 1080.0) + uTime) - 0.5) * uGrain;
     gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
@@ -251,6 +301,13 @@ export class IridescentEngine {
       uPetals: { value: 9 },
       uSpin: { value: 1 },
       uMouth: { value: 0.5 },
+      uSquash: { value: 1.4 },
+      uDrop: { value: -0.15 },
+      uPosX: { value: 0 },
+      uSoft: { value: 0.4 },
+      uLines: { value: 0 },
+      uShape: { value: 0 },
+      uSides: { value: 6 },
       uBg: { value: toVec3('#000000') },
       uColors: { value: GRAD_PALETTES[0].cols.map(toVec3) },
     }
@@ -305,6 +362,14 @@ export class IridescentEngine {
     if (p.petals != null) u.uPetals.value = p.petals
     u.uSpin.value = p.spin ?? 1
     if (p.mouth != null) u.uMouth.value = p.mouth
+    /* tunnel-only, off-schema elsewhere — reset so no other preset inherits them */
+    u.uSquash.value = p.squash ?? 1.4
+    u.uDrop.value = p.drop ?? -0.15
+    u.uPosX.value = p.posX ?? 0
+    u.uSoft.value = p.soft ?? 0.4
+    u.uLines.value = p.lines ?? 0
+    u.uShape.value = Math.max(0, TUNNEL_SHAPES.indexOf(p.shape ?? 'circle'))
+    u.uSides.value = p.sides ?? 6
     if (p.speed != null) this.speed = p.speed
     if (p.palette != null) {
       const pal = GRAD_PALETTES.find((x) => x.value === p.palette) || GRAD_PALETTES[0]

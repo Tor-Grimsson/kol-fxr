@@ -6,6 +6,7 @@ export const GRAD_PALETTES = [
   { value: 'aqua', label: 'Aqua', cols: ['#06113c', '#0353a4', '#2ec4b6', '#80ffdb', '#e0fbfc'] },
   { value: 'magma', label: 'Magma', cols: ['#0d0221', '#5f0f40', '#fb8b24', '#e36414', '#ffd23f'] },
   { value: 'candy', label: 'Candy', cols: ['#2b2bff', '#11d6c9', '#9bff8a', '#ffd34e', '#ff5fa2'] },
+  { value: 'violet', label: 'Violet', cols: ['#5216d6', '#7a22e6', '#d92fe6', '#e872dc', '#f4aaec'] },
 ]
 
 // Dark backdrops behind the forms.
@@ -27,4 +28,13 @@ export const GRAD_LOOKS = [
   { value: 'magma', label: 'Magma', p: { palette: 'magma', spectral: false, hue: 0.08, irid: 0.9 } },
   { value: 'candy', label: 'Candy', p: { palette: 'candy', spectral: false, hue: 0.8, irid: 1.2 } },
   { value: 'noir', label: 'Noir', p: { palette: 'spectrum', spectral: false, hue: 0, irid: 0.45, backdrop: 'black' } },
+]
+
+// Tunnel ring forms — the index is the shader's uShape branch (IridescentEngine shapeR).
+export const TUNNEL_SHAPES = ['circle', 'square', 'polygon', 'star']
+export const TUNNEL_SHAPE_OPTS = [
+  { value: 'circle', label: 'Circle' },
+  { value: 'square', label: 'Rounded square' },
+  { value: 'polygon', label: 'Polygon' },
+  { value: 'star', label: 'Star' },
 ]

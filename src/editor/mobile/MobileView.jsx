@@ -93,7 +93,11 @@ function MobileBody() {
      where the 264px rail left the stage 126px of a 390 window. The doors above stay the device's. */
   const narrow = useNarrow()
   /* a file opened by URL (`?open=`, plan 09) lands on the live screen — the chooser is for an empty stage */
-  const start = () => (new URLSearchParams(window.location.search).get('open') ? 'live' : 'entry')
+  /* …and Home's phone doors (`?start=category|effects`) skip the chooser — Home already was it */
+  const start = () => {
+    const q = new URLSearchParams(window.location.search)
+    return q.get('open') ? 'live' : q.get('start') === 'category' ? 'category' : 'entry'
+  }
   const [screen, setScreen] = useState(start)   /* entry | category | live */
   /* Effects: the input media first, then the effect sheet — and the media is
      KEPT while effects are browsed (the sheet's Back only closes the sheet) */
@@ -236,6 +240,15 @@ function MobileBody() {
     transport.play()
     setScreen('live')
   }
+  /* the door's param is read once, then dropped — Start over lands on the chooser, not the door again */
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    const door = url.searchParams.get('start')
+    if (!door) return
+    if (door === 'effects') { setFxFlow(true); startInsert() }
+    url.searchParams.delete('start')
+    window.history.replaceState(window.history.state, '', url)
+  }, [])   // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Output-tab aspect control: a real aspect id re-frames the composition
    * (setAspect) AND refits the active full-frame layer to the new frame —

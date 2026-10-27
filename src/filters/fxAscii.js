@@ -27,7 +27,7 @@ const ALGORITHM_OPTIONS = [
 ]
 
 /* Ramps for the density algorithm — ordered sparse → dense (labs originals). */
-const CHARSETS = [
+export const CHARSETS = [
   { value: 'classic', label: 'Classic', ramp: DENSITY_RAMP },
   { value: 'extended', label: 'Extended', ramp: " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$" },
   { value: 'blocks', label: 'Blocks', ramp: ' ░▒▓█' },
@@ -46,7 +46,7 @@ const BRAILLE_DOTS = [
   [1, 1, 0x10], [1, 2, 0x20], [0, 3, 0x40], [1, 3, 0x80],
 ]
 
-const rampChar = (ramp, l) => ramp[Math.max(0, Math.min(ramp.length - 1, Math.floor(l * ramp.length)))]
+export const rampChar = (ramp, l) => ramp[Math.max(0, Math.min(ramp.length - 1, Math.floor(l * ramp.length)))]
 
 /* Per-source pixel cache (glass.js pattern) — the host hands us a NEW fitted
  * canvas whenever the image/fit/size changes, so canvas identity is the key:

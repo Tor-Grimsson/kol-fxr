@@ -85,7 +85,7 @@ Wave B (2026-07-08) unhid ~30 engine-supported params that the catalog schemas n
 
 | Engine | Exposed | Gate |
 |---|---|---|
-| **Iridescent** | form sliders `angle` / `freq` / `winds` / `pitch` / `petals` / `mouth`, plus `sheen`/`gloss`/`relief` | per `cat` × `type` (the shader branch the preset pins). |
+| **Iridescent** | form sliders `angle` / `freq` / `winds` / `pitch` / `petals` / `mouth`, plus `sheen`/`gloss`/`relief`; Tunnel (`cat` 3) adds `shape` + `sides` (Tunnel and Halo) / `squash` / `drop` / `soft` / `lines` | per `cat` × `type` (the shader branch the preset pins). |
 | **Soft Forms 2D/3D** | shading `rimPow` / `rimShift` / `sss` (+ 2D `bulge`/`relief`, 3D `metaball`) | shared `SOFTFORMS_PARAMS`; 2D-only knobs excluded from the 3D map. |
 | **3D Scene** | primitive shape `pWinds` / `qWinds` / `detail` / `rounding` / `tube`, `flatShading`, XYZ-axis overlay | per `primitive`; material knobs per `materialType`; axis knobs `noRandom`. |
 | **Ribbon** | `ribbonThickness` (Flatness), `corner`, wireframe fat-line | material-dependent (`ior`/`dispersion` glass-only, `metalness` chrome-only). |

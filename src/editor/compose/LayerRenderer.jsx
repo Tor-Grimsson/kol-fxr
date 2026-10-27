@@ -507,6 +507,7 @@ function EngineLoopLayer({ layer, def, layerStyle, stages = [], pxStages = [] })
   /* Param-camera engines (def.cameraKeys, no OrbitControls) — pointer orbit
    * writes the camera params; the def.orbit path below stays engine-owned. */
   const camKeys = useCameraKeysDrag(def.orbit ? null : def, layer, canvasRef)
+  const grab = useGrabKeysDrag(def, layer, canvasRef)
 
   useEffect(() => {
     let dead = false
@@ -584,7 +585,7 @@ function EngineLoopLayer({ layer, def, layerStyle, stages = [], pxStages = [] })
       style={{
         position: 'absolute',
         left: layer.x, top: layer.y, width: layer.w, height: layer.h,
-        cursor: camDrag || camKeys ? 'grab' : 'move',
+        cursor: camDrag || camKeys || grab ? 'grab' : 'move',
         ...layerStyle,
         ...(chained ? { opacity: 0 } : null),
       }}
@@ -1627,6 +1628,69 @@ function useCameraKeysDrag(def, layer, canvasRef) {
       cv.removeEventListener('pointercancel', up)
       cv.removeEventListener('wheel', wheel)
       if (drag || wheelTx != null) { clearTimeout(wheelTx); commitTransaction() }
+    }
+  }, [enabled, def, layerId, keys, canvasRef, updateLayer, beginTransaction, commitTransaction])
+
+  return enabled
+}
+
+/* Drag-to-move for a loop's own shape. A def declares `grabKeys: { x, y }` naming the two params
+ * that place its form (Tunnel: posX/drop, in the shader's units — the layer's height spans 2, y up)
+ * and the layer's `grab` toggle arms it. While armed the drag moves the shape, not the layer: the
+ * native pointerdown stopPropagation keeps CanvasArea's move router off it (useCameraKeysDrag's
+ * idiom), and the Orbit tool still wins. One drag = one undo step. Returns whether it is armed. */
+function useGrabKeysDrag(def, layer, canvasRef) {
+  const { updateLayer, beginTransaction, commitTransaction } = useComposeState()
+  const { tool } = useTool()
+  const live = useRef(null)
+  live.current = layer
+  const keys = def?.grabKeys
+  const enabled = !!(keys && layer.grab && tool !== 'orbit')
+  const layerId = layer.id
+
+  useEffect(() => {
+    if (!enabled) return undefined
+    const cv = canvasRef.current
+    if (!cv) return undefined
+    const schemaOf = (key) => (def.params ?? []).find((q) => q.key === key)
+    const read = (key) => {
+      const v = live.current?.[key]
+      return typeof v === 'number' ? v : (schemaOf(key)?.default ?? 0)
+    }
+    const clamp = (key, v) => {
+      const s = schemaOf(key)
+      return Math.round(Math.min(s?.max ?? Infinity, Math.max(s?.min ?? -Infinity, v)) * 1e4) / 1e4
+    }
+    let drag = null
+    const down = (e) => {
+      e.stopPropagation()
+      drag = { x: e.clientX, y: e.clientY, px: read(keys.x), py: read(keys.y), h: cv.getBoundingClientRect().height || 1 }
+      cv.setPointerCapture?.(e.pointerId)
+      beginTransaction()
+    }
+    const move = (e) => {
+      if (!drag) return
+      const k = 2 / drag.h   /* px → shader units: the height spans 2, and x is aspect-scaled to match */
+      updateLayer(layerId, {
+        [keys.x]: clamp(keys.x, drag.px + (e.clientX - drag.x) * k),
+        [keys.y]: clamp(keys.y, drag.py - (e.clientY - drag.y) * k),
+      })
+    }
+    const up = () => {
+      if (!drag) return
+      drag = null
+      commitTransaction()
+    }
+    cv.addEventListener('pointerdown', down)
+    cv.addEventListener('pointermove', move)
+    cv.addEventListener('pointerup', up)
+    cv.addEventListener('pointercancel', up)
+    return () => {
+      cv.removeEventListener('pointerdown', down)
+      cv.removeEventListener('pointermove', move)
+      cv.removeEventListener('pointerup', up)
+      cv.removeEventListener('pointercancel', up)
+      if (drag) commitTransaction()
     }
   }, [enabled, def, layerId, keys, canvasRef, updateLayer, beginTransaction, commitTransaction])
 

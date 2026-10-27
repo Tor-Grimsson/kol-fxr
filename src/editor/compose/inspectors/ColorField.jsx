@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ColorSwatch, Input, LabeledControl, PopoverPanel, Tag, usePopover } from '@kolkrabbi/kol-component'
+import { Button, ColorSwatch, HueStrip, Input, LabeledControl, PopoverPanel, SBSquare, hexToHsva, hsvaToHex, usePopover } from '@kolkrabbi/kol-component'
 import { resolveColor } from '../state'
 import { useControlSize } from '../../params/controlSize'
 
@@ -38,7 +38,18 @@ export function ColorField({ value, onChange, palette, label = 'Color', hideLabe
   const isStroke     = label === 'Stroke'
 
   const [open, setOpen] = useState(false)
-  const popover = usePopover({ open, onOpenChange: setOpen, placement: 'bottom-start', offset: 4 })
+  /* THE SWATCH OPENS A REAL PICKER (plan 41 § 7.5, user 2026-10-26: "why dont you get the color picker,
+     why is it limited by some 6 swatches?"). The working copy is HSV, taken when the popover opens, so
+     the hue survives a drag into grey — the DS ColorPickerPopover's rule, on its own SBSquare/HueStrip. */
+  const [hsv, setHsv] = useState(null)
+  const popover = usePopover({
+    open, placement: 'bottom-start', offset: 4,
+    onOpenChange: (next) => {
+      if (next) setHsv(hexToHsva(/^#[0-9a-f]{6}/i.test(resolved) ? resolved.slice(0, 7) : '#808080') ?? { hue: 0, sat: 0, val: 50, alpha: 1 })
+      setOpen(next)
+    },
+  })
+  const pick = (next) => { setHsv(next); onChange(hsvaToHex({ ...next, alpha: 1 })) }
 
   /* Hex typing commits on blur / Enter (the CanvasInspector SizeField idiom)
    * — a per-keystroke write would push a partial hex ('#F') into layer +
@@ -132,8 +143,16 @@ export function ColorField({ value, onChange, palette, label = 'Color', hideLabe
         panel={false}
         focus={false}
         className="bg-surface-secondary border border-oq-08 rounded p-2 flex flex-col gap-2 shadow-lg"
-        style={{ minWidth: 200 }}
+        style={{ width: 216 }}
       >
+        {hsv && (
+          <>
+            <div className="rounded-[var(--kol-radius-xs)] overflow-hidden" style={{ height: 120 }}>
+              <SBSquare hue={hsv.hue} sat={hsv.sat} val={hsv.val} onChange={(sat, val) => pick({ ...hsv, sat, val })} />
+            </div>
+            <HueStrip hue={hsv.hue} onChange={(hue) => pick({ ...hsv, hue })} />
+          </>
+        )}
         <div className="grid grid-cols-6 gap-1">
           {PALETTE_REFS.map((ref) => (
             <ColorSwatch
@@ -146,19 +165,15 @@ export function ColorField({ value, onChange, palette, label = 'Color', hideLabe
             />
           ))}
         </div>
-        {/* Quick states: Theme (auto, flips with light/dark — only offered when
-            the field has an autoValue) and None (disable → transparent). */}
-        <div className="flex items-center gap-2">
+        {/* Quick states: Theme (auto, flips with light/dark — only offered when the field has an
+            autoValue) and None (disable → transparent). DS Buttons sharing the row, sunken so they read on the
+            secondary panel (primary fill = the panel) — the inline Tag
+            pill read as a stray chip (plan 41 § 7.5). */}
+        <div className="flex gap-2">
           {autoValue && (
-            <Tag size="xs" hash={false} active={isVar} aria-pressed={isVar} onClick={() => { onChange(autoValue); setOpen(false) }}>
-              <ColorSwatch hex={resolveColor(autoValue, palette) ?? autoValue} size={14} hoverable={false} />
-              Theme
-            </Tag>
+            <Button tone="sunken" size="sm" className="flex-1 min-w-0" pressed={isVar} onClick={() => { onChange(autoValue); setOpen(false) }}>Theme</Button>
           )}
-          <Tag size="xs" hash={false} active={isNone} aria-pressed={isNone} onClick={() => { onChange(null); setOpen(false) }}>
-            <ColorSwatch hex="#FFFFFF" size={14} showTransparent transparentTone={isStroke ? 'error' : 'warning'} hoverable={false} />
-            None
-          </Tag>
+          <Button tone="sunken" size="sm" className="flex-1 min-w-0" pressed={isNone} onClick={() => { onChange(null); setOpen(false) }}>None</Button>
         </div>
       </PopoverPanel>
     </LabeledControl>

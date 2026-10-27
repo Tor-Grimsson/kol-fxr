@@ -28,6 +28,7 @@ import { useHubSettings } from './settings/AppSettings'
 const CoverHost = lazy(() => import('./editor/library/CoverHost'))
 import FileCover from './editor/library/FileCover'
 import DevCards from './pages/DevCards'
+import FxChangelog from './pages/FxChangelog.jsx'
 
 /**
  * AppLayout — the shell tier's layout root: kol-shell's `AppStudio` (the Shell
@@ -318,6 +319,16 @@ export default function AppLayout() {
     onNote: (f, note) => edit(f.id, { note }),
     onCover: (f, src) => (presetOf(f.id)?.shipped ? setUploadedCover(f.id, src) : setThumbStored('preset', f.id, src)),
     action: { label: 'New File', onClick: openNewFile },
+    /* THE CHROME CHOOSER ON A PHONE (user, 2026-10-26: the old mobile card, between the heading and the
+       files) — HubHome's phone doors, the randomiser card's four buttons; the Hub draws them only on touch / narrow */
+    touch: {
+      doors: [
+        { icon: CHROMES.randomiser.icon, label: 'Generate', onPress: () => navigate('/randomiser?start=category') },
+        { icon: 'filter', label: 'Effects', onPress: () => navigate('/randomiser?start=effects') },
+        { icon: CHROMES.labs.icon, label: 'Labs', onPress: () => navigate('/labs') },
+        { icon: CHROMES.morph.icon, label: 'Morph', onPress: () => navigate('/morph') },
+      ],
+    },
   }
   /* the one card Home's handlers draw — Library takes it too (step 4) */
   const fileCard = (f) => ({ key: f.id, title: f.name, date: f.updatedAt, size: f.bytes, media: f.cover, tags: f.tags, details: f.details, mark: f.mark, onTags: (tags) => home.onTags(f, tags), note: f.note, onNote: (note) => home.onNote(f, note), verbs: { rename: (name) => home.onRename(f, name), duplicate: () => home.onDuplicate(f), remove: () => home.onRemove(f) }, download: () => home.onDownload(f), onClick: () => home.onOpen(f) })
@@ -362,7 +373,7 @@ export default function AppLayout() {
       pages={CHROME_ROWS.map((c) => ({ ...c, children: <RailFrame><Outlet /></RailFrame>, ...(c.path === '/labs' ? { sub: extras.items.length ? extras.items : labsRows } : {}) }))}
       /* THE DEV PAGE (`/dev`, the `</>` rail row, dev server only) — the user's, and it stays even
          empty (user, 2026-10-23). Never retire it. */
-      dev={{ tabs: [{ value: 'cards', label: 'Cards', content: <DevCards /> }] }}
+      dev={{ tabs: [{ value: 'cards', label: 'Cards', content: <DevCards /> }, { value: 'fx', label: 'FX changelog', content: <FxChangelog /> }] }}
       settings={{ ...hubSettings, comboLabel }}
       /* the Hub draws the foot rows and owns the picker and the password / sign-out dialogs */
       media={session ? { client: getMediaClient(), accept: ['image', 'video'], onSelect: onMediaPick } : undefined}

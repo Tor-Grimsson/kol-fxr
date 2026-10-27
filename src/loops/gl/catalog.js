@@ -13,11 +13,11 @@
  */
 import { PALETTES } from './driftPalettes.js'
 import { SUBPAGES } from './driftRegistry.js'
-import { SCENES } from './softformsRegistry.js'
-import { SCENES_3D } from './softforms3dRegistry.js'
+import { SCENES, SOFTFORM_CATEGORIES } from './softformsRegistry.js'
+import { SCENES_3D, CATEGORIES_3D } from './softforms3dRegistry.js'
 import { PRIMITIVES, PRESETS as POSE_PRESETS } from './primitivePresets.js'
 import { ARRANGEMENTS } from './primitiveComposition.js'
-import { GRAD_PALETTES, BACKDROPS, GRAD_LOOKS } from './gradEnums.js'
+import { GRAD_PALETTES, BACKDROPS, GRAD_LOOKS, TUNNEL_SHAPE_OPTS } from './gradEnums.js'
 import { FORMS } from './formsShapes.js'
 import { ENVIRONMENTS } from './envScenes.js'
 import { SHAPES as MESH_SHAPES, DRIVERS as MESH_DRIVERS, BG_STYLES as MESH_BG_STYLES, PALETTES as MESH_PALETTES } from './meshPalettes.js'
@@ -43,6 +43,8 @@ const range = (key, label, min, max, step, dflt, extra) => ({ key, label, type: 
  * params; a param's own explicit tab/section wins. */
 const tag = (meta, params) => params.map((p) => ({ ...meta, ...p }))
 const ANIM = { tab: 'anim', section: 'Motion' }
+/* a preset's `sub` IS the category the rail shows — the registry's label, never its id ("forms" → "Forms") */
+const catLabel = (cats, id) => cats.find((c) => c.id === id)?.label ?? id
 const CAM_ANIM = { tab: 'anim', section: 'Camera' }
 
 const GRAD_PALETTE_OPTS = opts(GRAD_PALETTES)
@@ -122,6 +124,9 @@ const iCustom = (l) => (l.look ?? 'custom') === 'custom'
 const IRIDESCENT_LOOP = {
   id: 'iridescent', label: 'Iridescent', group: 'gradients', kind: 'engine', engine: 'iridescent',
   drive: 'dt', duration: 8,
+  /* Grab contract (LayerRenderer useGrabKeysDrag): with the layer's `grab` on, a canvas drag
+   * writes these two params in shader units — the Tunnel's centre. */
+  grabKeys: { x: 'posX', y: 'drop' },
   params: [
     { key: 'look', label: 'Look', type: 'select', default: 'custom', options: GRAD_LOOK_OPTS, section: 'Color' },
     /* uSpectral defaults ON in the engine — the palette ramp only shows once
@@ -130,21 +135,31 @@ const IRIDESCENT_LOOP = {
     { key: 'palette', label: 'Palette', type: 'select', default: 'spectrum', options: GRAD_PALETTE_OPTS, section: 'Color', when: (l) => iCustom(l) && !(l.spectral ?? true) },
     { key: 'backdrop', label: 'Backdrop', type: 'select', default: 'black', options: BACKDROP_OPTS, section: 'Color', when: (l) => iCat(l) === 2 && (l.look ?? 'custom') !== 'noir' },
     { ...range('count', 'Count', 1, 6, 1, 5, { section: 'Composition' }), when: (l) => (iCat(l) === 2 && iType(l) === 0) || (iCat(l) === 1 && iType(l) === 1) },
-    { ...range('size', 'Size', 0.1, 2, 0.05, 1, { section: 'Composition' }), when: (l) => iCat(l) === 2 && (iType(l) === 0 || iType(l) === 2) },
+    { ...range('size', 'Size', 0.1, 2, 0.05, 1, { section: 'Composition' }), when: (l) => (iCat(l) === 2 && (iType(l) === 0 || iType(l) === 2)) || iCat(l) === 3 },
     { ...range('spread', 'Spread', 0, 2, 0.05, 1, { section: 'Composition' }), when: (l) => (iCat(l) === 1 && iType(l) <= 1) || (iCat(l) === 2 && iType(l) === 0) },
     /* Per-type form knobs (labs registry CTRL_SPEC ranges + per-type
      * `controls` gating): angle steers the field branches, freq the periodic
      * ones, winds/pitch/petals/mouth shape the spiral only. Defaults equal
      * the engine's uniform fallbacks so ungated presets render unchanged. */
     { ...range('angle', 'Angle', 0, 6.2832, 0.01, 0, { section: 'Composition' }), when: (l) => iCat(l) === 0 && [0, 1, 3].includes(iType(l)) },
-    { ...range('freq', 'Frequency', 0.2, 8, 0.1, 2, { section: 'Composition' }), when: (l) => (iCat(l) === 0 && (iType(l) === 1 || iType(l) === 2)) || (iCat(l) === 1 && iType(l) === 0) || (iCat(l) === 2 && iType(l) === 3) },
+    { ...range('freq', 'Frequency', 0.2, 8, 0.1, 2, { section: 'Composition' }), when: (l) => (iCat(l) === 0 && (iType(l) === 1 || iType(l) === 2)) || (iCat(l) === 1 && iType(l) === 0) || (iCat(l) === 2 && iType(l) === 3) || (iCat(l) === 3 && iType(l) !== 1) },
     { ...range('winds', 'Winds', 1, 12, 1, 5, { section: 'Composition' }), when: (l) => iCat(l) === 2 && iType(l) === 1 },
     { ...range('pitch', 'Pitch', 0.5, 6, 0.1, 2.4, { section: 'Composition' }), when: (l) => iCat(l) === 2 && iType(l) === 1 },
     { ...range('petals', 'Petals', 0, 24, 1, 9, { section: 'Composition' }), when: (l) => iCat(l) === 2 && iType(l) === 1 },
     { ...range('mouth', 'Mouth', 0.1, 1.2, 0.02, 0.5, { section: 'Composition' }), when: (l) => iCat(l) === 2 && iType(l) === 1 },
+    /* Tunnel: the ring's form (Tunnel + Halo — Horizon is a flat floor), its flattening, its vertical centre, the edge ramp */
+    { key: 'shape', label: 'Shape', type: 'select', default: 'circle', options: TUNNEL_SHAPE_OPTS, section: 'Composition', when: (l) => iCat(l) === 3 && iType(l) !== 2 },
+    { ...range('sides', 'Sides', 3, 12, 1, 6, { section: 'Composition' }), when: (l) => iCat(l) === 3 && iType(l) !== 2 && ['polygon', 'star'].includes(l.shape) },
+    { ...range('squash', 'Squash', 0.5, 3, 0.05, 1.4, { section: 'Composition' }), when: (l) => iCat(l) === 3 },
+    { ...range('posX', 'Centre X', -1.5, 1.5, 0.01, 0, { section: 'Composition' }), when: (l) => iCat(l) === 3 && iType(l) !== 2 },
+    { ...range('drop', 'Centre Y', -0.8, 0.8, 0.01, -0.15, { section: 'Composition' }), when: (l) => iCat(l) === 3 },
+    /* drag the shape on the canvas (a mode, not a look — never rolled) */
+    { key: 'grab', label: 'Grab', type: 'toggle', default: false, noRandom: true, section: 'Composition', when: (l) => iCat(l) === 3 },
+    { ...range('soft', 'Softness', 0.02, 1, 0.01, 0.4, { section: 'Look' }), when: (l) => iCat(l) === 3 },
+    { ...range('lines', 'Scanlines', 0, 0.3, 0.005, 0, { section: 'Look' }), when: (l) => iCat(l) === 3 },
     { ...range('irid', 'Iridescence', 0, 2, 0.05, 1, { section: 'Look' }), when: (l) => iCustom(l) && !(iCat(l) === 1 && (iType(l) === 1 || iType(l) === 2)) },
     { ...range('hue', 'Hue shift', 0, 1, 0.01, 0, { section: 'Look' }), when: iCustom },
-    { ...range('sheen', 'Sheen', 0, 1.5, 0.05, 0.5, { section: 'Look' }), when: (l) => iCat(l) === 2 || (iCat(l) === 1 && iType(l) <= 1) },
+    { ...range('sheen', 'Sheen', 0, 1.5, 0.05, 0.5, { section: 'Look' }), when: (l) => iCat(l) === 2 || (iCat(l) === 1 && iType(l) <= 1) || (iCat(l) === 3 && iType(l) === 1) },
     /* gloss is a specular pow() exponent (labs CTRL_SPEC 4–90), not a 0–1 amount */
     { ...range('gloss', 'Gloss', 4, 90, 1, 24, { section: 'Look' }), when: (l) => iCat(l) === 2 },
     /* relief scales the volume branches' height field — labs gates it to cat 2 */
@@ -153,14 +168,14 @@ const IRIDESCENT_LOOP = {
     range('grain', 'Grain', 0, 0.2, 0.005, 0.03, { section: 'Look' }),
     /* uSpin is a time-rate multiplier (stripe scroll / conic sweep / spiral
      * wind / ripple travel) — a motion knob, gated to the branches that read it */
-    { ...range('spin', 'Spin', -3, 3, 0.1, 1, ANIM), when: (l) => (iCat(l) === 0 && (iType(l) === 1 || iType(l) === 3)) || (iCat(l) === 2 && (iType(l) === 1 || iType(l) === 3)) },
+    { ...range('spin', 'Spin', -3, 3, 0.1, 1, ANIM), when: (l) => (iCat(l) === 0 && (iType(l) === 1 || iType(l) === 3)) || (iCat(l) === 2 && (iType(l) === 1 || iType(l) === 3)) || iCat(l) === 3 },
     range('speed', 'Speed', 0, 3, 0.05, 1, ANIM),
   ],
 }
-/* cat 0=field / 1=pole / 2=volume; type indexes the shader branch. The cat
+/* cat 0=field / 1=pole / 2=volume / 3=tunnel; type indexes the shader branch. The cat
  * IS labs' sidebar category (gradients/registry.js), so `sub` derives. */
 const IP = (id, label, cat, type, extra = {}) =>
-  ({ id: `irid-${id}`, label, loop: 'iridescent', sub: ['Field', 'Pole', 'Volume'][cat], params: { cat, form: type, ...extra } })
+  ({ id: `irid-${id}`, label, loop: 'iridescent', sub: ['Field', 'Pole', 'Volume', 'Tunnel'][cat], params: { cat, form: type, ...extra } })
 /* Extras on the labs-ported presets pin that type's labs registry defaults
  * where they differ from the engine's (blobs-centric) uniform defaults. */
 const IRIDESCENT_PRESETS = [
@@ -176,6 +191,10 @@ const IRIDESCENT_PRESETS = [
   IP('spiral', 'Spiral', 2, 1),
   IP('dome', 'Dome', 2, 2, { size: 0.6, irid: 1.1, hue: 0.3, sheen: 0.6, gloss: 30, relief: 1, warp: 0.08 }),
   IP('ripple', 'Ripple', 2, 3, { irid: 1, hue: 0.55, spectral: false, palette: 'aqua', freq: 3, relief: 1, gloss: 20, warp: 0.05, backdrop: 'abyss' }),
+  /* Tunnel — the soft-ring fly-through (ref: dev/ref/new style) */
+  IP('tunnel', 'Tunnel', 3, 0, { spectral: false, palette: 'violet', irid: 2, freq: 1, squash: 1.4, drop: -0.15, soft: 0.45, warp: 0.12, grain: 0.04, lines: 0.08 }),
+  IP('halo', 'Halo', 3, 1, { spectral: false, palette: 'violet', irid: 1, size: 1, squash: 1.3, drop: -0.1, soft: 0.35, sheen: 0.5, warp: 0.1, grain: 0.04, lines: 0.08 }),
+  IP('horizon', 'Horizon', 3, 2, { spectral: false, palette: 'violet', irid: 2, size: 0.6, squash: 1, drop: 0.05, soft: 0.5, warp: 0.08, grain: 0.04, lines: 0.08 }),
 ]
 
 /* ── Soft forms 2D / 3D — scenes carry `forms` arrays as opaque params ── */
@@ -212,7 +231,7 @@ const SOFTFORMS_LOOP = {
   ],
 }
 const SOFTFORMS_PRESETS = SCENES.map((s) => ({
-  id: `sf-${s.id}`, label: s.label, loop: 'softforms', sub: s.cat,
+  id: `sf-${s.id}`, label: s.label, loop: 'softforms', sub: catLabel(SOFTFORM_CATEGORIES, s.cat),
   params: { ...(s.defaults || {}), forms: s.forms },
 }))
 
@@ -231,7 +250,7 @@ const SOFTFORMS3D_LOOP = {
   ],
 }
 const SOFTFORMS3D_PRESETS = SCENES_3D.map((s) => ({
-  id: `sf3-${s.id}`, label: s.label, loop: 'softforms3d', sub: s.cat,
+  id: `sf3-${s.id}`, label: s.label, loop: 'softforms3d', sub: catLabel(CATEGORIES_3D, s.cat),
   params: { ...(s.defaults || {}), forms: s.forms },
 }))
 

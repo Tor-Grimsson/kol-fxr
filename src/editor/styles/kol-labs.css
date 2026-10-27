@@ -192,6 +192,17 @@
 .kol-editor-labs[data-touch]:not([data-params="open"]) .kol-editor-right {
   display: none;
 }
+/* THE PHONE CHROME (plan 41 W4, frame E): the PhoneNav pill floats at the top (16 + 56 + 16), so the
+   stage starts under it; the TransportPill floats over the sheet's foot, so the sheet's rows scroll
+   clear of it; the sheet lifts off the stage with frame E's shadow, not a rule. */
+.kol-editor-labs[data-touch] .kol-editor-canvas {
+  padding-top: 88px;
+}
+.kol-editor-labs[data-touch] .kol-editor-right {
+  border-top: 0;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.45);
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
+}
 /* the sheet's header is the generator's: no rule under it, the body starting straight below */
 .kol-editor-labs[data-touch] .kol-editor-rail-header {
   border-bottom: 0;

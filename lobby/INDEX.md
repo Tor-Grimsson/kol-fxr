@@ -57,11 +57,13 @@ _(none yet — ownership, deferral and context notes land in `archive/`)_
 
 Tickets this ledger does **not** govern — each row names the destination ledger
 that does. The **Remainder** is this repo's to do; the state is theirs to report.
-Fifty-two went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
+Fifty-four went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
 last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/INDEX.md`).
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [PhoneNavTopAndFold](outbox/PhoneNavTopAndFold.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 closed 2026-10-27 — kol-shell 0.83.0 | none — adopted 2026-10-27: phone Labs runs PhoneNav top + TransportPill (LabsView.jsx), TransportFab retired to _tmp |
+| 🟢 | [TransportPill](outbox/TransportPill.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 closed 2026-10-27 — kol-shell 0.83.0 | none — adopted 2026-10-27: phone Labs runs PhoneNav top + TransportPill (LabsView.jsx), TransportFab retired to _tmp |
 | 🟢 | [HubHomeContract](outbox/HubHomeContract.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-24 — kol-shell 0.77.0 · kol-theme 0.184.0 · kol-component 0.296.0 | none — adopted 2026-10-24: AppStudio, Home on `files` + handlers, `/` touch redirect gone |
 | 🟢 | [AppCardNoHoverFill](outbox/AppCardNoHoverFill.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` — kol-component 0.293.0 | none — adopted 2026-10-23 (plan 39 § 2.1) |
 | 🟢 | [CatalogAppVariant](outbox/CatalogAppVariant.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` — kol-component 0.291.0 · kol-shell 0.75.0 | none — adopted 2026-10-23 (`FxrLibraryOnAppPreset`) |
@@ -140,6 +142,9 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-27 | **`PhoneNavTopAndFold` and `TransportPill` adopted** — the phone Labs layout runs both; TransportFab and the sheet header retired to `_tmp/2026-10-27-labs-phone-chrome/` |
+| 2026-10-27 | **`PhoneNavTopAndFold` and `TransportPill` returned** — bumped kol-component 0.304.0, kol-shell 0.83.0, kol-icons 0.47.0, kol-theme 0.191.0, kol-framework 0.57.0; adoption in the phone Labs layout still owed (plan 41 W4) |
+| 2026-10-27 | **`PhoneNavTopAndFold` and `TransportPill` filed to kol-ds-ui** — the phone Labs layout, frame E (plan 41 W4) |
 | 2026-10-24 | **`SunkenWellEatenByPageWash` retired ⚫ (user ruling)** — outdated: the `/settings` page it measured is gone (settings is a rail), last measured on kol-theme 0.109.0. Re-file against the rail if the sunken pills vanish there |
 | 2026-10-24 | **Three receipts retired ⚫ (user ruling)** — `library-reader-for-a-hub-home` · `editor-chrome-review` · `editor-panels-the-held-specs`: all about `@kolkrabbi/design-editor`, gone from fxr since 2026-10-08. Closing lines appended to `DevSectionHeader` · `FileCardTitleClearsActions` · `MenuRowSidePadding` (adopted 2026-10-22, stubs never squared) |
 | 2026-10-24 | **`HubHomeContract` adopted** — the Studio adoption (kol-ds-ui steps 1–9): AppStudio, Home on the data contract, touch redirect gone; studio-hub pass 54/54, build green |

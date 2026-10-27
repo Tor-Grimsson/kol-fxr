@@ -234,7 +234,8 @@ export default function EditorFooter() {
   useEffect(() => () => { onRecordStop() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Window › Transport · Output · File and File › Batch export… (plan 28) */
-  useOpenTab(FOOTER_TABS, useCallback((t) => setTab(t.toLowerCase()), []))
+  /* on touch the phone nav's More opens a tab and the same row closes it (plan 41 W4) */
+  useOpenTab(FOOTER_TABS, useCallback((t) => setTab((cur) => (touch && cur === t.toLowerCase() ? null : t.toLowerCase())), [touch]))
   useEffect(() => {
     const on = () => setBatchOpen(true)
     window.addEventListener('kol:open-batch-export', on)
@@ -320,9 +321,14 @@ export default function EditorFooter() {
     )
   }
 
+  /* touch, nothing opened from More: no foot at all (an empty bordered block otherwise) */
+  if (touch && !tab) return <>{modals}</>
+
   return (
     <div className="relative border-t border-oq-08 flex flex-col gap-3" style={{ padding: '16px 16px 20px' }}>
-      <div className="flex items-center gap-2">
+      {/* ON TOUCH THE STRIP IS GONE (plan 41 W4, frame E): Output and File are rows in the phone nav's
+          More, so the sheet's foot shows only the tab that was opened — or nothing */}
+      {!touch && <div className="flex items-center gap-2">
         {/* the 26px pin is 'sm' geometry — above it the strip is on the ladder */}
         {/* the default strip — raised cells, dividers, the selected one on the ground — filling
           * the row, as fxr drew it (inspector rebuild 2026-09-27: `filled` read as bare tabs).
@@ -340,7 +346,7 @@ export default function EditorFooter() {
           size={cs}
           className={`flex-1 min-w-0 ${stripClamp(cs) ?? ''}`.trim()}
         />
-      </div>
+      </div>}
       {/* stays mounted hidden on desktop so playback chrome never re-inits on a
           tab switch; on touch the bar lives in the sheet below */}
       {TransportBar && !touch && (

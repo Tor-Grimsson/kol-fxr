@@ -29,14 +29,9 @@ export const themeAsPalette = (t) => ({
   colors: [t.bg, t.fg, t.accent, t.dim ?? t.accent, t.warm ?? t.accent],
 })
 
-/* a bare list of hex (editor swatches, a Combo Lab save) as a palette: roles by order, darkest = ground */
+/* a bare list of hex (editor swatches, a Combo Lab save, a generated palette) as a palette: roles by meaning */
 export function colorsAsPalette(colors, { id, name, source }) {
-  const byL = [...colors].sort((a, b) => hexToHsl(a).l - hexToHsl(b).l)
-  const rest = colors.filter((c) => c !== byL[0] && c !== byL[byL.length - 1])
-  return {
-    id, name, source, colors,
-    roles: { bg: byL[0], fg: byL[byL.length - 1], accent: rest[0] ?? byL[byL.length - 1], dim: rest[1] ?? byL[0], warm: rest[2] ?? rest[0] ?? byL[byL.length - 1] },
-  }
+  return { id, name, source, colors, roles: assignRoles(colors) }
 }
 
 /* THE STORE: themes · the editor's swatches · the library's saved palettes, all one shape */
@@ -75,6 +70,72 @@ export function okL(hex) {
   const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
   const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
   return 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
+}
+
+/* a hex as OKLCH [L, C, h] — the generator reads the base colour in the space it builds in */
+export function hexToOklch(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+  const l = Math.cbrt(0.4122214708 * r + 0.5363015620 * g + 0.0514770613 * b)
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+  const L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
+  const A = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s
+  const B = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+  return [L, Math.hypot(A, B), ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360]
+}
+
+/**
+ * ROLES BY MEANING (plan 41 § 6.2) — assigned after a palette exists, never typed in first:
+ * bg = the darkest, fg (Ink) = the lightest, accent = the most saturated of the rest, dim = the
+ * least saturated of what is left, warm = the next. A short palette reuses: two colours give
+ * bg + fg, and accent/dim/warm fall back to the most saturated.
+ */
+export function assignRoles(colors) {
+  const all = colors.map((hex, i) => { const [L, C] = hexToOklch(hex); return { hex, i, L, C } })
+  const byL = [...all].sort((a, b) => a.L - b.L)
+  const bg = byL[0], fg = byL[byL.length - 1]
+  const rest = all.filter((c) => c !== bg && c !== fg).sort((a, b) => b.C - a.C)
+  const vivid = [...all].sort((a, b) => b.C - a.C)[0]
+  const accent = rest[0] ?? vivid
+  const left = rest.slice(1)
+  const dim = left[left.length - 1] ?? accent
+  const warm = left.length > 1 ? left[0] : accent
+  return { bg: bg.hex, fg: fg.hex, accent: accent.hex, dim: dim.hex, warm: warm.hex }
+}
+
+/* each relation's distinct hue offsets, in the DS harmony's role order */
+const offsetsOf = (rel) => [...new Set(HARMONIES.find((h) => h.id === rel)?.roleOffsets ?? [0])]
+
+/**
+ * ONE COLOUR GENERATES THE PALETTE (plan 41 § 6.2, the Adobe Color model) — `base` is colour 0,
+ * exactly; the others take the relation's hues off the base's OKLCH hue, cycling when the count
+ * outruns them. Lightness: one ground near black and one ink near white (from three colours up),
+ * the rest spread through the middle so repeated hues still read apart. The same rng and inputs
+ * give the same list.
+ */
+export function generatePalette(rng, { base, relation = 'analogous', count = 5 }) {
+  const n = Math.min(8, Math.max(2, Math.round(count)))
+  const [L0, C0, h0] = hexToOklch(base)
+  const C = Math.min(0.2, Math.max(0.06, C0)) * (0.85 + rng() * 0.3)
+  const offs = relation === 'monochromatic' ? [0] : offsetsOf(relation)
+  const hueAt = (i) => (relation === 'random' ? rng() * 360 : h0 + offs[i % offs.length])
+  const out = [base.toLowerCase()]
+  const others = n - 1
+  for (let k = 0; k < others; k++) {
+    const h = hueAt(k + 1)
+    let L, c
+    if (n >= 3 && k === 0) { L = 0.14 + rng() * 0.05; c = C * 0.3 }            /* ground */
+    else if (n >= 3 && k === 1) { L = 0.93 + rng() * 0.04; c = C * 0.2 }       /* ink */
+    else if (n === 2) { L = L0 < 0.55 ? 0.93 + rng() * 0.04 : 0.14 + rng() * 0.05; c = C * 0.25 }
+    else {
+      const mids = others - 2
+      const j = k - 2
+      L = 0.4 + (mids === 1 ? 0.25 : (0.4 * j) / (mids - 1)) + (rng() - 0.5) * 0.06
+      c = C * (0.7 + rng() * 0.3)
+    }
+    out.push(oklchToHex(L, c, h))
+  }
+  return out
 }
 
 /* WCAG relative luminance — the contrast check warns, never enforces (ticket § Wiring 4) */

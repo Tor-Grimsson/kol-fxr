@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Dropdown, Tooltip } from '@kolkrabbi/kol-component'
+import { Button, Divider, Dropdown, Tooltip } from '@kolkrabbi/kol-component'
 import { LabeledControl, SettingsRow, LabeledControlSection } from '@kolkrabbi/kol-component'
 import { SegmentedToggle } from '@kolkrabbi/kol-component'
 import { ViewToggle } from '@kolkrabbi/kol-component'
@@ -66,7 +66,7 @@ function Row({ inline, label, align = 'fill', children }) {
 const ONOFF = [{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]
 function OnOff({ inline, cs, on, onChange }) {
   return inline
-    ? <SegmentedToggle size={cs} className={`w-full ${stripClamp(cs) ?? ''}`} options={ONOFF} value={on ? 'on' : 'off'} onChange={(v) => onChange(v === 'on')} />
+    ? <SegmentedToggle tone="sunken" size={cs} className={`w-full ${stripClamp(cs) ?? ''}`} options={ONOFF} value={on ? 'on' : 'off'} onChange={(v) => onChange(v === 'on')} />
     : <ViewToggle size={cs} options={ONOFF} viewMode={on ? 'on' : 'off'} onViewChange={(v) => onChange(v === 'on')} />
 }
 
@@ -238,7 +238,7 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
             <Row inline label="Palette">
               <div className="flex w-full gap-2">
                 <Dropdown variant="subtle" size={cs} className="flex-1 min-w-0" options={RELATIONS.map((r) => ({ value: r.id, label: r.label }))} value={relation} onChange={(v) => setProp('_paletteRelation', v)} />
-                <Button tone="grey" size={cs} onClick={rollColors}>Roll</Button>
+                <Button tone="primary" size={cs} onClick={rollColors}>Roll</Button>
               </div>
             </Row>
             {loopBgToggleable(loop) && (
@@ -273,6 +273,8 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
               weight/seed) — pickers above the randomize block, labs order. */}
           <AutoControls schema={schema} layer={layer} setProp={setParamProp} palette={palette} renderAnimate={renderAnimate} tab="generate" inline={inline} />
 
+          {/* THE RANDOMISE BLOCK STANDS APART in labs (plan 41 § 7.2, user 2026-10-26) */}
+          {inline && <Divider />}
           {/* Rolls WHICH PRESET you are on — the axis the rail had no button
               for. Hidden when the group holds nothing else to move to. */}
           {presetRollPool(layer).length > 0 && (
@@ -297,9 +299,8 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
           </div>
           <RollScopesDialog open={scopesOpen} onClose={() => setScopesOpen(false)} schema={schema} layer={layer} size={cs} />
           {scopes.length > 0 && (
-            /* Odd counts keep the lone half-width cell — labs' own grids do
-             * (Pattern's 5, Penrose's 6-plus-reset), verified 2026-08-09. */
-            <div className="grid grid-cols-2 gap-2">
+            /* Labs: three to a row (plan 41 § 4.6, user 2026-10-26: "3 in a row?"); the editor keeps two. */
+            <div className={`grid ${inline ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
               {scopes.map((s) => (
                 <Button key={s.id} tone="primary" size={cs} onClick={(e) => (e.altKey ? resetScope(s.params) : roll(s.params, s))}>
                   {s.label}

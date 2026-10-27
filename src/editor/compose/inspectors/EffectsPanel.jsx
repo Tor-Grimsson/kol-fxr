@@ -285,8 +285,8 @@ export function StageRolls({ def, view, tab, onPatch, inline = false }) {
         </div>
       )}
       {scopes.length > 0 && (
-        /* Odd counts keep the lone half-width cell — Generate's grid does. */
-        <div className="grid grid-cols-2 gap-2">
+        /* Labs: three to a row, like Generate's (plan 41 § 4.6); the editor keeps two. */
+        <div className={`grid ${inline ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
           {scopes.map((sc) => (
             <Button key={sc.id} tone="primary" size={cs}
               onClick={(e) => (e.altKey ? reset(sc.params) : roll(sc.params, sc))}>

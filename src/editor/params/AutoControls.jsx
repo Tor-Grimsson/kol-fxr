@@ -96,7 +96,11 @@ export default function AutoControls({ schema, layer, setProp, palette, renderAn
           kol-labs.css then out-specified it back to 8px — Section's default IS
           8px, so dropping both lands on the same rendering with nothing
           overriding anything. */}
-      {groups.map((g) => (
+      {groups.map((g) => {
+        /* ONE BOX WIDTH PER SECTION (plan 41 § 7.4, user 2026-10-26: "why is speed not the same width
+           as phase?") — the widest range box in the section sets every range box in it */
+        const chars = Math.max(0, ...g.params.filter((p) => p.type === 'range').map(rangeChars))
+        return (
         <LabeledControlSection
           key={g.params[0].key}
           label={g.section && g.section !== g.params[0].label ? g.section : undefined}
@@ -115,13 +119,23 @@ export default function AutoControls({ schema, layer, setProp, palette, renderAn
                 bound={bound}
                 animate={animate}
                 inline={inline}
+                chars={chars || undefined}
               />
             )
           })}
         </LabeledControlSection>
-      ))}
+        )
+      })}
     </>
   )
+}
+
+/* AS WIDE AS ITS LONGEST VALUE (spec R6.1): the range's widest end plus its decimals — a 0–200
+   radius is three characters, a 0.025 step five. Per param; a section takes its widest (§ 7.4). */
+function rangeChars(p) {
+  const stepDecimals = p.step && p.step < 1 ? (String(p.step).split('.')[1]?.length ?? 2) : 0
+  return Math.max(2, String(Math.round(p.max ?? 0)).length, String(Math.round(p.min ?? 0)).length)
+    + (stepDecimals ? stepDecimals + 1 : 0)
 }
 
 /* RangeField — the range control with DIRECT INPUT. One editable box does it
@@ -131,7 +145,7 @@ export default function AutoControls({ schema, layer, setProp, palette, renderAn
  * live resolved value every transport tick — so you see the modulation move —
  * and the box shows the expression (editable) or the live value. Subscribes to
  * the transport only when bound, so unbound params pay nothing. */
-function RangeField({ param: p, layer, setProp }) {
+function RangeField({ param: p, layer, setProp, chars: sectionChars }) {
   const cs = useControlSize()
   const raw = layer[p.key]
   const bound = isBinding(raw)
@@ -146,10 +160,8 @@ function RangeField({ param: p, layer, setProp }) {
   const shown = boundExpr
     ? (raw.transform?.expr ?? 'wave(t)')
     : (p.format ? String(p.format(numVal)) : (stepDecimals ? numVal.toFixed(stepDecimals) : String(Math.round(numVal))))
-  /* AS WIDE AS ITS LONGEST VALUE (spec R6.1): the range's widest end plus its decimals — a 0–200
-     radius is three characters, a 0.025 step five. It was a fixed 5. */
-  const chars = Math.max(2, String(Math.round(p.max ?? 0)).length, String(Math.round(p.min ?? 0)).length)
-    + (stepDecimals ? stepDecimals + 1 : 0)
+  /* the section's width when AutoControls passes one (§ 7.4), else this range's own (spec R6.1) */
+  const chars = sectionChars ?? rangeChars(p)
   const [draft, setDraft] = useState(shown)
   const [editing, setEditing] = useState(false)
   useEffect(() => { if (!editing) setDraft(shown) }, [shown, editing])
@@ -213,7 +225,7 @@ const INLINE_LABEL_W = RAIL_LABEL_W
    Written out per rung: Tailwind only emits a class it can read whole. */
 const ROW_H = { xs: 'h-[var(--kol-ctl-xs)]', sm: 'h-[var(--kol-ctl-sm)]', md: 'h-[var(--kol-ctl-md)]', lg: 'h-[var(--kol-ctl-lg)]' }
 
-function ParamControl({ param: p, layer, setProp, palette, bound, animate, inline }) {
+function ParamControl({ param: p, layer, setProp, palette, bound, animate, inline, chars }) {
   const cs = useControlSize()
   const raw = layer[p.key]
   const value = raw === undefined ? p.default : raw
@@ -244,7 +256,7 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
     /* Direct input + live modulation readout, both in one field (RangeField):
      * type a number for a constant or an expression to bind it; a bound track
      * shows the resolved value moving. */
-    control = <RangeField param={p} layer={layer} setProp={setProp} />
+    control = <RangeField param={p} layer={layer} setProp={setProp} chars={chars} />
   } else if (p.type === 'select') {
     control = (
       <Dropdown
@@ -256,12 +268,12 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
     )
   } else if (p.type === 'segmented') {
     /* THE LABS SKIN HAS ONE SEGMENTED CONTROL (user, 2026-09-01): the DS
-     * SegmentedToggle — one group radius, dividers, the sunken selected cell
-     * (kol-labs.css) — for tab strips and option pairs alike. ViewToggle's
+     * SegmentedToggle, `tone="sunken"` (no outer border, dark selected cell, grey cells,
+     * dividers; plan 41 § 4.8, user 2026-10-27) — for tab strips and option pairs alike. ViewToggle's
      * bare tiles beside it were two answers to one question. The editor
      * keeps ViewToggle with the rest of its inspector. */
     control = inline ? (
-      <SegmentedToggle
+      <SegmentedToggle tone="sunken"
         size={cs} className={`w-full ${stripClamp(cs) ?? ''}`}
         options={p.options ?? []}
         value={value}
@@ -290,7 +302,7 @@ function ParamControl({ param: p, layer, setProp, palette, bound, animate, inlin
       /* labelled pair in the labs skin: the same SegmentedToggle as
        * `segmented`, spanning the control column like a dropdown */
       control = (
-        <SegmentedToggle
+        <SegmentedToggle tone="sunken"
           size={cs} className={`w-full ${stripClamp(cs) ?? ''}`}
           options={[{ value: 'off', label: offLabel }, { value: 'on', label: onLabel }]}
           value={value ? 'on' : 'off'}

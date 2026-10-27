@@ -4,10 +4,12 @@ import { PaletteBody } from './PaletteBody'
 
 /**
  * COLOR MODES — the palette generator as a TOOL WINDOW (plan 39 § 4.1; the user's colour-modes tool,
- * Adobe's colour tool the reference): opened from Tools · Edit · Window › Color Modes, never a tab.
+ * Adobe's colour tool the reference): opened from Tools · Edit · Window › Color Modes and from Labs'
+ * Color row (plan 41 § 6.1), never a tab.
  * One generator in the app — it replaced both the colour pane's Palette tab and the old PaletteModal
- * (retired to `_tmp/2026-10-23-palette-modal-retired/`). The body is `PaletteBody`: relationship ·
- * roll · lock · load · save, applied to the selected generator or to the document palette.
+ * (retired to `_tmp/2026-10-23-palette-modal-retired/`). The body is `PaletteBody`: one base colour,
+ * a relationship and a count; roll · lock · edit · delete · load · save, applied to the selected
+ * generator or to the document palette.
  *
  * Opened by `kol:open-color-modes`. `scrim` like Layer Effects: the canvas stays visible under it,
  * so every apply is seen live.
