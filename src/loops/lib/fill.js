@@ -13,18 +13,18 @@ export const FILL_OPTIONS = [
 // Shared params spread into a filled loop's schema. `tab:'color'` routes them to
 // the rail's Color tab (next to the swatches), not the Edit/transform tab.
 export const FILL_PARAMS = [
-  { key: 'fill', label: 'Fill', type: 'select', options: FILL_OPTIONS, default: 'solid', tab: 'color' },
-  { key: 'fillAngle', label: 'Angle', type: 'range', min: 0, max: 360, step: 1, default: 0, tab: 'color', noRandom: true },
-  { key: 'fillStops', label: 'Polar stops', type: 'range', min: 2, max: 16, step: 1, default: 6, tab: 'color', noRandom: true },
+  { key: 'fill', label: 'Fill', type: 'select', options: FILL_OPTIONS, default: 'solid', tab: 'color', collapsed: true },
+  { key: 'fillAngle', label: 'Angle', type: 'range', min: 0, max: 360, step: 1, default: 0, tab: 'color', noRandom: true, collapsed: true },
+  { key: 'fillStops', label: 'Polar stops', type: 'range', min: 2, max: 16, step: 1, default: 6, tab: 'color', noRandom: true, collapsed: true },
 ]
 
 // Extra params for loops that fill a single closed curve (vs concentric discs):
 // an on/off toggle, opacity, and a winding rule (matters for self-intersecting
 // curves like rose / lissajous). Spread alongside FILL_PARAMS.
 export const SHAPE_FILL_PARAMS = [
-  { key: 'fillShape', label: 'Fill shape', type: 'toggle', default: false, tab: 'color' },
-  { key: 'fillAlpha', label: 'Fill opacity', type: 'range', min: 0.05, max: 1, step: 0.05, default: 0.5, tab: 'color', noRandom: true },
-  { key: 'fillRule', label: 'Fill rule', type: 'select', options: [{ value: 'nonzero', label: 'Nonzero' }, { value: 'evenodd', label: 'Even-odd' }], default: 'nonzero', tab: 'color' },
+  { key: 'fillShape', label: 'Fill shape', type: 'toggle', default: false, tab: 'color', collapsed: true },
+  { key: 'fillAlpha', label: 'Fill opacity', type: 'range', min: 0.05, max: 1, step: 0.05, default: 0.5, tab: 'color', noRandom: true, collapsed: true },
+  { key: 'fillRule', label: 'Fill rule', type: 'select', options: [{ value: 'nonzero', label: 'Nonzero' }, { value: 'evenodd', label: 'Even-odd' }], default: 'nonzero', tab: 'color', collapsed: true },
 ]
 
 // Canvas winding rule from the loop's param (defaults to nonzero).

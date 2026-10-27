@@ -284,27 +284,27 @@ export default {
   params: [
     { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#050506' },
     { key: 'stroke', label: 'Stroke', type: 'color', role: 'fg', default: '#9ec1ff' },
-    { key: 'clip', label: 'Shape', type: 'select', options: [...CLIPS.map(({ id, label }) => ({ value: id, label })), { value: 'custom', label: 'Custom' }], default: 'circle-to-sine' },
-    { key: 'mode', label: 'Motion', type: 'select', options: MODE_OPTIONS, default: 'reveal' },
+    { key: 'clip', noRandom: true, label: 'Shape', type: 'select', options: [...CLIPS.map(({ id, label }) => ({ value: id, label })), { value: 'custom', label: 'Custom' }], default: 'circle-to-sine' },
+    { key: 'mode', noRandom: true, label: 'Motion', type: 'select', options: MODE_OPTIONS, default: 'reveal' },
     { key: 'tail', label: 'Comet tail', type: 'range', min: 0.05, max: 0.9, step: 0.05, default: 0.35, when: (l) => l.mode === 'comet' },
     { key: 'weight', label: 'Weight', type: 'range', min: 0.5, max: 6, step: 0.1, default: 1.6 },
-    { key: 'guides', label: 'Construction', type: 'toggle', default: true },
     // Modifiers (labs ClipForm) — copies/spiral default to the stock clip's
     // authored mod; a non-default value overrides it.
-    { key: 'copies', label: 'Copies', type: 'range', min: 1, max: 24, step: 1, default: 1, section: 'Modifiers' },
-    { key: 'spiral', label: 'Spiral', type: 'range', min: 0, max: 8, step: 0.1, default: 0, section: 'Modifiers' },
+    { key: 'copies', noRandom: true, label: 'Copies', type: 'range', min: 1, max: 24, step: 1, default: 1, section: 'Modifiers' },
+    { key: 'spiral', noRandom: true, label: 'Spiral', type: 'range', min: 0, max: 8, step: 0.1, default: 0, section: 'Modifiers' },
     { key: 'fill', label: 'Fill', type: 'toggle', default: false, section: 'Modifiers' },
     { key: 'outline', label: 'Outline', type: 'toggle', default: false, section: 'Modifiers', when: (l) => !!l.fill },
     { key: 'fillOpacity', label: 'Fill opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 1, section: 'Modifiers', when: (l) => !!l.fill },
     // Reference axes/box (labs StylePanel AXIS_3D + axes3d.js overlay).
-    { key: 'axes', label: 'Axes', type: 'select', options: AXIS_3D_OPTIONS, default: 'none', section: 'Reference' },
+    { key: 'guides', noRandom: true, section: 'Reference', label: 'Construction', type: 'toggle', default: true },
+    { key: 'axes', noRandom: true, collapsed: true, label: 'Axes', type: 'select', options: AXIS_3D_OPTIONS, default: 'none', section: 'Reference' },
     { key: 'gridColor', label: 'Grid color', type: 'color', role: 'fg', default: '#ffffff', section: 'Reference', when: (l) => l.axes && l.axes !== 'none' },
     { key: 'gridOpacity', label: 'Grid opacity', type: 'range', min: 0, max: 1, step: 0.02, default: 0.1, section: 'Reference', when: (l) => l.axes && l.axes !== 'none' },
     { key: 'spin', label: 'Spin · turns', type: 'range', min: -8, max: 8, rMin: 0, rMax: 3, step: 1, default: 1, tab: 'anim', section: 'Motion' },
     { key: 'cycles', label: 'Trace cycles', type: 'range', min: 1, max: 8, rMin: 1, rMax: 4, step: 1, default: 1, tab: 'anim', section: 'Motion' },
-    { key: 'yaw', label: 'Yaw', type: 'range', min: 0, max: 360, step: 1, default: 340 },
-    { key: 'pitch', label: 'Pitch', type: 'range', min: -80, max: 80, step: 1, default: 18 },
-    { key: 'dist', label: 'Distance', type: 'range', min: 1.5, max: 6, step: 0.1, default: 3 },
+    { key: 'yaw', section: 'Reference', label: 'Yaw', type: 'range', min: 0, max: 360, step: 1, default: 340 },
+    { key: 'pitch', section: 'Reference', label: 'Pitch', type: 'range', min: -80, max: 80, step: 1, default: 18 },
+    { key: 'dist', section: 'Reference', label: 'Distance', type: 'range', min: 1.5, max: 6, step: 0.1, default: 3 },
   ],
   draw(ctx, u, w, h, p) {
     ctx.fillStyle = p.bg

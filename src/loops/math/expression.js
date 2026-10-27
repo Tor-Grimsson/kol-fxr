@@ -184,21 +184,21 @@ export default {
     /* Bounds fold into View (user call — one knob section, one boring
      * chip). `max` stays labs' knob-range idiom: the helpers' scale AND
      * the red reference ceiling. */
-    { key: 'min', label: 'Min', type: 'range', min: -100, max: 100, step: 1, default: 0, section: 'View' },
-    { key: 'max', label: 'Max', type: 'range', min: 1, max: 200, step: 1, default: 100, section: 'View' },
-    { key: 'sec', label: 'Window', type: 'range', min: 1, max: 30, step: 1, default: 5, section: 'View' },
-    { key: 'ofs', label: 'Offset', type: 'range', min: -10, max: 10, step: 0.1, default: 0, section: 'View' },
-    { key: 'margin', label: 'Margin', type: 'range', min: 0, max: 120, step: 1, default: 0, section: 'View' },
+    { key: 'min', noRandom: true, label: 'Min', type: 'range', min: -100, max: 100, step: 1, default: 0, section: 'View' },
+    { key: 'max', noRandom: true, label: 'Max', type: 'range', min: 1, max: 200, step: 1, default: 100, section: 'View' },
+    { key: 'sec', noRandom: true, label: 'Window', type: 'range', min: 1, max: 30, step: 1, default: 5, section: 'View' },
+    { key: 'ofs', noRandom: true, label: 'Offset', type: 'range', min: -10, max: 10, step: 0.1, default: 0, section: 'View' },
+    { key: 'margin', noRandom: true, label: 'Margin', type: 'range', min: 0, max: 120, step: 1, default: 0, section: 'View' },
     /* Labs' View X/Y zooms (its Scale slider is just a set-both convenience
      * over these two — not real state, so it has no param here). */
-    { key: 'zoomX', label: 'X', type: 'range', min: 0.1, max: 10, step: 0.1, default: 1, section: 'View' },
-    { key: 'zoomY', label: 'Y', type: 'range', min: 0.1, max: 10, step: 0.1, default: 1, section: 'View' },
-    { key: 'axis', label: 'Axis', type: 'select', default: 'grid', section: 'View',
-      options: [{ value: 'grid', label: 'Grid' }, { value: 'none', label: 'None' }] },
-    { key: 'gridOpacity', label: 'Grid opacity', type: 'range', min: 0, max: 0.5, step: 0.01, default: 0.1, section: 'View', when: (l) => l.axis !== 'none' },
-    { key: 'gridWeight', label: 'Grid weight', type: 'range', min: 0.5, max: 3, step: 0.1, default: 1, section: 'View' },
+    { key: 'zoomX', noRandom: true, label: 'X', type: 'range', min: 0.1, max: 10, step: 0.1, default: 1, section: 'View' },
+    { key: 'zoomY', noRandom: true, label: 'Y', type: 'range', min: 0.1, max: 10, step: 0.1, default: 1, section: 'View' },
     { key: 'traceWeight', label: 'Trace weight', type: 'range', min: 0.5, max: 6, step: 0.1, default: 2, section: 'View' },
-    { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#121215', section: 'Color' },
+    { key: 'axis', noRandom: true, collapsed: true, label: 'Axis', type: 'select', default: 'grid', section: 'Grid',
+      options: [{ value: 'grid', label: 'Grid' }, { value: 'none', label: 'None' }] },
+    { key: 'gridOpacity', label: 'Grid opacity', type: 'range', min: 0, max: 0.5, step: 0.01, default: 0.1, section: 'Grid', when: (l) => l.axis !== 'none' },
+    { key: 'gridWeight', label: 'Grid weight', type: 'range', min: 0.5, max: 3, step: 0.1, default: 1, section: 'Grid' },
+    { key: 'bg', collapsed: true, label: 'Background', type: 'color', role: 'bg', default: '#121215', section: 'Color' },
     { key: 'fg', label: 'Trace', type: 'color', role: 'fg', default: '#faf7f0', section: 'Color' },
     { key: 'gridColor', label: 'Grid color', type: 'color', role: 'dim', default: '#faf7f0', section: 'Color' },
   ],

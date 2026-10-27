@@ -62,7 +62,7 @@ const DRIFT_STYLES = {
  * the water caustics branch returns before uFlow/uLight/uAmp/uFoam/uSheen. */
 const notCaustics = (l) => l.style !== 'caustics'
 const driftCommon = (family) => [
-  { key: 'style', label: 'Style', type: 'select', default: DRIFT_STYLES[family][0].value, options: DRIFT_STYLES[family], section: 'Field' },
+  { key: 'style', label: 'Style', type: 'select', noRandom: true, default: DRIFT_STYLES[family][0].value, options: DRIFT_STYLES[family], section: 'Field' },
   { key: 'palette', label: 'Palette', type: 'select', default: PALETTES[family][0].value, options: opts(PALETTES[family]), section: 'Field' },
   range('freq', 'Scale', 0.3, 3, 0.05, 1, { section: 'Field' }),
   /* uWarp is read by the air shader only (clouds domain-warp) */
@@ -128,13 +128,13 @@ const IRIDESCENT_LOOP = {
    * writes these two params in shader units — the Tunnel's centre. */
   grabKeys: { x: 'posX', y: 'drop' },
   params: [
-    { key: 'look', label: 'Look', type: 'select', default: 'custom', options: GRAD_LOOK_OPTS, section: 'Color' },
+    { key: 'look', label: 'Look', type: 'select', default: 'custom', options: GRAD_LOOK_OPTS, section: 'Color', collapsed: true },
     /* uSpectral defaults ON in the engine — the palette ramp only shows once
      * it's switched off (tint() = mix(ramp, rainbow, uSpectral)). */
     { key: 'spectral', label: 'Spectral', type: 'toggle', default: true, section: 'Color', when: iCustom },
     { key: 'palette', label: 'Palette', type: 'select', default: 'spectrum', options: GRAD_PALETTE_OPTS, section: 'Color', when: (l) => iCustom(l) && !(l.spectral ?? true) },
     { key: 'backdrop', label: 'Backdrop', type: 'select', default: 'black', options: BACKDROP_OPTS, section: 'Color', when: (l) => iCat(l) === 2 && (l.look ?? 'custom') !== 'noir' },
-    { ...range('count', 'Count', 1, 6, 1, 5, { section: 'Composition' }), when: (l) => (iCat(l) === 2 && iType(l) === 0) || (iCat(l) === 1 && iType(l) === 1) },
+    { ...range('count', 'Count', 1, 6, 1, 5, { section: 'Composition', noRandom: true }), when: (l) => (iCat(l) === 2 && iType(l) === 0) || (iCat(l) === 1 && iType(l) === 1) },
     { ...range('size', 'Size', 0.1, 2, 0.05, 1, { section: 'Composition' }), when: (l) => (iCat(l) === 2 && (iType(l) === 0 || iType(l) === 2)) || iCat(l) === 3 },
     { ...range('spread', 'Spread', 0, 2, 0.05, 1, { section: 'Composition' }), when: (l) => (iCat(l) === 1 && iType(l) <= 1) || (iCat(l) === 2 && iType(l) === 0) },
     /* Per-type form knobs (labs registry CTRL_SPEC ranges + per-type
@@ -143,20 +143,19 @@ const IRIDESCENT_LOOP = {
      * the engine's uniform fallbacks so ungated presets render unchanged. */
     { ...range('angle', 'Angle', 0, 6.2832, 0.01, 0, { section: 'Composition' }), when: (l) => iCat(l) === 0 && [0, 1, 3].includes(iType(l)) },
     { ...range('freq', 'Frequency', 0.2, 8, 0.1, 2, { section: 'Composition' }), when: (l) => (iCat(l) === 0 && (iType(l) === 1 || iType(l) === 2)) || (iCat(l) === 1 && iType(l) === 0) || (iCat(l) === 2 && iType(l) === 3) || (iCat(l) === 3 && iType(l) !== 1) },
-    { ...range('winds', 'Winds', 1, 12, 1, 5, { section: 'Composition' }), when: (l) => iCat(l) === 2 && iType(l) === 1 },
+    { ...range('winds', 'Winds', 1, 12, 1, 5, { section: 'Composition', noRandom: true }), when: (l) => iCat(l) === 2 && iType(l) === 1 },
     { ...range('pitch', 'Pitch', 0.5, 6, 0.1, 2.4, { section: 'Composition' }), when: (l) => iCat(l) === 2 && iType(l) === 1 },
-    { ...range('petals', 'Petals', 0, 24, 1, 9, { section: 'Composition' }), when: (l) => iCat(l) === 2 && iType(l) === 1 },
+    { ...range('petals', 'Petals', 0, 24, 1, 9, { section: 'Composition', noRandom: true }), when: (l) => iCat(l) === 2 && iType(l) === 1 },
     { ...range('mouth', 'Mouth', 0.1, 1.2, 0.02, 0.5, { section: 'Composition' }), when: (l) => iCat(l) === 2 && iType(l) === 1 },
     /* Tunnel: the ring's form (Tunnel + Halo — Horizon is a flat floor), its flattening, its vertical centre, the edge ramp */
-    { key: 'shape', label: 'Shape', type: 'select', default: 'circle', options: TUNNEL_SHAPE_OPTS, section: 'Composition', when: (l) => iCat(l) === 3 && iType(l) !== 2 },
-    { ...range('sides', 'Sides', 3, 12, 1, 6, { section: 'Composition' }), when: (l) => iCat(l) === 3 && iType(l) !== 2 && ['polygon', 'star'].includes(l.shape) },
+    { key: 'shape', label: 'Shape', type: 'select', default: 'circle', options: TUNNEL_SHAPE_OPTS, section: 'Composition', noRandom: true, when: (l) => iCat(l) === 3 && iType(l) !== 2 },
+    { ...range('sides', 'Sides', 3, 12, 1, 6, { section: 'Composition', noRandom: true }), when: (l) => iCat(l) === 3 && iType(l) !== 2 && ['polygon', 'star'].includes(l.shape) },
     { ...range('squash', 'Squash', 0.5, 3, 0.05, 1.4, { section: 'Composition' }), when: (l) => iCat(l) === 3 },
-    { ...range('posX', 'Centre X', -1.5, 1.5, 0.01, 0, { section: 'Composition' }), when: (l) => iCat(l) === 3 && iType(l) !== 2 },
-    { ...range('drop', 'Centre Y', -0.8, 0.8, 0.01, -0.15, { section: 'Composition' }), when: (l) => iCat(l) === 3 },
+    { ...range('posX', 'Centre X', -1.5, 1.5, 0.01, 0, { section: 'Position', collapsed: true, noRandom: true }), when: (l) => iCat(l) === 3 && iType(l) !== 2 },
+    { ...range('drop', 'Centre Y', -0.8, 0.8, 0.01, -0.15, { section: 'Position', noRandom: true }), when: (l) => iCat(l) === 3 },
     /* drag the shape on the canvas (a mode, not a look — never rolled) */
-    { key: 'grab', label: 'Grab', type: 'toggle', default: false, noRandom: true, section: 'Composition', when: (l) => iCat(l) === 3 },
+    { key: 'grab', label: 'Grab', type: 'toggle', default: false, noRandom: true, section: 'Position', when: (l) => iCat(l) === 3 },
     { ...range('soft', 'Softness', 0.02, 1, 0.01, 0.4, { section: 'Look' }), when: (l) => iCat(l) === 3 },
-    { ...range('lines', 'Scanlines', 0, 0.3, 0.005, 0, { section: 'Look' }), when: (l) => iCat(l) === 3 },
     { ...range('irid', 'Iridescence', 0, 2, 0.05, 1, { section: 'Look' }), when: (l) => iCustom(l) && !(iCat(l) === 1 && (iType(l) === 1 || iType(l) === 2)) },
     { ...range('hue', 'Hue shift', 0, 1, 0.01, 0, { section: 'Look' }), when: iCustom },
     { ...range('sheen', 'Sheen', 0, 1.5, 0.05, 0.5, { section: 'Look' }), when: (l) => iCat(l) === 2 || (iCat(l) === 1 && iType(l) <= 1) || (iCat(l) === 3 && iType(l) === 1) },
@@ -165,7 +164,9 @@ const IRIDESCENT_LOOP = {
     /* relief scales the volume branches' height field — labs gates it to cat 2 */
     { ...range('relief', 'Relief', 0.3, 1.6, 0.05, 0.9, { section: 'Look' }), when: (l) => iCat(l) === 2 },
     range('warp', 'Warp', 0, 2, 0.05, 0.5, { section: 'Look' }),
-    range('grain', 'Grain', 0, 0.2, 0.005, 0.03, { section: 'Look' }),
+    /* scanlines and grain finish the frame — closed past the 12-knob rule (plan 42 § 4.1) */
+    { ...range('lines', 'Scanlines', 0, 0.3, 0.005, 0, { section: 'Finish', collapsed: true }), when: (l) => iCat(l) === 3 },
+    range('grain', 'Grain', 0, 0.2, 0.005, 0.03, { section: 'Finish', collapsed: true }),
     /* uSpin is a time-rate multiplier (stripe scroll / conic sweep / spiral
      * wind / ripple travel) — a motion knob, gated to the branches that read it */
     { ...range('spin', 'Spin', -3, 3, 0.1, 1, ANIM), when: (l) => (iCat(l) === 0 && (iType(l) === 1 || iType(l) === 3)) || (iCat(l) === 2 && (iType(l) === 1 || iType(l) === 3)) || iCat(l) === 3 },
@@ -199,7 +200,7 @@ const IRIDESCENT_PRESETS = [
 
 /* ── Soft forms 2D / 3D — scenes carry `forms` arrays as opaque params ── */
 const SOFTFORMS_PARAMS = [
-  { key: 'spectral', label: 'Spectral', type: 'toggle', default: false, section: 'Color' },
+  { key: 'spectral', label: 'Spectral', type: 'toggle', default: false, section: 'Color', collapsed: true },
   /* tint() = mix(ramp, rainbow, uSpectral) — the palette ramp only shows while
    * Spectral is off. */
   { key: 'palette', label: 'Palette', type: 'select', default: 'spectrum', options: GRAD_PALETTE_OPTS, section: 'Color', when: (l) => !l.spectral },
@@ -213,7 +214,7 @@ const SOFTFORMS_PARAMS = [
   /* labs registry CTRL_SPEC ranges; defaults = labs BASE_PARAMS (engine map
    * uRimPow/uRimShift/uSSS — both the 2D and 3D engines read all three) */
   range('rimPow', 'Rim focus', 1, 6, 0.1, 2.6, { section: 'Look' }),
-  range('rimShift', 'Rim shift', 0, 0.5, 0.01, 0.12, { section: 'Look' }),
+  range('rimShift', 'Rim shift', 0, 0.5, 0.01, 0.12, { section: 'Look', noRandom: true }),
   range('sss', 'Subsurface', 0, 1, 0.01, 0.25, { section: 'Look' }),
   range('motion', 'Motion', 0, 1.5, 0.02, 0.4, ANIM),
   range('sweep', 'Sweep', 0, 360, 1, 20, ANIM),
@@ -226,7 +227,7 @@ const SOFTFORMS_LOOP = {
   params: [
     ...SOFTFORMS_PARAMS,
     /* 2D-only surface knobs — the 3D engine's param map reads neither */
-    range('bulge', 'Bulge', 0.2, 1.2, 0.01, 0.55, { section: 'Form' }),
+    range('bulge', 'Bulge', 0.2, 1.2, 0.01, 0.55, { section: 'Form', collapsed: true }),
     range('relief', 'Relief', 0.2, 2.5, 0.05, 1, { section: 'Form' }),
   ],
 }
@@ -243,8 +244,8 @@ const SOFTFORMS3D_LOOP = {
   cameraKeys: { yaw: 'camTheta', pitch: 'camPhi', dist: 'camDist' },
   params: [
     ...SOFTFORMS_PARAMS,
-    { key: 'metaball', label: 'Metaball', type: 'toggle', default: false, section: 'Form' },
-    range('camTheta', 'Camera θ', 0, 6.28, 0.01, 0.3, { section: 'Camera' }),
+    { key: 'metaball', label: 'Metaball', type: 'toggle', default: false, section: 'Form', collapsed: true },
+    range('camTheta', 'Camera θ', 0, 6.28, 0.01, 0.3, { section: 'Camera', collapsed: true }),
     range('camPhi', 'Camera φ', -1.2, 1.2, 0.01, 0.35, { section: 'Camera' }),
     range('camDist', 'Camera distance', 1.5, 8, 0.05, 3, { section: 'Camera' }),
   ],
@@ -267,7 +268,7 @@ const SCENE_LOOP = {
   id: 'scene3d', label: '3D scene', group: 'scene', kind: 'engine', engine: 'scene', orbit: true, bgToggle: true,
   drive: 'seek', duration: 8,
   params: [
-    { key: 'primitive', label: 'Primitive', type: 'select', default: 'torusKnot', options: opts(PRIMITIVES), section: 'Primitive' },
+    { key: 'primitive', label: 'Primitive', type: 'select', default: 'torusKnot', options: opts(PRIMITIVES), section: 'Primitive', noRandom: true },
     /* the Model's file (plan 26 § 15) — picked in the rail's Model section, never a schema row:
        `meshSrc` is a URL (the R2 media library) or a data URL (a local upload), `meshType` its format.
        Default: the Stanford Bunny (Stanford 3D Scanning Repository, Turk & Levoy 1994), in R2. */
@@ -277,9 +278,9 @@ const SCENE_LOOP = {
      * buildGeometry reads tube/p/q/detail via params, rounding via globals —
      * pWinds/qWinds are the host-contract names for the knot's p/q). */
     { ...range('tube', 'Tube', 0.1, 0.45, 0.01, 0.32, { section: 'Primitive' }), when: (l) => (l.primitive ?? 'torusKnot') === 'torus' },
-    { ...range('pWinds', 'P winds', 1, 5, 1, 2, { section: 'Primitive' }), when: (l) => (l.primitive ?? 'torusKnot') === 'torusKnot' },
-    { ...range('qWinds', 'Q winds', 1, 5, 1, 3, { section: 'Primitive' }), when: (l) => (l.primitive ?? 'torusKnot') === 'torusKnot' },
-    { ...range('detail', 'Detail', 0, 3, 1, 0, { section: 'Primitive' }), when: (l) => ['icosahedron', 'octahedron', 'dodecahedron'].includes(l.primitive ?? 'torusKnot') },
+    { ...range('pWinds', 'P winds', 1, 5, 1, 2, { section: 'Primitive', noRandom: true }), when: (l) => (l.primitive ?? 'torusKnot') === 'torusKnot' },
+    { ...range('qWinds', 'Q winds', 1, 5, 1, 3, { section: 'Primitive', noRandom: true }), when: (l) => (l.primitive ?? 'torusKnot') === 'torusKnot' },
+    { ...range('detail', 'Detail', 0, 3, 1, 0, { section: 'Primitive', noRandom: true }), when: (l) => ['icosahedron', 'octahedron', 'dodecahedron'].includes(l.primitive ?? 'torusKnot') },
     { ...range('rounding', 'Rounding', 0, 0.7, 0.02, 0.22, { section: 'Primitive' }), when: (l) => (l.primitive ?? 'torusKnot') === 'box' },
     /* animMode/duration — host-wiring contract keys (keyframes data itself is
      * opaque layer state, no schema entry). */
@@ -287,41 +288,41 @@ const SCENE_LOOP = {
       options: [{ value: 'preset', label: 'Preset' }, { value: 'keyframes', label: 'Keyframes' }] },
     { key: 'pose', label: 'Motion', type: 'select', default: 'spin', options: opts(POSE_PRESETS), tab: 'anim', section: 'Motion', when: (l) => (l.animMode ?? 'preset') === 'preset' },
     range('duration', 'Duration (s)', 2, 30, 0.5, 8, { ...ANIM, noRandom: true }),
-    range('count', 'Count', 1, 24, 1, 1, { section: 'Composition' }),
-    /* Multi-object knobs are no-ops at count 1 — hidden until they act. */
-    { key: 'arrangement', label: 'Arrangement', type: 'select', default: 'single', options: ARRANGEMENTS, when: (l) => (l.count ?? 1) > 1, section: 'Composition' },
-    { ...range('spread', 'Spread', 0.5, 5, 0.1, 2.2, { section: 'Composition' }), when: (l) => (l.count ?? 1) > 1 },
+    range('count', 'Count', 1, 24, 1, 1, { section: 'Composition', noRandom: true }),
     range('objectSize', 'Object size', 0.2, 3, 0.05, 1, { section: 'Composition' }),
-    { ...range('stagger', 'Stagger', 0, 1, 0.05, 0, { section: 'Composition' }), when: (l) => (l.count ?? 1) > 1 },
-    { key: 'materialType', label: 'Material', type: 'select', default: 'standard', options: MATERIALS, section: 'Material' },
+    /* Multi-object knobs are no-ops at count 1 — hidden until they act. */
+    { key: 'arrangement', label: 'Arrangement', type: 'select', default: 'single', options: ARRANGEMENTS, when: (l) => (l.count ?? 1) > 1, section: 'Arrangement', collapsed: true, noRandom: true },
+    { ...range('spread', 'Spread', 0.5, 5, 0.1, 2.2, { section: 'Arrangement' }), when: (l) => (l.count ?? 1) > 1 },
+    { ...range('stagger', 'Stagger', 0, 1, 0.05, 0, { section: 'Arrangement' }), when: (l) => (l.count ?? 1) > 1 },
+    { key: 'materialType', label: 'Material', type: 'select', default: 'standard', options: MATERIALS, section: 'Material', noRandom: true },
     /* Material-dependent knobs (per makeMaterial/applyMaterialProps):
      * normal ignores colour; roughness exists on standard + the physical pair;
      * metalness only applies to standard; env IBL only lights PBR materials. */
     { key: 'sceneColor', label: 'Color', type: 'color', role: 'fg', default: '#b9c2d0', section: 'Material', when: (l) => (l.materialType ?? 'standard') !== 'normal' || !!l.wireframe },
     { ...range('roughness', 'Roughness', 0, 1, 0.02, 0.38, { section: 'Material' }), when: (l) => ['standard', 'glass', 'dispersion'].includes(l.materialType ?? 'standard') },
     { ...range('metalness', 'Metalness', 0, 1, 0.02, 0.18, { section: 'Material' }), when: (l) => (l.materialType ?? 'standard') === 'standard' },
-    { key: 'flatShading', label: 'Flat shading', type: 'toggle', default: false, section: 'Material' },
-    { key: 'wireframe', label: 'Wireframe', type: 'toggle', default: false, section: 'Material' },
-    { ...range('strokeWidth', 'Stroke width', 1, 10, 0.5, 3, { section: 'Material' }), when: (l) => !!l.wireframe },
-    { key: 'environment', label: 'Environment', type: 'toggle', default: false, section: 'Material', when: (l) => ['standard', 'glass', 'dispersion'].includes(l.materialType ?? 'standard') },
+    { key: 'flatShading', label: 'Flat shading', type: 'toggle', default: false, section: 'Shading', collapsed: true, noRandom: true },
+    { key: 'wireframe', label: 'Wireframe', type: 'toggle', default: false, section: 'Shading', noRandom: true },
+    { ...range('strokeWidth', 'Stroke width', 1, 10, 0.5, 3, { section: 'Shading' }), when: (l) => !!l.wireframe },
+    { key: 'environment', label: 'Environment', type: 'toggle', default: false, section: 'Shading', noRandom: true, when: (l) => ['standard', 'glass', 'dispersion'].includes(l.materialType ?? 'standard') },
     /* LIGHTING (plan 26 § 15; the user: "rotated on a loop with some lighting controls") — the engine's
        fixed key / fill / ambient rig made controllable, plus a rim; Light orbit = whole turns of the key
        around the subject per loop, so a still statue can be the thing the light moves over. */
-    range('lightKey', 'Key light', 0, 4, 0.05, 1.5, { section: 'Lighting' }),
+    range('lightKey', 'Key light', 0, 4, 0.05, 1.5, { section: 'Lighting', collapsed: true }),
     range('lightAngle', 'Key angle', 0, 360, 1, 37, { section: 'Lighting' }),
     range('lightElevation', 'Key height', -10, 85, 1, 42, { section: 'Lighting' }),
-    range('lightFill', 'Fill light', 0, 2, 0.05, 0.5, { section: 'Lighting' }),
-    range('lightRim', 'Rim light', 0, 4, 0.05, 0, { section: 'Lighting' }),
-    range('lightAmbient', 'Ambient', 0, 1.5, 0.05, 0.35, { section: 'Lighting' }),
+    range('lightFill', 'Fill light', 0, 2, 0.05, 0.5, { section: 'Lighting', noRandom: true }),
+    range('lightRim', 'Rim light', 0, 4, 0.05, 0, { section: 'Lighting', noRandom: true }),
+    range('lightAmbient', 'Ambient', 0, 1.5, 0.05, 0.35, { section: 'Lighting', noRandom: true }),
     range('lightOrbit', 'Light orbit', -8, 8, 1, 0, { tab: 'anim', section: 'Lighting', rMin: -4, rMax: 4 }),
-    range('fov', 'FOV', 15, 90, 1, 38, { section: 'Camera' }),
+    range('fov', 'FOV', 15, 90, 1, 38, { section: 'Camera', collapsed: true }),
     { key: 'cameraMotion', label: 'Camera orbit', type: 'toggle', default: false, tab: 'anim', section: 'Camera' },
     { ...range('orbitSpeed', 'Orbit speed', 0, 3, 0.05, 1, CAM_ANIM), when: (l) => !!l.cameraMotion },
     /* XYZ axes overlay (engine this.axes — scale + material opacity).
      * noRandom: a debug guide is curation, not look — keep rolls off it. */
-    { key: 'showAxis', label: 'Show XYZ axis', type: 'toggle', default: false, section: 'Guides', noRandom: true },
-    { ...range('axisLength', 'Axis length', 0.5, 4, 0.1, 1.5, { section: 'Guides', noRandom: true }), when: (l) => !!l.showAxis },
-    { ...range('axisOpacity', 'Axis opacity', 0, 1, 0.05, 0.7, { section: 'Guides', noRandom: true }), when: (l) => !!l.showAxis },
+    { key: 'showAxis', label: 'Show XYZ axis', type: 'toggle', default: false, section: 'Camera', noRandom: true },
+    { ...range('axisLength', 'Axis length', 0.5, 4, 0.1, 1.5, { section: 'Camera', noRandom: true }), when: (l) => !!l.showAxis },
+    { ...range('axisOpacity', 'Axis opacity', 0, 1, 0.05, 0.7, { section: 'Camera', noRandom: true }), when: (l) => !!l.showAxis },
   ],
 }
 const SP = (id, label, params) => ({ id: `scene-${id}`, label, loop: 'scene3d', params })
@@ -346,8 +347,8 @@ const MESH_LOOP = {
      * (host passthrough is B3 wiring; structural, so noRandom) */
     { key: 'mode', label: 'Mode', type: 'select', default: 'single', noRandom: true, section: 'Field',
       options: [{ value: 'single', label: 'Single' }, { value: 'grid', label: 'Grid' }] },
-    range('seed', 'Seed', 1, 40, 1, 7, { section: 'Field' }),
-    { key: 'shape', label: 'Shape', type: 'select', default: 'sphere', options: MESH_SHAPES.map((s) => ({ value: s, label: s === 'sphere' ? 'Sphere' : 'Plane' })), section: 'Field' },
+    range('seed', 'Seed', 1, 40, 1, 7, { section: 'Field', noRandom: true }),
+    { key: 'shape', label: 'Shape', type: 'select', noRandom: true, default: 'sphere', options: MESH_SHAPES.map((s) => ({ value: s, label: s === 'sphere' ? 'Sphere' : 'Plane' })), section: 'Field' },
     range('distort', 'Distort', 0.1, 1.2, 0.02, 0.5, { section: 'Field' }),
     range('glow', 'Glow', 0, 1, 0.02, 0.6, { section: 'Field' }),
     range('grain', 'Grain', 0, 0.2, 0.005, 0.06, { section: 'Field' }),
@@ -376,12 +377,12 @@ const FORMS_LOOP = {
   id: 'forms3d', label: 'Forms', group: 'forms', kind: 'engine', engine: 'forms', orbit: true, bgToggle: true,
   drive: 'seek', duration: 8,
   params: [
-    { key: 'form', label: 'Form', type: 'select', default: 'helix', options: opts(FORMS) },
+    { key: 'form', label: 'Form', type: 'select', noRandom: true, default: 'helix', options: opts(FORMS) },
     /* Per formsShapes.writePositions: turns/radius/height are helix-only;
      * amp animates the grid creatures (torus + helix ignore it); torus is the
      * one static form (its fn ignores ph, so cycles does nothing there). */
     ...tag({ section: 'Geometry' }, [
-      range('samples', 'Density', 8, 60, 1, 30),
+      range('samples', 'Density', 8, 60, 1, 30, { noRandom: true }),
       { ...range('cycles', 'Cycles', 1, 8, 1, 2, { rMin: 1, rMax: 6 }), when: (l) => (l.form ?? 'helix') !== 'torus' },
       { ...range('amp', 'Amplitude', 0, 1.5, 0.05, 0.35), when: (l) => !['helix', 'torus'].includes(l.form ?? 'helix') },
       range('pointSize', 'Point size', 0.01, 0.2, 0.005, 0.05),
@@ -404,7 +405,7 @@ const ENV_LOOP = {
   drive: 'seek', duration: 8,
   params: [
     { key: 'env', label: 'Scene', type: 'select', default: 'mountain', options: opts(ENVIRONMENTS) },
-    range('samples', 'Density', 16, 96, 1, 48, { section: 'Geometry' }),
+    range('samples', 'Density', 16, 96, 1, 48, { section: 'Geometry', noRandom: true }),
     range('cycles', 'Cycles', 1, 8, 1, 2, { section: 'Geometry', rMin: 1, rMax: 6 }),
     range('amp', 'Amplitude', 0, 1.5, 0.05, 0.5, { section: 'Geometry' }),
     /* The engine suppresses auto-rotate for wrapped scenes (camera sits inside
@@ -424,32 +425,42 @@ const RIBBON_LOOP = {
   drive: 'seek', duration: 12,
   params: [
     /* geometry (rebuilds the swept ribbon) */
+    /* plan 42: the seed sits on Gen beside the other structure; depth, flatness and corner close as Detail */
+    range('seed', 'Seed', 1, 64, 1, 1, { tab: 'generate', noRandom: true }),
     ...tag({ section: 'Geometry' }, [
-      range('seed', 'Seed', 1, 64, 1, 1),
-      range('loops', 'Loops', 1, 6, 1, 3),
+      range('loops', 'Loops', 1, 6, 1, 3, { noRandom: true }),
       range('height', 'Height', 0.5, 4, 0.1, 2.2),
       range('gap', 'Gap', 0.3, 1.6, 0.02, 0.92),
-      range('depth', 'Depth', 0, 1, 0.01, 0.35),
       range('curl', 'Curl', 0, 3, 0.05, 1),
       range('width', 'Width', 0.1, 1.2, 0.02, 0.5),
-      range('ribbonThickness', 'Flatness', 0.04, 0.3, 0.005, 0.12),
-      range('corner', 'Corner', 0.01, 0.12, 0.005, 0.045),
+    ]),
+    ...tag({ section: 'Detail', collapsed: true }, [
+      range('depth', 'Depth', 0, 1, 0.01, 0.35, { noRandom: true }),
+      range('ribbonThickness', 'Flatness', 0.04, 0.3, 0.005, 0.12, { noRandom: true }),
+      range('corner', 'Corner', 0.01, 0.12, 0.005, 0.045, { noRandom: true }),
     ]),
     /* look — applyMaterialProps splits per material: metalness is chrome-only,
      * ior/dispersion are glass-only. */
     ...tag({ section: 'Look' }, [
-      { key: 'materialType', label: 'Material', type: 'select', default: 'glass',
+      { key: 'materialType', label: 'Material', type: 'select', default: 'glass', noRandom: true,
         options: [{ value: 'glass', label: 'Glass' }, { value: 'chrome', label: 'Chrome' }] },
-      { key: 'ribbonColor', label: 'Color', type: 'color', role: 'fg', default: '#cfe0ff' },
       range('roughness', 'Roughness', 0, 1, 0.01, 0.05),
+    ]),
+    ...tag({ section: 'Color', collapsed: true }, [
+      { key: 'ribbonColor', label: 'Color', type: 'color', role: 'fg', default: '#cfe0ff' },
+      { key: 'background', label: 'Backdrop', type: 'color', role: 'bg', default: '#000000' },
+    ]),
+    ...tag({ section: 'Glass', collapsed: true }, [
       { ...range('metalness', 'Metalness', 0, 1, 0.02, 1), when: (l) => l.materialType === 'chrome' },
       { ...range('ior', 'IOR', 1, 2.4, 0.01, 1.55), when: (l) => (l.materialType ?? 'glass') === 'glass' },
-      { ...range('dispersion', 'Dispersion', 0, 20, 0.5, 10), when: (l) => (l.materialType ?? 'glass') === 'glass' },
-      { key: 'background', label: 'Backdrop', type: 'color', role: 'bg', default: '#000000' },
-      /* fat-line overlay sibling (engine globals.wireframe/strokeWidth —
-       * wireStroke is the host-contract name; labs stroke 1–8, engine dflt 2.5) */
-      { key: 'wireframe', label: 'Wireframe', type: 'toggle', default: false },
+      { ...range('dispersion', 'Dispersion', 0, 20, 0.5, 10, { noRandom: true }), when: (l) => (l.materialType ?? 'glass') === 'glass' },
+    ]),
+    /* fat-line overlay sibling (engine globals.wireframe/strokeWidth —
+     * wireStroke is the host-contract name; labs stroke 1–8, engine dflt 2.5) — with the FOV, the View section */
+    ...tag({ section: 'View', collapsed: true }, [
+      { key: 'wireframe', label: 'Wireframe', type: 'toggle', default: false, noRandom: true },
       { ...range('wireStroke', 'Stroke', 1, 8, 0.5, 2.5), when: (l) => !!l.wireframe },
+      range('fov', 'FOV', 15, 90, 1, 36, { noRandom: true }),
     ]),
     /* motion + post */
     range('flow', 'Flow', 0, 1, 0.01, 0.6, ANIM),
@@ -457,8 +468,7 @@ const RIBBON_LOOP = {
     range('duration', 'Duration (s)', 4, 30, 0.5, 12, { ...ANIM, noRandom: true }),
     { key: 'cameraOrbit', label: 'Camera orbit', type: 'toggle', default: false, tab: 'anim', section: 'Camera' },
     { ...range('orbitSpeed', 'Orbit speed', 0, 3, 0.05, 0.6, CAM_ANIM), when: (l) => !!l.cameraOrbit },
-    range('fov', 'FOV', 15, 90, 1, 36, { section: 'Camera' }),
-    ...tag({ section: 'Post' }, [
+    ...tag({ section: 'Post', collapsed: true }, [
       range('aberration', 'Aberration', 0, 3, 0.05, 1),
       range('bloom', 'Bloom', 0, 2, 0.05, 0),
       range('vignette', 'Vignette', 0, 1, 0.01, 0.35),

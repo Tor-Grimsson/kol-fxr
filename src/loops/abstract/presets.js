@@ -74,7 +74,7 @@ const rdLoop = {
     { key: 'f', label: 'Stoichiometry', type: 'range', min: 0.6, max: 2.2, step: 0.05, default: 1.4, when: (l) => rdModel(l) === 'oregonator' },
     { key: 'eps', label: 'Epsilon', type: 'range', min: 0.01, max: 0.08, step: 0.005, default: 0.02, when: (l) => rdModel(l) === 'oregonator' },
     { key: 'palette', label: 'Palette', type: 'select', default: 'jade', options: opts(RD_PALETTES) },
-    { key: 'seed', label: 'Seed', type: 'select', default: 'scatter', options: opts(RD_SEEDS) },
+    { key: 'seed', noRandom: true, label: 'Seed', type: 'select', default: 'scatter', options: opts(RD_SEEDS) },
     { key: 'speed', label: 'Speed', type: 'range', min: 0.2, max: 3, step: 0.1, default: 1 },
   ],
   draw(ctx, u, w, h, p) {

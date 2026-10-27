@@ -50,7 +50,7 @@ const MASK_PARAMS = [
   /* Default 'none' — generation-first (user ruling 2026-08-09): the sim owns
    * the full frame; picking a glyph/shape here is the opt-in that makes a
    * FORM interact with the generation. */
-  { key: 'shape', label: 'Shape', type: 'select', default: 'none', tab: 'generate', options: SHAPE_SOURCES.map((s) => ({ value: s.id, label: s.label })) },
+  { key: 'shape', label: 'Shape', type: 'select', default: 'none', tab: 'generate', noRandom: true, options: SHAPE_SOURCES.map((s) => ({ value: s.id, label: s.label })) },
   { key: 'glyph', label: 'Glyph', type: 'text', rows: 1, default: 'A', tab: 'generate', when: isGlyph },
   { key: 'customSvg', label: 'SVG code', type: 'text', rows: 4, placeholder: '<svg viewBox="0 0 24 24"><path d="…"/></svg>', default: '', tab: 'generate', noRandom: true, when: (l) => l.shape === 'custom' },
   { key: 'font', label: 'Font', type: 'select', default: DEFAULT_FONT, tab: 'generate', when: isGlyph, options: EDITOR_FONTS.map((f) => ({ value: f.family, label: f.label })) },
@@ -64,18 +64,32 @@ const MASK_PARAMS = [
  * forward-compat but today only change via their ColorFields — defaults come
  * from the KOL theme so presets read as a scheme out of the box. */
 const COLOR_PARAMS = [
-  { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: T.bg },
-  { key: 'fg', label: 'Foreground', type: 'color', role: 'fg', default: T.fg },
-  { key: 'accent', label: 'Accent', type: 'color', role: 'accent', default: T.accent },
-  { key: 'dim', label: 'Dim', type: 'color', role: 'dim', default: T.dim },
-  { key: 'warm', label: 'Warm', type: 'color', role: 'warm', default: T.warm },
+  { section: 'Color', collapsed: true, key: 'bg', label: 'Background', type: 'color', role: 'bg', default: T.bg },
+  { section: 'Color', collapsed: true, key: 'fg', label: 'Foreground', type: 'color', role: 'fg', default: T.fg },
+  { section: 'Color', collapsed: true, key: 'accent', label: 'Accent', type: 'color', role: 'accent', default: T.accent },
+  { section: 'Color', collapsed: true, key: 'dim', label: 'Dim', type: 'color', role: 'dim', default: T.dim },
+  { section: 'Color', collapsed: true, key: 'warm', label: 'Warm', type: 'color', role: 'warm', default: T.warm },
   /* Per-role opacity boosters (labs settings.js 0–5 model; dim boots at 5 —
    * prototypes author dim strokes at very low alpha and rely on the boost). */
-  { key: 'fgOpacity', label: 'Foreground opacity', type: 'range', min: 0, max: 5, step: 0.1, default: 1 },
-  { key: 'accentOpacity', label: 'Accent opacity', type: 'range', min: 0, max: 5, step: 0.1, default: 1 },
-  { key: 'dimOpacity', label: 'Dim opacity', type: 'range', min: 0, max: 5, step: 0.1, default: 5 },
-  { key: 'warmOpacity', label: 'Warm opacity', type: 'range', min: 0, max: 5, step: 0.1, default: 1 },
+  { section: 'Color', collapsed: true, noRandom: true, key: 'fgOpacity', label: 'Foreground opacity', type: 'range', min: 0, max: 5, step: 0.1, default: 1 },
+  { section: 'Color', collapsed: true, noRandom: true, key: 'accentOpacity', label: 'Accent opacity', type: 'range', min: 0, max: 5, step: 0.1, default: 1 },
+  { section: 'Color', collapsed: true, noRandom: true, key: 'dimOpacity', label: 'Dim opacity', type: 'range', min: 0, max: 5, step: 0.1, default: 5 },
+  { section: 'Color', collapsed: true, noRandom: true, key: 'warmOpacity', label: 'Warm opacity', type: 'range', min: 0, max: 5, step: 0.1, default: 1 },
 ]
+
+/* THE PENROSE ROLL (plan 42 § 1.2): Randomize all rolls the look, not the structure. These keys are
+ * counts, caps, grid resolution, iterations, timesteps, recursion depth and form switches across the
+ * 55 sims — `noRandom`, so they keep their own scope buttons (the rest roll inside the middle half
+ * of their sliders, lib/rng.js). No key here is look in another sim. */
+const STRUCTURAL = new Set([
+  'addPerSec', 'agents', 'attempts', 'attractorCount', 'autoSeeds', 'cadence', 'count', 'cx', 'cy', 'd',
+  'depth', 'dropsPerFrame', 'dt', 'dyefade', 'edgesPerSec', 'erasers', 'f1', 'f2', 'fibers', 'fillOpacity',
+  'iter', 'iters', 'lattice', 'loop', 'm', 'margin', 'maxCircles', 'maxDepth', 'maxIter', 'maxNodes',
+  'maxRelax', 'maxStuck', 'modeA', 'modeB', 'n', 'N', 'N0', 'nebula', 'nWalkers', 'outlines', 'outward',
+  'particles', 'plants', 'points', 'pts', 'res', 'reverse', 'samples', 'seedN', 'seeds', 'seedsPerFrame',
+  'showAxis', 'showLoad', 'spawnRate', 'steps', 'stepsPerFrame', 'substeps', 'tail', 'trails', 'walkers',
+])
+const curate = (q) => (STRUCTURAL.has(q.key) ? { ...q, noRandom: true } : q)
 
 /* ── labs param schema → editor schema grammar ────────────────────────────
  *   int              → range (step 1)         · label kept verbatim
@@ -273,7 +287,8 @@ export function protoLoop(proto, opts = {}) {
     group: 'penrose',
     kind: '2d',
     duration: DURATION,
-    params: [...MASK_PARAMS, ...COLOR_PARAMS, ...(proto.params ?? []).map(translateParam)],
+    /* the sim's own knobs first, the closed Color section last (plan 42 § 1.1) */
+    params: [...MASK_PARAMS, ...(proto.params ?? []).map(translateParam).map(curate), ...COLOR_PARAMS],
     // u only gates stepping (pauses with the transport) — see header.
     draw(ctx, u, w, h, p) {
       const paletteSig = syncPalette(p)

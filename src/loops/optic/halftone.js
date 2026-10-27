@@ -167,9 +167,9 @@ export default {
   params: [
     { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#06070b' },
     { key: 'palette', label: 'Palette', type: 'select', options: PALETTES.map(({ value, label }) => ({ value, label })), default: 'drekker' },
-    { key: 'field', label: 'Field', type: 'select', options: FIELD_OPTIONS, default: 'radial' },
+    { key: 'field', noRandom: true, label: 'Field', type: 'select', options: FIELD_OPTIONS, default: 'radial' },
     { key: 'layout', label: 'Layout', type: 'select', options: LAYOUT_OPTIONS, default: 'hex' },
-    { key: 'shape', label: 'Cell shape', type: 'select', options: SHAPE_OPTIONS, default: 'dot' },
+    { key: 'shape', noRandom: true, label: 'Cell shape', type: 'select', options: SHAPE_OPTIONS, default: 'dot' },
     { key: 'density', label: 'Density', type: 'range', min: 4, max: 80, step: 1, default: 34 },
     { key: 'dotScale', label: 'Dot scale', type: 'range', min: 0.2, max: 2, step: 0.05, default: 1 },
     { key: 'fieldScale', label: 'Field scale', type: 'range', min: 0.2, max: 4, step: 0.05, default: 1, when: (l) => (l.field ?? 'radial') !== 'radial' },

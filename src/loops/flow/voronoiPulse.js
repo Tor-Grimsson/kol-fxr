@@ -50,13 +50,13 @@ export default {
     { key: 'cool', label: 'Large cells', type: 'color', role: 'dim', default: '#3f6485', section: 'Color' },
     { key: 'hot', label: 'Small cells', type: 'color', role: 'accent', default: '#ffcf33', section: 'Color' },
     { key: 'graph', label: 'Graph', type: 'color', role: 'warm', default: '#7bd389', section: 'Color' },
-    { key: 'points', label: 'Points', type: 'range', min: 8, max: 160, step: 1, default: 48 },
+    { key: 'points', noRandom: true, label: 'Points', type: 'range', min: 8, max: 160, step: 1, default: 48 },
     { key: 'inset', label: 'Inset', type: 'range', min: 0, max: 0.04, step: 0.002, default: 0.012 },
     { key: 'round', label: 'Corner radius', type: 'range', min: 0, max: 0.06, step: 0.002, default: 0.02 },
     { key: 'glow', label: 'Glow', type: 'range', min: 0, max: 1, step: 0.05, default: 0.6 },
     { key: 'reach', label: 'Graph reach', type: 'range', min: 0, max: 0.4, step: 0.01, default: 0.16 },
     { key: 'drift', label: 'Drift', type: 'range', min: 0, max: 0.12, step: 0.005, default: 0.05 },
-    { key: 'seed', label: 'Seed', type: 'range', min: 1, max: 999, step: 1, default: 3 },
+    { key: 'seed', noRandom: true, label: 'Seed', type: 'range', min: 1, max: 999, step: 1, default: 3 },
   ],
   draw(ctx, u, w, h, p) {
     const m = Math.min(w, h)

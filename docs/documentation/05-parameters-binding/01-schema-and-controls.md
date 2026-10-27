@@ -2,7 +2,7 @@
 title: Schema & Controls
 type: reference
 status: active
-updated: 2026-07-08
+updated: 2026-10-27
 description: The param descriptor grammar (types + section/tab/when/animatable/noRandom/role metadata), how AutoControls auto-renders it, and the shared control idioms (NumberField draft/commit, ColorField, TreePicker).
 aliases:
   - schema-and-controls
@@ -58,6 +58,8 @@ Two more keys, read outside `AutoControls`:
 | Key | Read by | Meaning |
 |---|---|---|
 | `noRandom` | `rolls.jsx` / `randomizeSchema` | Exclude from scoped seeded randomize (structural counts like `Bars`, `Rings` that read as jank when rolled). "Randomize section" can override it. |
+| `rMin` / `rMax` | `randomizeSchema` | The span a roll lands in. Absent = the middle half of the slider. |
+| `collapsed` | `AutoControls` | `true` on any param of a section renders that section as a closed DS `AccordionPanel` — the overflow past 12 rows per tab (plan 42). Its params still roll by scope. |
 | `role` | `src/loops/theme.js` `themeParams` | On `type:'color'` params: `'bg' | 'fg' | 'accent' | 'dim' | 'warm'` — the theme slot that param recolors to on a theme switch. Non-roled colors survive a switch untouched. |
 
 ### Grammar helpers (`schema.js`)
@@ -90,7 +92,7 @@ Only type-specific knobs live in a schema. Universal props (position, transform,
 `AutoControls({ schema, layer, setProp, palette, renderAnimate, tab, emptyHint })` (`AutoControls.jsx`):
 
 - **Filters** `visibleParams` by `when`, then by `tab` when a tab is passed; renders `emptyHint` (or null) when nothing survives.
-- **Groups** consecutive same-`section` params under one small header.
+- **Groups** consecutive same-`section` params under one small header. A section carrying `collapsed` renders closed, its name on the trigger.
 - **Writes** go through `setProp` (the caller's `useLayerEdit` path — history + coalescing intact).
 - **`renderAnimate(p, bound)`** (optional) is called for each animatable param and rendered beside its control. This is the seam the timeline uses to add bind dots without `AutoControls` knowing about the transport — `ParametersPanel` passes `(p) => <BindDot layer={layer} param={p} setProp={setProp} />`.
 - **Range params** render `RangeField` (not the DS `Slider`): the value box takes **direct input** — a number sets a constant, an expression binds the `expr` source. When bound, the track goes read-only and its thumb **tracks the live resolved value** each transport tick (it subscribes to the transport only while bound), so the graph drives it without the slider fighting the binding (`isBinding(layer[p.key])`).

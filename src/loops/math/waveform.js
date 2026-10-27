@@ -122,23 +122,23 @@ export default {
   params: [
     { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#0c0a06' },
     { key: 'fg', label: 'Foreground', type: 'color', role: 'fg', default: '#ffb35c' },
-    { key: 'wave', label: 'Wave', type: 'select', options: [...WAVE_OPTIONS.map(({ value, label }) => ({ value, label })), { value: 'custom', label: 'Custom…' }], default: 'square' },
+    { key: 'wave', noRandom: true, label: 'Wave', type: 'select', options: [...WAVE_OPTIONS.map(({ value, label }) => ({ value, label })), { value: 'custom', label: 'Custom…' }], default: 'square' },
     { key: 'expr', label: 'f(t) =', type: 'text', rows: 2, default: WAVE_EXPR_EXAMPLES[3], placeholder: WAVE_EXPR_EXAMPLES[4], when: (l) => l.wave === 'custom' },
-    { key: 'harmonics', label: 'Harmonics', type: 'range', min: 1, max: 24, step: 1, default: 8 },
+    { key: 'harmonics', noRandom: true, label: 'Harmonics', type: 'range', min: 1, max: 24, step: 1, default: 8 },
     { key: 'rolloff', label: 'Rolloff', type: 'range', min: 0, max: 1.5, step: 0.05, default: 0 },
     { key: 'phase', label: 'Phase', type: 'range', min: 0, max: 360, step: 1, default: 0 },
     // Trace — three elements, each with its own weight + opacity (0 hides).
-    { key: 'circlesWeight', label: 'Circles weight', type: 'range', min: 0.25, max: 12, step: 0.05, default: 1 },
-    { key: 'circlesOpacity', label: 'Circles opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 0.6 },
-    { key: 'loopWeight', label: 'Loop weight', type: 'range', min: 0.25, max: 12, step: 0.05, default: 1 },
-    { key: 'loopOpacity', label: 'Loop opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 0.6 },
-    { key: 'graphWeight', label: 'Graph weight', type: 'range', min: 0.5, max: 12, step: 0.05, default: 1.25 },
-    { key: 'graphOpacity', label: 'Graph opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 1 },
-    { key: 'graphLength', label: 'Graph length', type: 'range', min: 0.05, max: 1, step: 0.05, default: 1 },
-    { key: 'graphDot', label: 'Dot size', type: 'range', min: 0, max: 4, step: 0.1, default: 1 },
+    { key: 'circlesWeight', collapsed: true, section: 'Strokes', label: 'Circles weight', type: 'range', min: 0.25, max: 12, step: 0.05, default: 1 },
+    { key: 'circlesOpacity', noRandom: true, section: 'Strokes', label: 'Circles opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 0.6 },
+    { key: 'loopWeight', section: 'Strokes', label: 'Loop weight', type: 'range', min: 0.25, max: 12, step: 0.05, default: 1 },
+    { key: 'loopOpacity', noRandom: true, section: 'Strokes', label: 'Loop opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 0.6 },
+    { key: 'graphWeight', section: 'Strokes', label: 'Graph weight', type: 'range', min: 0.5, max: 12, step: 0.05, default: 1.25 },
+    { key: 'graphOpacity', noRandom: true, section: 'Strokes', label: 'Graph opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 1 },
+    { key: 'graphLength', section: 'Strokes', label: 'Graph length', type: 'range', min: 0.05, max: 1, step: 0.05, default: 1 },
+    { key: 'graphDot', section: 'Strokes', label: 'Dot size', type: 'range', min: 0, max: 4, step: 0.1, default: 1 },
     // Transform (static placement)
-    { key: 'posX', label: 'Position X', type: 'range', min: -1, max: 1, step: 0.02, default: 0 },
-    { key: 'posY', label: 'Position Y', type: 'range', min: -1, max: 1, step: 0.02, default: 0 },
+    { key: 'posX', noRandom: true, label: 'Position X', type: 'range', min: -1, max: 1, step: 0.02, default: 0 },
+    { key: 'posY', noRandom: true, label: 'Position Y', type: 'range', min: -1, max: 1, step: 0.02, default: 0 },
     { key: 'baseScale', label: 'Scale', type: 'range', min: 0.3, max: 2, step: 0.05, default: 1 },
     // Frame (whole-figure sweep; flow pans whole frames ⇒ seamless)
     { key: 'flow', label: 'Flow', type: 'range', min: -8, max: 8, rMin: 0, rMax: 3, step: 1, default: 0, tab: 'anim', section: 'Frame' },
@@ -155,7 +155,7 @@ export default {
     // waveforms had no axis system, spec'd in with a fixed 8-unit reference
     // frame). Static screen-space: the Frame pan/zoom moves the figure over
     // the grid, not the grid.
-    { key: 'axes', label: 'Axes', type: 'select', options: AXIS_2D_OPTIONS, default: 'none', section: 'Reference' },
+    { key: 'axes', noRandom: true, collapsed: true, label: 'Axes', type: 'select', options: AXIS_2D_OPTIONS, default: 'none', section: 'Reference' },
     { key: 'gridColor', label: 'Grid color', type: 'color', role: 'fg', default: '#ffffff', section: 'Reference', when: (l) => l.axes && l.axes !== 'none' },
     { key: 'gridOpacity', label: 'Grid opacity', type: 'range', min: 0, max: 1, step: 0.02, default: 0.12, section: 'Reference', when: (l) => l.axes && l.axes !== 'none' },
   ],

@@ -48,9 +48,11 @@ export function randomizeSchema(params, rng) {
     if (p.roll) { out[p.key] = p.roll(rng); continue }
     if (p.type === 'range') {
       /* `rMin`/`rMax` keep a roll inside the musical span of a slider whose hand range is wider —
-         kinetic knobs' convention (knobs.js), schema-wide since plan 27 § 7 */
-      const min = p.rMin ?? p.min ?? 0
-      const max = p.rMax ?? p.max ?? 1
+         kinetic knobs' convention (knobs.js), schema-wide since plan 27 § 7. A range that names no
+         span rolls inside the middle half of its slider (plan 42 § 4.2): never to the ends. */
+      const lo = p.min ?? 0, hi = p.max ?? 1
+      const min = p.rMin ?? lo + (hi - lo) * 0.25
+      const max = p.rMax ?? lo + (hi - lo) * 0.75
       const step = p.step || 0.01
       const v = min + rng() * (max - min)
       out[p.key] = step >= 1 ? Math.round(v) : Math.round(v / step) * step

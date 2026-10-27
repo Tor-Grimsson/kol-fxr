@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Input, Slider, Dropdown, ViewToggle, ToggleSwitch, SegmentedToggle, LabeledControl, SettingsRow, LabeledControlSection, Textarea } from '@kolkrabbi/kol-component'
+import { Input, Slider, Dropdown, ViewToggle, ToggleSwitch, SegmentedToggle, LabeledControl, SettingsRow, LabeledControlSection, Textarea, AccordionPanel } from '@kolkrabbi/kol-component'
 import Hint from '../components/Hint'
 import { visibleParams, isAnimatable, paramTab, paramSection } from './schema'
 import { isBinding, resolveValue } from './resolve'
@@ -100,11 +100,15 @@ export default function AutoControls({ schema, layer, setProp, palette, renderAn
         /* ONE BOX WIDTH PER SECTION (plan 41 § 7.4, user 2026-10-26: "why is speed not the same width
            as phase?") — the widest range box in the section sets every range box in it */
         const chars = Math.max(0, ...g.params.filter((p) => p.type === 'range').map(rangeChars))
-        return (
+        /* THE CLOSED SECTION (plan 42 § 0.1): a section any of whose params carries `collapsed: true`
+           renders as the DS AccordionPanel, shut until pressed — the 12-knob rule's overflow. Its
+           params still roll when their scope is on; closing hides, it never curates. */
+        const closed = g.section && g.params.some((p) => p.collapsed)
+        const body = (
         <LabeledControlSection
           key={g.params[0].key}
-          label={g.section && g.section !== g.params[0].label ? g.section : undefined}
-          divided
+          label={!closed && g.section && g.section !== g.params[0].label ? g.section : undefined}
+          divided={!closed}
         >
           {g.params.map((p) => {
             const bound = isBinding(layer[p.key])
@@ -125,6 +129,7 @@ export default function AutoControls({ schema, layer, setProp, palette, renderAn
           })}
         </LabeledControlSection>
         )
+        return closed ? <AccordionPanel key={g.params[0].key} title={g.section}>{body}</AccordionPanel> : body
       })}
     </>
   )

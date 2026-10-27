@@ -2,6 +2,7 @@
  * first, with its rail path. Backfilled 2026-10-26 from the session logs (`approx` = the earliest log
  * that mentions it). New visual → new row on top. Not repo changes: only things a user picks. */
 export const FX_CHANGELOG = [
+  { date: '2026-10-27', name: 'Calmer Randomize all', where: 'Every generator', what: 'Randomize all changes the look, not the structure: counts, grid size, seeds and form switches stay put, and every slider rolls inside the middle of its range. At most 12 controls show per tab; the rest sit in a closed section.' },
   { date: '2026-10-27', name: 'ASCII field', where: 'Generative › Flow › Glyphs', what: 'A generated noise, plasma, rings, waves or vortex field drawn in the ASCII charsets, no media needed. Presets ASCII noise, ASCII plasma, ASCII rings, Katakana vortex.' },
   { date: '2026-10-27', name: 'Color', where: 'Labs › Color', what: 'Palette from one base colour: pick a harmony and 2 to 8 colours, then lock, edit or delete each. Apply to a layer or the document.' },
   { date: '2026-10-27', name: 'Moved: Field and Pattern Loops', where: 'Generative › Pattern › Field, Pattern Loops', what: 'Moved from Loops into Pattern; the rule-driven patterns read Rules beside them. Loops keeps Simple.' },

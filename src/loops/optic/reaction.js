@@ -184,7 +184,7 @@ export default {
   duration: 8, // nominal — the sim free-runs; u only paces the transport
   params: [
     { key: 'palette', label: 'Palette', type: 'select', options: RD_PALETTES.map(({ value, label }) => ({ value, label })), default: 'lava' },
-    { key: 'seed', label: 'Seed', type: 'select', options: RD_SEEDS, default: 'scatter' },
+    { key: 'seed', noRandom: true, label: 'Seed', type: 'select', options: RD_SEEDS, default: 'scatter' },
     /* Rollable (no noRandom): each roll = a NEW deterministic scatter layout —
      * the PRNG was pinned to 0xC0FFEE before this knob existed. */
     { key: 'scatterSeed', label: 'Scatter seed', type: 'range', min: 1, max: 99, step: 1, default: 1, when: (l) => (l.seed ?? 'scatter') === 'scatter' },

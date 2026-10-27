@@ -140,7 +140,7 @@ Every preset whose override turns a switch on its base loop (scanned against eac
 Not switch variants (a different form, not a flipped switch): Threads Mesh (grid form), Surfaces Lorenz (another attractor), Scanline Weave (lattice weave), every Pattern rules preset.
 Proposal: the ten Simple-loop rows fold into their base preset; Fill shape and Ring fill already sit in each base's Style tab, so nothing is lost but the duplicate entries. The two Mono rows stay (they retune five values, not one).
 
-## W5 — Normalise exposed params and randomised values — TALK, audited 2026-10-27
+## W5 — Normalise exposed params and randomised values — ✅ built 2026-10-27 as plan 42 (`42-normalise-knobs-and-randomize-all.md`)
 Scanned every loop the presets use (live registry, 2026-10-27). "Knobs" = non-colour params; "gated" = shown only for some settings (`when`); "rolled" = what Randomize all touches; "curated" = ranges with a musical roll span (`rMin`/`rMax`).
 
 | Family | Loops | Knobs | Gated | Rolled | Curated per loop |

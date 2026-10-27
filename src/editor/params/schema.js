@@ -22,6 +22,9 @@
  *            as style with a 'Color' section.
  *   section  sentence-case group header ('Geometry', 'Motion', …) — consecutive
  *            same-section params share one header; absent = unsectioned run
+ *   collapsed  true on any param of a section renders that section closed
+ *            (AutoControls, plan 42 § 0.1) — overflow past the 12-knob rule
+ *   rMin/rMax  the span Randomize all rolls a range inside (lib/rng.js)
  */
 
 /* Build the default-value object from a schema (mirrors loopDefaults()). */

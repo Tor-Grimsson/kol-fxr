@@ -183,7 +183,7 @@ export default {
   params: [
     { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#121215' },
     { key: 'ink', label: 'Ink', type: 'color', role: 'fg', default: '#e8e4dc' },
-    { key: 'mode', label: 'Mode', type: 'select', options: MODE_OPTIONS, default: 'print-press' },
+    { key: 'mode', noRandom: true, label: 'Mode', type: 'select', options: MODE_OPTIONS, default: 'print-press' },
     { key: 'amount', label: 'Amount', type: 'range', min: 0, max: 80, step: 1, default: 24 },
     { key: 'frequency', label: 'Frequency', type: 'range', min: 1, max: 100, step: 1, default: 30 },
     { key: 'smoothness', label: 'Smoothness', type: 'range', min: 0, max: 100, step: 1, default: 20 },

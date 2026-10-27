@@ -74,8 +74,8 @@ export default {
   kind: '2d',
   duration: 8,
   params: [
-    { key: 'colA', label: 'Color A', type: 'color', role: 'bg', default: '#000000' },
-    { key: 'colB', label: 'Color B', type: 'color', role: 'fg', default: '#ffffff' },
+    { key: 'colA', collapsed: true, section: 'Color', label: 'Color A', type: 'color', role: 'bg', default: '#000000' },
+    { key: 'colB', section: 'Color', label: 'Color B', type: 'color', role: 'fg', default: '#ffffff' },
     { key: 'combine', label: 'Combine', type: 'select', options: COMBINE_OPTIONS, default: 'xor', when: (l) => (l.g2On ?? true) || !!l.g3On },
     { key: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 1, step: 0.01, default: 0.3 },
     { key: 'invert', label: 'Invert', type: 'toggle', default: false },

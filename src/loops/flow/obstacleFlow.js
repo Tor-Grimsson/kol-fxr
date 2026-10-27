@@ -14,7 +14,7 @@ export default {
     { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#0b0b0e', section: 'Color' },
     { key: 'line', label: 'Line color', type: 'color', role: 'fg', default: '#ece7dc', section: 'Color' },
     { key: 'ring', label: 'Ring color', type: 'color', role: 'accent', default: '#ffcf33', section: 'Color' },
-    { key: 'lines', label: 'Line count', type: 'range', min: 12, max: 120, step: 1, default: 56 },
+    { key: 'lines', noRandom: true, label: 'Line count', type: 'range', min: 12, max: 120, step: 1, default: 56 },
     { key: 'obstacles', label: 'Obstacles', type: 'range', min: 1, max: 6, step: 1, default: 3, noRandom: true },
     { key: 'radius', label: 'Radius', type: 'range', min: 0.03, max: 0.16, step: 0.01, default: 0.08 },
     { key: 'rings', label: 'Rings', type: 'range', min: 0, max: 8, step: 1, default: 4 },

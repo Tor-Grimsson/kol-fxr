@@ -18,14 +18,14 @@ export default {
     { key: 'bg', label: 'Background', type: 'color', role: 'bg', default: '#0b0b0e', section: 'Color' },
     { key: 'weak', label: 'Weak', type: 'color', role: 'dim', default: '#3f6485', section: 'Color' },
     { key: 'strong', label: 'Strong', type: 'color', role: 'accent', default: '#ffcf33', section: 'Color' },
-    { key: 'glyph', label: 'Glyph', type: 'select', options: ['g', 'n', 'a', 'e', 'k', 'r', 's', '6', '→', '•'].map((c) => ({ value: c, label: c })), default: 'g' },
-    { key: 'cols', label: 'Columns', type: 'range', min: 8, max: 64, step: 1, default: 26 },
+    { key: 'glyph', noRandom: true, label: 'Glyph', type: 'select', options: ['g', 'n', 'a', 'e', 'k', 'r', 's', '6', '→', '•'].map((c) => ({ value: c, label: c })), default: 'g' },
+    { key: 'cols', noRandom: true, label: 'Columns', type: 'range', min: 8, max: 64, step: 1, default: 26 },
     { key: 'size', label: 'Size', type: 'range', min: 0.4, max: 1.6, step: 0.05, default: 0.95 },
     { key: 'scaleBy', label: 'Size by strength', type: 'range', min: 0, max: 1, step: 0.05, default: 0.5 },
     { key: 'vortices', label: 'Vortices', type: 'range', min: 1, max: 4, step: 1, default: 2, noRandom: true },
     { key: 'swirl', label: 'Swirl', type: 'range', min: 0.5, max: 8, step: 0.5, default: 3 },
     { key: 'noise', label: 'Noise', type: 'range', min: 0, max: 1, step: 0.05, default: 0.25 },
-    { key: 'seed', label: 'Seed', type: 'range', min: 1, max: 999, step: 1, default: 7 },
+    { key: 'seed', noRandom: true, label: 'Seed', type: 'range', min: 1, max: 999, step: 1, default: 7 },
   ],
   draw(ctx, u, w, h, p) {
     const m = Math.min(w, h)
