@@ -385,7 +385,7 @@ function LabsPhoneChrome({ paramsOpen, setParamsOpen, catalog, toggleCatalog }) 
   ]
   return (
     <>
-      <PhoneNav shape="pill" placement="top" border={false} active="circle" foldable moreKeepsOpen items={items} actions={actions} currentPath="#none" />
+      <PhoneNav shape="pill" variant="panel" items={items} actions={actions} currentPath="#none" />
       {transportOn && (
         <TransportPill
           foldable

@@ -14,7 +14,7 @@ A React 19 + Vite + Tailwind 4 app. It consumes the published `@kolkrabbi/kol-*`
 | `pnpm dev:app` | the app alone — no API, the library stays local |
 | `pnpm build` | the production build into `dist/` |
 | `pnpm preview` | serve the built `dist/` |
-| `pnpm icons` | regenerate the touch icons and share image from `public/touch-icons/apple-touch-icon-dark.svg` |
+| `pnpm icons` | copy the touch icons, favicon and share image from kol-icons' `identity/fxr/` |
 | `pnpm api:deploy` | deploy the Worker |
 
 ## Hosting

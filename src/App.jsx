@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import AppLayout from './AppLayout'
 import LibraryPage from './pages/LibraryPage'
+import { SignInPage, JoinPage, AccountPage } from './pages/AccountPages'
 /* The router bridge comes from the PACKAGE, not a local copy — `mode.js` holds
    `let navigator` as module state, so registering the router on our copy left
    the package's null and every in-package hop fell back to
@@ -118,6 +119,10 @@ export default function App() {
             <Route path="/randomiser" element={<MobileView />} />
           </Route>
           <Route path="/output" element={<OutputView />} />
+          {/* the account pages (plan 43) — a form wants the page to itself, so they sit outside the Hub */}
+          <Route path="/signin" element={<SignInPage />} />
+          <Route path="/join" element={<JoinPage />} />
+          <Route path="/account" element={<AccountPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Suspense>

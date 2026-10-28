@@ -1,7 +1,7 @@
 // Glyph tile — a Right Grotesk letterform (or short run) as pattern-tile
 // geometry. Restores the labs 'glyph' shape (kol-labs-single lib/glyphPath.js)
 // on this repo's EXISTING font machinery: editor/modes/type/fontLoader.js
-// (opentype.js over /public/fonts/Right-Grotesk-ttf, promise-cached per cut) —
+// (opentype.js over /public/fonts/right-grotesk-ttf, promise-cached per cut) —
 // no second loader, no new dependency.
 //
 // Sync by contract, async by nature: `glyphShape` answers from the warm cache

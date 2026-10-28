@@ -220,6 +220,10 @@ function photoLayerSvg(layer, w, h, idx, defs, snapScale) {
    * through to the plain photo paths when no canvas is mounted (crop active
    * renders as <img>). */
   if (hasEnabledFilters(layer) && layer.imgW == null && typeof document !== 'undefined') {
+    /* a LAST stage that draws vector (the growing line, plan 43 § 4.2) exports as vector */
+    const last = Array.isArray(layer.filters) ? layer.filters.filter((st) => st && st.enabled !== false && st.id).at(-1) : null
+    const vec = last && pack('effects')?.filterById(last.id)?.svg?.(lw, lh, last.params ?? {})
+    if (vec) return `<svg x="${lx}" y="${ly}" width="${lw}" height="${lh}" viewBox="0 0 ${lw} ${lh}">${vec}</svg>`
     const live = document.querySelector(`canvas[data-layer-id="${layer.id}"]`)
     if (live) return `<image href="${escapeXml(live.toDataURL('image/png'))}" x="${lx}" y="${ly}" width="${lw}" height="${lh}"/>`
   }
@@ -484,6 +488,9 @@ function loopLayerSvg(layer, snapScale) {
     if (!live) return ''
     return `<image href="${escapeXml(live.toDataURL('image/png'))}" x="${x}" y="${y}" width="${lw.toFixed(2)}" height="${lh.toFixed(2)}"/>`
   }
+  /* a loop that draws vector (the growing line, plan 43 § 4.1) exports as vector, not a snapshot */
+  const vec = loop.svg?.(lw, lh, loopDrawParams(loop, layer))
+  if (vec) return `<svg x="${x}" y="${y}" width="${lw.toFixed(2)}" height="${lh.toFixed(2)}" viewBox="0 0 ${lw} ${lh}">${vec}</svg>`
   const scale = snapScale
   const c = document.createElement('canvas')
   c.width = Math.round(lw * scale)

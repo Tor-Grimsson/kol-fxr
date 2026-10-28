@@ -172,7 +172,7 @@ function drawWeave(ctx, u, w, h, p) {
 // Full catalog including 'glyph' + 'custom' (labs parity — both restored).
 const TILE_SHAPE_OPTIONS = SHAPE_OPTIONS
 // Glyph tile faces — the cuts fontLoader can actually serve (Right Grotesk
-// TTFs in /public/fonts/Right-Grotesk-ttf; 'mono' is woff2-only ⇒ excluded).
+// TTFs in /public/fonts/right-grotesk-ttf; 'mono' is woff2-only ⇒ excluded).
 // Values are fontLoader's width ids / numeric weights.
 const GLYPH_FONT_OPTIONS = [
   { value: 'base', label: 'Display' }, { value: 'Compact', label: 'Compact' },

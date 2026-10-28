@@ -17,16 +17,18 @@ import {
   useRailExtras, RAIL_EXTRA_PREFIX,
   shortcutsBySection, comboLabel,
   setMode, withView, loadLibrary,
-  getLibraryApi, useLibrarySession, signInLibrary, signOutLibrary, UnauthorizedError,
+  getLibraryApi, useLibrarySession, useAccount, signInLibrary, signOutLibrary, UnauthorizedError,
   renameStored, duplicateStored, removeStored, setThumbStored, copyStored, readLibraryRaw, subscribeLibrary,
 } from './index.jsx'
 import { listShipped, readShippedRaw, subscribeShipped, renameShipped, removeShipped } from './editor/library/shipped'
 import { setUploadedCover } from './editor/library/FileCover'
 import { saveSpot, readSpot, writeSpot, useRestoreScroll } from './editor/library/returnSpot'
 import { useHubSettings } from './settings/AppSettings'
+import { useAccountPrefs } from './editor/library/accountPrefs'
 /* lazy — it pulls the output stack, which the shell tier otherwise never carries */
 const CoverHost = lazy(() => import('./editor/library/CoverHost'))
 import FileCover from './editor/library/FileCover'
+import HomeStage from './components/HomeStage'
 import DevCards from './pages/DevCards'
 import FxChangelog from './pages/FxChangelog.jsx'
 
@@ -107,7 +109,7 @@ const CHROME_PATHS = new Set(['/editor', '/labs', '/morph', '/randomiser'])
 
 const APP = {
   name: 'FXR',
-  subtitle: 'Pick a chrome. All three run the same engine.',
+  /* no subtitle on Home (user 2026-10-28: "this is poinless" — FXR is enough), plan 44 § 2.1 */
   logomark: '/favicon/favicon.svg',
   about: 'A DOM/SVG design compositor — frames, layers, vector tools — with generative, kinetic-type and effects layers on the same engine, served through three chromes: the Editor, Labs, and the Randomiser.',
   links: [
@@ -162,18 +164,18 @@ const SHORTCUTS = shortcutsBySection(null)
 
 const typing = (t) => t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName)
 
-/* The sign-in gesture, under the shell's own ModalProvider so the KOL alert serves it on every
-   route — the chromes carry their own provider inside. The Hub's Sign in row asks the password
-   (or the sign-out confirm) itself and hands it here: a string signs in, `null` signs out. */
+/* The sign-in gesture, under the shell's own ModalProvider so the KOL alert serves it on every route — the chromes carry
+   their own provider inside. ACCOUNTS (plan 43, HubAccountRow, kol-shell 0.85.0): signed out, the Hub's row asks Email and
+   Password itself and hands `{ email, password }` here; signed in, the row is you and opens /account, where sign-out lives. */
 function RailSignIn({ handlerRef }) {
   const modal = useModal()
-  handlerRef.current = async (password) => {
-    if (password == null) { signOutLibrary(); return }
+  handlerRef.current = async (creds) => {
+    if (creds == null) { signOutLibrary(); return }
     try {
-      const n = await signInLibrary(password)
+      const n = await signInLibrary(creds)
       await modal.alert(`Signed in. ${n} saved ${n === 1 ? 'item' : 'items'} in the cloud library; saves now sync.`)
     } catch (e) {
-      await modal.alert(e instanceof UnauthorizedError ? 'Wrong password. Still local only.' : `Sign in failed: ${e?.message || e}`)
+      await modal.alert(e instanceof UnauthorizedError ? 'Wrong email or password. Still local only.' : `Sign in failed: ${e?.message || e}`)
     }
   }
   return null
@@ -244,6 +246,8 @@ export default function AppLayout() {
   const labsRows = useLabsRows()
   const hubSettings = useHubSettings()
   const session = useLibrarySession()
+  const account = useAccount()
+  useAccountPrefs()
   const signInRef = useRef(null)
   /* the Hub's Media row (signed in — the r2b2 stores, read-only; plan 15 § 4): a pick lands in the
      chrome under it — or, from a shell page, in the editor it opens */
@@ -319,9 +323,23 @@ export default function AppLayout() {
     onNote: (f, note) => edit(f.id, { note }),
     onCover: (f, src) => (presetOf(f.id)?.shipped ? setUploadedCover(f.id, src) : setThumbStored('preset', f.id, src)),
     action: { label: 'New File', onClick: openNewFile },
+    /* SIGNED OUT (plan 44 W3, frames A2 · B2, HubHomeSignedOut kol-shell 0.86.0; user 2026-10-28: "we shouldnt see any
+       files until you've LOGGED-IN") — no files, the growing line full-bleed behind, the chromes as the pill (the desk's
+       dock, the phone's nav). Only where accounts exist: a build without the API has nothing to sign in to. */
+    signedOut: getLibraryApi() ? !session : false,
+    stage: <HomeStage />,
+    chromes: [
+      { icon: CHROMES.randomiser.icon, label: 'Generate', onPress: () => navigate('/randomiser?start=category') },
+      { icon: 'filter', label: 'Effects', onPress: () => navigate('/randomiser?start=effects') },
+      { icon: CHROMES.labs.icon, label: 'Labs', onPress: () => navigate('/labs') },
+      { icon: CHROMES.morph.icon, label: 'Morph', onPress: () => navigate('/morph') },
+      { icon: CHROMES.editor.icon, label: 'Editor', onPress: () => navigate('/editor') },
+    ],
     /* THE CHROME CHOOSER ON A PHONE (user, 2026-10-26: the old mobile card, between the heading and the
-       files) — HubHome's phone doors, the randomiser card's four buttons; the Hub draws them only on touch / narrow */
+       files; 2026-10-28: "I want taht instead of this 2x2") — HubHome's stacked doors under the eyebrow, the old
+       EntryScreen's buttons with no card (HubHomePhoneChooser, kol-shell 0.85.0); the Hub draws them only on touch / narrow */
     touch: {
+      label: 'Select chrome',
       doors: [
         { icon: CHROMES.randomiser.icon, label: 'Generate', onPress: () => navigate('/randomiser?start=category') },
         { icon: 'filter', label: 'Effects', onPress: () => navigate('/randomiser?start=effects') },
@@ -377,7 +395,7 @@ export default function AppLayout() {
       settings={{ ...hubSettings, comboLabel }}
       /* the Hub draws the foot rows and owns the picker and the password / sign-out dialogs */
       media={session ? { client: getMediaClient(), accept: ['image', 'video'], onSelect: onMediaPick } : undefined}
-      signIn={getLibraryApi() ? { signedIn: !!session, onPress: (pw) => signInRef.current?.(pw) } : undefined}
+      signIn={getLibraryApi() ? { signedIn: !!session, user: account ? { name: account.name || account.email, avatar: account.avatar ?? undefined } : undefined, onProfile: () => navigate('/account'), onPress: (creds) => signInRef.current?.(creds) } : undefined}
       shell={{ railToggleKey: '\\', navKeys: false, settingsKey: onChrome ? undefined : ',' }}
     />
     </ModalProvider>

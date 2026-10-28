@@ -11,24 +11,21 @@
  * handful of bound-layer renderers, never the whole tree.
  */
 import { useSyncExternalStore } from 'react'
+import { createTransport } from '@kolkrabbi/kol-hardware/signal'
 import { anyLiveSourceActive } from './sources'
 
-let t           = 0
-let playing     = false
-let loopSeconds = 4
+/* THE CLOCK IS THE DS'S (TransportFromHardware, kol-hardware 0.8.0, 2026-10-28): one `createTransport()` — mirror's and this
+ * file's clock merged. `phase()` is `t` (0..1 in the loop, the loops' `u`), `epoch` bumps on stop and rewind only (never
+ * pause), `setLoopSeconds` moves the window's out point. What stays here: the pointer and stage inputs, `pointerInterest`,
+ * live sources and the per-frame notify for bound layers. The hand-rolled clock is in `_tmp/2026-10-28-transport-from-hardware/`. */
+const clock = createTransport({ loopIn: 0, loopOut: 4, looping: true })
+
 let mouse       = { x: 0.5, y: 0.5 }
 let stage       = null   /* pointer in virtual-canvas px (CanvasArea feeds it) */
 let version     = 0
-/* Reset epoch — a monotonic counter bumped ONLY by stop/rewind (never pause:
- * pause must hold every sim exactly where it is). Free-running/stateful
- * consumers (math-spinner/orbits trails, penrose protos, optic reaction-
- * diffusion, video currentTime) key their state on it, so stop/rewind means
- * "fresh run", matching the labs transport semantics. */
-let epoch       = 0
 
 const subs   = new Set()
 let raf      = null
-let lastTs   = null
 /* Pointer-binding interest — toggled by the compose layer-state watcher
  * whenever any layer carries a mouse/stage-driven binding. Mousemove /
  * stage-pointer notifies are gated on it, so an editor with zero pointer
@@ -37,24 +34,21 @@ let lastTs   = null
 let pointerInterest = false
 
 function notify() { version++; subs.forEach((cb) => cb()) }
+/* every change of the clock's state (play, pause, stop, rewind, seek, loop length) is a tick for the subscribers */
+clock.subscribe(notify)
 
-function tick(ts) {
-  if (lastTs == null) lastTs = ts
-  const dt = (ts - lastTs) / 1000
-  lastTs = ts
-  if (playing) {
-    t = (t + dt / loopSeconds) % 1
-    notify()
-  } else if (subs.size > 0 && anyLiveSourceActive()) {
+function tick() {
+  if (clock.playing) notify()
+  else if (subs.size > 0 && anyLiveSourceActive()) {
     /* Live sources (audio, gamepad) change outside play/mouse events —
      * bound layers must re-sample per frame even while paused. */
     notify()
   }
   /* Keep the loop alive only while it has work (playing or subscribers). */
-  if (playing || subs.size > 0) raf = requestAnimationFrame(tick)
-  else { raf = null; lastTs = null }
+  if (clock.playing || subs.size > 0) raf = requestAnimationFrame(tick)
+  else raf = null
 }
-function ensureRaf() { if (raf == null) { lastTs = null; raf = requestAnimationFrame(tick) } }
+function ensureRaf() { if (raf == null) raf = requestAnimationFrame(tick) }
 
 /* Live pointer → normalized 0..1 over the window. Notifies so mouse-bound
  * params update even when the transport is paused (modulation is live).
@@ -72,20 +66,23 @@ if (typeof window !== 'undefined') {
 }
 
 export const transport = {
-  play()  { playing = true; ensureRaf(); notify() },
-  pause() { playing = false; notify() },
-  toggle() { playing ? transport.pause() : transport.play() },
-  seek(frac) { t = ((frac % 1) + 1) % 1; notify() },
+  play()  { clock.play(); ensureRaf() },
+  pause() { clock.pause() },
+  toggle() { clock.playing ? transport.pause() : transport.play() },
+  seek(frac) { clock.seekPhase(frac) },
   /* Stop = pause + rewind + new epoch; rewind keeps the play state. Both are
-   * the ONLY epoch writers (see `epoch` above — pause-coherence). */
-  stop()   { playing = false; t = 0; epoch++; notify() },
-  rewind() { t = 0; epoch++; notify() },
-  setLoopSeconds(s) { loopSeconds = Math.max(0.1, Number(s) || 0.1); notify() },
-  isPlaying() { return playing },
-  getLoopSeconds() { return loopSeconds },
-  getT() { return t },
-  getEpoch() { return epoch },
-  getCtx() { return { t, mouse, stage, epoch } },
+   * the ONLY epoch writers (pause-coherence) — the clock's stop and home. */
+  stop()   { clock.stop() },
+  rewind() { clock.home() },
+  /* the head keeps its place IN the loop when the length changes (the clock alone keeps seconds, so a shorter loop jumped it) */
+  setLoopSeconds(s) { const u = clock.phase(); clock.setLoopSeconds(s); clock.seekPhase(u) },
+  isPlaying() { return clock.playing },
+  getLoopSeconds() { return clock.loopSeconds },
+  getT() { return clock.phase() },
+  getEpoch() { return clock.epoch },
+  getCtx() { return { t: clock.phase(), mouse, stage, epoch: clock.epoch } },
+  /* the DS clock itself — for kol-hardware's faces (`Scrubber`, `TimeStrip`), which read it directly */
+  clock,
   /* Stage pointer in virtual px — feeds the layer-local pointer sources and
    * sim pointer forces. `down` carries the button/touch-contact state so
    * sims can distinguish hover-repel from grab-drag (2026-08-09); existing
@@ -115,9 +112,9 @@ export function useTransportCtx(enabled) {
 export function useTransport() {
   useSyncExternalStore(subscribe, getVersion, getVersion)
   return {
-    playing,
-    loopSeconds,
-    t,
+    playing: clock.playing,
+    loopSeconds: clock.loopSeconds,
+    t: clock.phase(),
     play:  transport.play,
     pause: transport.pause,
     toggle: transport.toggle,
@@ -131,8 +128,8 @@ export function useTransport() {
 /* Snapshot hooks — re-render ONLY when the snapshot value changes (not per
  * tick), so a plain <video> layer can follow play/pause/reset without paying
  * the 60fps subscription the bound-layer renderers do. */
-const getPlaying = () => playing
-const getEpoch   = () => epoch
+const getPlaying = () => clock.playing
+const getEpoch   = () => clock.epoch
 export function useTransportPlaying() {
   return useSyncExternalStore(subscribe, getPlaying, getPlaying)
 }

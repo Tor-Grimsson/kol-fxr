@@ -1,16 +1,16 @@
 // Font registry for the kinetic layer — the TG variable fonts the shipped
 // presets use (real fvar axes, read from the ttf fvar tables). Trimmed from
 // the labs registry (src/pages/kinetic/lib/vfAxes.js) to the faces the 10
-// preset compositions reference; files live in public/fonts/TG/.
+// preset compositions reference; files live in public/fonts/tg/.
 //
 // Also owns the export font cache: base64 @font-face CSS pre-fetched at layer
 // mount (warmFontCss) so build.js can embed fonts SYNCHRONOUSLY into the
 // exported SVG (its layer walk is sync).
 
 export const FONTS = [
-  { key: 'rot', label: 'Rot', family: 'TG Rot', url: '/fonts/TG/TGRotVF.ttf', axes: [{ tag: 'wdth', min: 64, max: 172, def: 100 }, { tag: 'wght', min: 100, max: 900, def: 400 }] },
-  { key: 'malromur', label: 'Malromur', family: 'TG Malromur', url: '/fonts/TG/TGMalromurRomanVF.ttf', axes: [{ tag: 'wght', min: 300, max: 900, def: 300 }] },
-  { key: 'gullhamrar', label: 'Gullhamrar', family: 'TG Gullhamrar', url: '/fonts/TG/TGGullhamrarVF.ttf', axes: [{ tag: 'wght', min: 300, max: 900, def: 300 }] },
+  { key: 'rot', label: 'Rot', family: 'TG Rot', url: '/fonts/tg/TGRotVF.ttf', axes: [{ tag: 'wdth', min: 64, max: 172, def: 100 }, { tag: 'wght', min: 100, max: 900, def: 400 }] },
+  { key: 'malromur', label: 'Malromur', family: 'TG Malromur', url: '/fonts/tg/TGMalromurRomanVF.ttf', axes: [{ tag: 'wght', min: 300, max: 900, def: 300 }] },
+  { key: 'gullhamrar', label: 'Gullhamrar', family: 'TG Gullhamrar', url: '/fonts/tg/TGGullhamrarVF.ttf', axes: [{ tag: 'wght', min: 300, max: 900, def: 300 }] },
 ]
 
 export const FONT_OPTIONS = FONTS.map((f) => ({ value: f.key, label: f.label }))

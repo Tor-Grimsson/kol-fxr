@@ -35,6 +35,8 @@ Parking, declaring stale, reopening and any design decision stay the **user's ca
 
 | | Entry | About | Staged | State |
 |---|---|---|---|---|
+| 🟠 | [TransportFromHardware](inbox/TransportFromHardware.md) | bump kol-hardware 0.8.0; the editor's clock on `createTransport()` (phase · epoch · setLoopSeconds kept), the timeline's ruler and head from `TimeStrip`, your keyframe lanes as its children | 2026-10-28 | 🟠 `addressed` 2026-10-28 — the clock on `createTransport()` (kol-hardware 0.8.0); the strip waits on `TimeStripInADock` |
+| 🟢 | [IdentitySetFromPackage](done/IdentitySetFromPackage.md) | **kol-ds-ui** — take the home-screen icons, favicon and OG from kol-icons `identity/fxr/`: bump, `pnpm icons` copies, generator + sharp retire | 2026-10-28 | 🟢 `closed` 2026-10-28 — five packages pinned, `pnpm icons` copies `identity/fxr/` (plus the tile SVG the manifest links), generator + sharp to `_tmp/2026-10-28-icons-from-package/`; PNGs pixel-identical, walked `vite preview` 0 console messages |
 | 🟢 | [FxrLibraryOnAppPreset](done/FxrLibraryOnAppPreset.md) | bump kol-component 0.291.0 · kol-shell 0.75.0; Library on `CatalogPage preset="app"`, Home file cards `variant: "app"`; FileCard.jsx parts retire | 2026-10-23 | 🟢 `closed` 2026-10-23 — 0.291.0 · 0.75.0 pinned, Library + Home on the `app` card, parts to `_tmp/2026-10-23-filecard-app-variant/`; walked `/library` on `vite preview`: menu, duplicate, delete confirm, 0 console messages |
 | 🟢 | [color-pass-one-palette-for-every-layer](done/color-pass-one-palette-for-every-layer.md) | One palette store + resolver every layer reads: link to editor swatches or not, amount, roles or rotation, relationship generator (OKLCH), lock/load/save, mapping by property; the Color roll rolls a palette, not N random hexes | 2026-10-22 | 🟢 `closed` 2026-10-22 — plan 37 W5: one store + resolver on kol-component colorMath, palette Color roll, editor Palette tab + Labs rail Palette row, mapping by property on the Flow loops; walked desk + 390 on `vite preview`, 0 console messages |
 | 🟢 | [effects-intake-motion-references-2026-10](done/effects-intake-motion-references-2026-10.md) | Eight motion references judged: a shared field core (streamlines + glyph instancer) for three of them, letter-gap kinetic type, slice + zoom-wave filter, Voronoi pulse; order proposed, user's call | 2026-10-22 | 🟢 `closed` 2026-10-22 — plan 37 W6: field core, E1–E6 built and walked at desk (Flow · Letter Gap · Slice wave · Riso), E7/E8 parked with reasons; walked desk + 390 on `vite preview`, 0 console messages — at 390 thin streamlines read dashed (a 1080 canvas shown at ~290px), output solid |
@@ -62,6 +64,16 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🔵 | [TimeStripInADock](outbox/TimeStripInADock.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🔵 filed 2026-10-28 | **none** |
+| 🟢 | [PhonePillMoreTurnsToClose](outbox/PhonePillMoreTurnsToClose.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.87.0 | none — adopted 2026-10-28 |
+| 🟢 | [HubHomeSignedOut](outbox/HubHomeSignedOut.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.86.0 · kol-component 0.311.0 | none — adopted 2026-10-28 |
+| 🟢 | [PhoneNavDock](outbox/PhoneNavDock.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.86.0 · kol-component 0.311.0 | none — adopted 2026-10-28 |
+| 🟢 | [PublicSansByLink](outbox/PublicSansByLink.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-theme 0.195.0 | none — adopted 2026-10-28 |
+| 🟢 | [PhoneNavVariants](outbox/PhoneNavVariants.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.85.0 · kol-component 0.309.0 | none — adopted 2026-10-28 |
+| 🟢 | [PhoneMoreWholeNav](outbox/PhoneMoreWholeNav.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.85.0 · kol-component 0.309.0 | none — adopted 2026-10-28 |
+| 🟢 | [PromptHoldsWithKeyboard](outbox/PromptHoldsWithKeyboard.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.85.0 · kol-component 0.309.0 | none — adopted 2026-10-28 |
+| 🟢 | [HubHomePhoneChooser](outbox/HubHomePhoneChooser.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.85.0 · kol-component 0.309.0 | none — adopted 2026-10-28 |
+| 🟢 | [HubAccountRow](outbox/HubAccountRow.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.85.0 · kol-component 0.309.0 | none — adopted 2026-10-28 |
 | 🟢 | [PhoneNavTopAndFold](outbox/PhoneNavTopAndFold.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 closed 2026-10-27 — kol-shell 0.83.0 | none — adopted 2026-10-27: phone Labs runs PhoneNav top + TransportPill (LabsView.jsx), TransportFab retired to _tmp |
 | 🟢 | [TransportPill](outbox/TransportPill.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 closed 2026-10-27 — kol-shell 0.83.0 | none — adopted 2026-10-27: phone Labs runs PhoneNav top + TransportPill (LabsView.jsx), TransportFab retired to _tmp |
 | 🟢 | [HubHomeContract](outbox/HubHomeContract.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-24 — kol-shell 0.77.0 · kol-theme 0.184.0 · kol-component 0.296.0 | none — adopted 2026-10-24: AppStudio, Home on `files` + handlers, `/` touch redirect gone |
@@ -142,6 +154,17 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-28 | **`TransportFromHardware` addressed** — the clock on kol-hardware's `createTransport()`; the strip back to kol-ds-ui as `TimeStripInADock` |
+| 2026-10-28 | **`TransportFromHardware` filed from kol-ds-ui** — the editor's transport and timeline on kol-hardware |
+| 2026-10-28 | **`PhonePillMoreTurnsToClose` adopted** — kol-shell 0.87.0 |
+| 2026-10-28 | **`HubHomeSignedOut`, `PhoneNavDock` adopted; `PhonePillMoreTurnsToClose` filed** — plan 44 W3 |
+| 2026-10-28 | **`PublicSansByLink` adopted** — kol-theme 0.195.0 |
+| 2026-10-28 | **`PhoneNavDock`, `HubHomeSignedOut` filed to kol-ds-ui** — plan 44 W5.1, W5.2 |
+| 2026-10-28 | **`PublicSansByLink` filed to kol-ds-ui** — plan 44 W5.3 |
+| 2026-10-28 | **The five plan 43 tickets adopted** — kol-shell 0.85.0 · kol-component 0.309.0: the stacked phone chooser, More lists the whole nav, `nav` / `panel` pill variants, the dialog that holds with the keyboard, the account row |
+| 2026-10-28 | **`IdentitySetFromPackage` closed** — icons from kol-icons `identity/fxr/`, generator and sharp retired; receipt to kol-ds-ui |
+| 2026-10-28 | **`PhoneNavVariants`, `PhoneMoreWholeNav`, `PromptHoldsWithKeyboard`, `HubHomePhoneChooser`, `HubAccountRow` filed to kol-ds-ui** — plan 43 (W1, W2.3, W3.1, W5) |
+| 2026-10-28 | **`IdentitySetFromPackage` filed from kol-ds-ui** — icons from kol-icons `identity/fxr/`, the generator retires |
 | 2026-10-27 | **`PhoneNavTopAndFold` and `TransportPill` adopted** — the phone Labs layout runs both; TransportFab and the sheet header retired to `_tmp/2026-10-27-labs-phone-chrome/` |
 | 2026-10-27 | **`PhoneNavTopAndFold` and `TransportPill` returned** — bumped kol-component 0.304.0, kol-shell 0.83.0, kol-icons 0.47.0, kol-theme 0.191.0, kol-framework 0.57.0; adoption in the phone Labs layout still owed (plan 41 W4) |
 | 2026-10-27 | **`PhoneNavTopAndFold` and `TransportPill` filed to kol-ds-ui** — the phone Labs layout, frame E (plan 41 W4) |

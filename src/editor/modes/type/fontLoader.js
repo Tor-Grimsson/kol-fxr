@@ -1,7 +1,7 @@
 /**
  * Font loader for the morph engine.
  *
- * Fetches a Right Grotesk ttf from /public/fonts/Right-Grotesk-ttf/ (pre-
+ * Fetches a Right Grotesk ttf from /public/fonts/right-grotesk-ttf/ (pre-
  * generated from the woff2 sources via `node scripts/woff2-to-ttf.js`) and
  * parses with opentype.js. Returns the parsed Font object, which exposes
  * getPath(char, x, y, fontSize) for outline extraction.
@@ -35,7 +35,7 @@ function fontPath(width, weight, italic = false) {
   const widthPart  = width === 'base' || !width ? '' : width
   const weightPart = WEIGHT_NAME[weight] ?? 'Regular'
   const italicPart = italic ? 'Italic' : ''
-  return `/fonts/Right-Grotesk-ttf/PPRightGrotesk-${widthPart}${weightPart}${italicPart}.ttf`
+  return `/fonts/right-grotesk-ttf/PPRightGrotesk-${widthPart}${weightPart}${italicPart}.ttf`
 }
 
 export async function loadFont(width, weight, italic = false) {

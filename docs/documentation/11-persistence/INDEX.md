@@ -2,7 +2,7 @@
 title: Persistence
 type: index
 status: active
-updated: 2026-10-08
+updated: 2026-10-28
 description: Everything the editor writes to disk-equivalent storage — the whole-document draft autosave, the .json project file, the saved-preset library, and the global app settings + theme — plus the one master map of every storage key.
 tags:
   - project/kol-fxr
@@ -33,7 +33,9 @@ Every key the app touches, in one place:
 | localStorage | `kol.editor.draft` | **whole-document autosave** — the live composition, so a reload restores your work | [[01-draft-autosave\|draft autosave]] |
 | file (download) | `kol-fxr.json` | the **exported document** — the frame *spec* as a portable file | [[02-project-files\|project files]] |
 | localStorage | `kol.editor.library.v3` | **saved presets** — palette / pattern / type / preset slots | [[03-saved-library\|saved library]] |
-| D1 `kol-fxr` (via `fxr-api.kolkrabbi.io`) | `documents` | **the library's cloud copy** — synced after a rail sign-in, one row per item, soft delete | [[03-saved-library\|saved library]] |
+| D1 `kol-fxr` (via `fxr-api.kolkrabbi.io`) | `documents` | **the library's cloud copy** — synced while signed in, one row per item, owned by its account (`user_id`), soft delete | [[03-saved-library\|saved library]] |
+| D1 `kol-fxr` | `users` · `sessions` · `invites` | **accounts** (plan 43) — email, name, picture, the account's preferences (theme, chrome, app defaults); a session keeps only its token's hash; sign-up through a one-use invite | [[03-saved-library\|saved library]] |
+| localStorage | `kol.fxr.library-session` | **the signed-in session** — the token and the last-known user, never the password | [[03-saved-library\|saved library]] |
 | localStorage | `kol-editor-settings` | **global defaults** — default aspect, loop-palette theme, autoplay, clip-to-frame | [[04-app-settings\|app settings]] |
 | localStorage | `kol-editor-theme` | **UI theme** — `light` / `dark` / `system` | [[04-app-settings\|app settings]] |
 | IndexedDB | `kol-editor-clips` / `clips` | **uploaded video Blobs**, keyed by layer id, so clips survive reload | [[../09-media/INDEX\|media]] |
