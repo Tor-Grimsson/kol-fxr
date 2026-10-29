@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { Avatar, Button, Input, LabeledControl, PageHeader, VectorLoader } from '@kolkrabbi/kol-component'
+import { Button, Input, LabeledControl, PageHeader, VectorLoader } from '@kolkrabbi/kol-component'
 import HomeStage from '../components/HomeStage'
-import { getLibraryApi, useAccount, signInLibrary, signUpLibrary, signOutLibrary, updateAccount, mintInvite, requestInvite, listInviteRequests, inviteFromRequest, UnauthorizedError } from '../index.jsx'
+import { getLibraryApi, useAccount, signInLibrary, signUpLibrary, requestInvite, UnauthorizedError } from '../index.jsx'
 
 /* THE ACCOUNT PAGES (plan 43 W2–W3, 2026-10-28) — sign in, sign up through an invite link, and your own page. Top-level
  * routes outside the Hub: a form wants the page to itself. The Hub's account row (HubAccountRow, kol-shell 0.85.0) signs in
@@ -111,7 +111,7 @@ function JoinC({ invite }) {
       ]}
       footer={{ text: 'Already have an account?', link: 'Sign in', to: '/signin' }}
       check={(v) => (v.password !== v.confirm ? 'The passwords do not match.' : v.password.length < 8 ? 'The password needs at least 8 characters.' : null)}
-      onSubmit={async (v) => { await signUpLibrary({ invite, name: v.name, email: v.email.trim(), password: v.password }); navigate('/account', { replace: true }) }}
+      onSubmit={async (v) => { await signUpLibrary({ invite, name: v.name, email: v.email.trim(), password: v.password }); navigate('/?account=1', { replace: true }) }}
     />
   )
 }
@@ -149,82 +149,7 @@ export function JoinPage() {
   return <JoinC invite={invite} />
 }
 
-/* a picked photo → a 256px square webp data URL (centre crop), small enough for the account row */
-function toAvatar(file) {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => {
-      const s = Math.min(img.width, img.height)
-      const c = document.createElement('canvas')
-      c.width = c.height = 256
-      c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 256, 256)
-      URL.revokeObjectURL(img.src)
-      resolve(c.toDataURL('image/webp', 0.85))
-    }
-    img.onerror = reject
-    img.src = URL.createObjectURL(file)
-  })
-}
-
-/* the open invite requests — each turns into a one-use link to send (the app sends no email) */
-function InviteRequests() {
-  const [rows, setRows] = useState(null)
-  const [links, setLinks] = useState({})
-  useEffect(() => { listInviteRequests().then(setRows).catch(() => setRows([])) }, [])
-  if (!rows?.length) return null
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="kol-eyebrow text-body">Invite requests</span>
-      {rows.map((r) => (
-        <div key={r.id} className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <span className="kol-mono-14 text-emphasis truncate">{r.name || r.email}</span>
-            {r.name && <span className="kol-mono-12 text-meta truncate">{r.email}</span>}
-            {!links[r.id] && <Button tone="grey" size="sm" className="ml-auto" onClick={async () => { const l = await inviteFromRequest(r.id); setLinks((m) => ({ ...m, [r.id]: l.url })) }}>Make invite</Button>}
-          </div>
-          {links[r.id] && <Input size="md" width="100%" readOnly value={links[r.id]} onFocus={(e) => e.target.select()} />}
-        </div>
-      ))}
-    </div>
-  )
-}
-
+/* /account is the account rail now (frame D2) — the route opens it over Home */
 export function AccountPage() {
-  const navigate = useNavigate()
-  const account = useAccount()
-  const fileRef = useRef(null)
-  const [name, setName] = useState(account?.name ?? '')
-  const [invite, setInvite] = useState(null)
-  const [error, setError] = useState('')
-  /* a sign-out here lands on Home; arriving signed out goes to sign in */
-  const leaving = useRef(false)
-  if (!account) return <Navigate to={leaving.current ? '/' : '/signin'} replace />
-  const run = async (fn) => { setError(''); try { await fn() } catch (err) { setError(err.message) } }
-  const pickAvatar = (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) run(async () => updateAccount({ avatar: await toAvatar(f) })) }
-  return (
-    <Frame title={account.name || 'Account'} subtitle={account.email}>
-      <div className="flex items-center gap-4">
-        <Avatar size="xl" initial={initialOf(account)} src={account.avatar ?? undefined} alt={account.name} />
-        <div className="flex flex-col gap-2">
-          <Button tone="grey" size="sm" iconLeft="upload" onClick={() => fileRef.current?.click()}>Upload picture</Button>
-          {account.avatar && <Button tone="grey" size="sm" onClick={() => run(() => updateAccount({ avatar: null }))}>Remove picture</Button>}
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pickAvatar} />
-        </div>
-      </div>
-      <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); run(() => updateAccount({ name })) }}>
-        <Field label="Name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
-        <Button type="submit" tone="grey" size="md" disabled={name.trim() === (account.name ?? '')}>Save name</Button>
-      </form>
-      <InviteRequests />
-      <div className="flex flex-col gap-2">
-        <Button tone="grey" size="md" iconLeft="plus" onClick={() => run(async () => setInvite(await mintInvite()))}>New invite link</Button>
-        {invite && <Input size="md" width="100%" readOnly value={invite.url} onFocus={(e) => e.target.select()} />}
-      </div>
-      {error && <p className="kol-mono-12 text-ui-error">{error}</p>}
-      <div className="flex gap-2">
-        <Button tone="grey" size="md" onClick={() => navigate('/')}>Home</Button>
-        <Button tone="grey" size="md" onClick={() => { leaving.current = true; signOutLibrary() }}>Sign out</Button>
-      </div>
-    </Frame>
-  )
+  return <Navigate to="/?account=1" replace />
 }

@@ -25,4 +25,9 @@ Checked: the clock in node (runs, pause holds with no epoch, seek, loop length k
 **Not taken: the strip.** `TimeStrip` is absolute-positioned with its own frame, spans ≥ 4 s while fxr's lanes span one loop, and has no label gutter — filed back as `TimeStripInADock`.
 
 - [x] the editor plays, loops, scrubs and stops on `createTransport()`; bound layers still re-render per frame; stop/rewind still reset free-running sims (epoch)
-- [ ] the timeline draws its lanes under the DS strip — waits on `TimeStripInADock`
+- [x] the timeline draws its lanes under the DS strip
+
+
+## ✅ RESOLVED — 2026-10-29
+
+The strip half landed with `TimeStripInADock` (kol-hardware 0.9.1): the dock's readout, ruler, loop window and head are `TimeStrip` docked over the lanes. Both halves done.

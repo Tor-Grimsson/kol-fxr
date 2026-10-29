@@ -20,3 +20,10 @@ Shipped **kol-hardware 0.9.0**: `<TimeStrip transport={t} framed={false} span="l
 Resolution: `kol-ds-ui/lobby/done/TimeStripInADock.md`.
 
 **Remainder here:** bump kol-hardware 0.9.0; swap `ScrubRuler` in `TimelineDock` for `TimeStrip` docked; check it at a 2 s and an 8 s loop.
+
+
+## ✅ ADOPTED — 2026-10-29
+
+kol-hardware 0.9.1 pinned. `TimelineDock` draws `<TimeStrip transport={transport.clock} framed={false} span="loop" gutter={132} />` (the lanes' 120 label column + its 12 gap); `ScrubRuler` retired to `_tmp/2026-10-29-timestrip/`. Walked Morph at a 4 s and a 2 s loop: ticks 0–4 and 0–2 over the full lane width, the head over the lanes' playhead, 0 console messages.
+
+**Remainder here:** none.

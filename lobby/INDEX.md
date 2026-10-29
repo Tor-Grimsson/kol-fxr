@@ -35,7 +35,7 @@ Parking, declaring stale, reopening and any design decision stay the **user's ca
 
 | | Entry | About | Staged | State |
 |---|---|---|---|---|
-| 🟠 | [TransportFromHardware](inbox/TransportFromHardware.md) | bump kol-hardware 0.8.0; the editor's clock on `createTransport()` (phase · epoch · setLoopSeconds kept), the timeline's ruler and head from `TimeStrip`, your keyframe lanes as its children | 2026-10-28 | 🟠 `addressed` 2026-10-28 — the clock on `createTransport()` (kol-hardware 0.8.0); the strip waits on `TimeStripInADock` |
+| 🟢 | [TransportFromHardware](done/TransportFromHardware.md) | bump kol-hardware 0.8.0; the editor's clock on `createTransport()` (phase · epoch · setLoopSeconds kept), the timeline's ruler and head from `TimeStrip`, your keyframe lanes as its children | 2026-10-28 | 🟢 `closed` 2026-10-29 — the clock on `createTransport()`, the dock's strip from `TimeStrip` (kol-hardware 0.9.1) |
 | 🟢 | [IdentitySetFromPackage](done/IdentitySetFromPackage.md) | **kol-ds-ui** — take the home-screen icons, favicon and OG from kol-icons `identity/fxr/`: bump, `pnpm icons` copies, generator + sharp retire | 2026-10-28 | 🟢 `closed` 2026-10-28 — five packages pinned, `pnpm icons` copies `identity/fxr/` (plus the tile SVG the manifest links), generator + sharp to `_tmp/2026-10-28-icons-from-package/`; PNGs pixel-identical, walked `vite preview` 0 console messages |
 | 🟢 | [FxrLibraryOnAppPreset](done/FxrLibraryOnAppPreset.md) | bump kol-component 0.291.0 · kol-shell 0.75.0; Library on `CatalogPage preset="app"`, Home file cards `variant: "app"`; FileCard.jsx parts retire | 2026-10-23 | 🟢 `closed` 2026-10-23 — 0.291.0 · 0.75.0 pinned, Library + Home on the `app` card, parts to `_tmp/2026-10-23-filecard-app-variant/`; walked `/library` on `vite preview`: menu, duplicate, delete confirm, 0 console messages |
 | 🟢 | [color-pass-one-palette-for-every-layer](done/color-pass-one-palette-for-every-layer.md) | One palette store + resolver every layer reads: link to editor swatches or not, amount, roles or rotation, relationship generator (OKLCH), lock/load/save, mapping by property; the Color roll rolls a palette, not N random hexes | 2026-10-22 | 🟢 `closed` 2026-10-22 — plan 37 W5: one store + resolver on kol-component colorMath, palette Color roll, editor Palette tab + Labs rail Palette row, mapping by property on the Flow loops; walked desk + 390 on `vite preview`, 0 console messages |
@@ -64,7 +64,8 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
-| 📌 | [TimeStripInADock](outbox/TimeStripInADock.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 closed 2026-10-28 · hardware 0.9.0 | bump; `TimelineDock` on `TimeStrip` docked (`framed={false}` `span="loop"` `gutter`) |
+| 🟢 | [AccountRowNoPictureIsTheIcon](outbox/AccountRowNoPictureIsTheIcon.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-shell 0.87.2 | none — adopted 2026-10-29 |
+| 🟢 | [TimeStripInADock](outbox/TimeStripInADock.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-hardware 0.9.1 | none — adopted 2026-10-29 |
 | 🟢 | [PhonePillMoreTurnsToClose](outbox/PhonePillMoreTurnsToClose.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.87.0 | none — adopted 2026-10-28 |
 | 🟢 | [HubHomeSignedOut](outbox/HubHomeSignedOut.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.86.0 · kol-component 0.311.0 | none — adopted 2026-10-28 |
 | 🟢 | [PhoneNavDock](outbox/PhoneNavDock.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.86.0 · kol-component 0.311.0 | none — adopted 2026-10-28 |
@@ -154,6 +155,9 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-29 | **`TransportFromHardware` closed; `TimeStripInADock` adopted** — kol-hardware 0.9.1 |
+| 2026-10-29 | **`AccountRowNoPictureIsTheIcon` adopted** — kol-shell 0.87.2 |
+| 2026-10-29 | **`AccountRowNoPictureIsTheIcon` filed to kol-ds-ui** |
 | 2026-10-28 | **`TransportFromHardware` addressed** — the clock on kol-hardware's `createTransport()`; the strip back to kol-ds-ui as `TimeStripInADock` |
 | 2026-10-28 | **`TransportFromHardware` filed from kol-ds-ui** — the editor's transport and timeline on kol-hardware |
 | 2026-10-28 | **`PhonePillMoreTurnsToClose` adopted** — kol-shell 0.87.0 |

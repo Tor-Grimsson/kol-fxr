@@ -7,7 +7,8 @@ import { setMorph, useMorph } from '../morph/morphStore'
 import { useTimelinePinned } from './timelinePinned'
 import { EASINGS, EASING_OPTIONS } from './easing'
 import { isBinding } from './resolve'
-import { useTransport } from './transport'
+import { transport, useTransport } from './transport'
+import { TimeStrip } from '@kolkrabbi/kol-hardware'
 
 /**
  * TimelineDock — the keyframe timeline under the canvas (the motion pack's `canvas.footer`).
@@ -78,38 +79,6 @@ function collectTracks(layers, out = []) {
 }
 
 const secs = (frac, len) => `${(frac * len).toFixed(2)}`
-
-/* Click/drag to seek. */
-function ScrubRuler({ t, len, onSeek }) {
-  const ref = useRef(null)
-  const fracFromEvent = (e) => {
-    const r = ref.current.getBoundingClientRect()
-    return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))
-  }
-  const onPointerDown = (e) => {
-    e.currentTarget.setPointerCapture(e.pointerId)
-    onSeek?.(fracFromEvent(e))
-  }
-  const onPointerMove = (e) => {
-    if (e.buttons & 1) onSeek?.(fracFromEvent(e))
-  }
-  return (
-    <div className="flex items-center gap-3">
-      <Tooltip label="Time / loop length" asChild>
-        <span className="kol-mono-12 text-meta tabular-nums shrink-0 text-right whitespace-nowrap" style={{ width: 120 }}>{secs(t, len)} / {len.toFixed(2)} s</span>
-      </Tooltip>
-      <div
-        ref={ref}
-        className="relative flex-1 h-4 cursor-ew-resize rounded"
-        style={{ background: 'var(--kol-fg-04)' }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-      >
-        <Playhead t={t} />
-      </div>
-    </div>
-  )
-}
 
 function Playhead({ t }) {
   return (
@@ -438,7 +407,7 @@ export function useTimelineUp() {
 
 export default function TimelineDock() {
   const { layers, updateLayer } = useComposeState()
-  const { t, seek, loopSeconds } = useTransport()
+  const { t, loopSeconds } = useTransport()
   const morph = useMorph()
   const pinned = useTimelinePinned()
   const collected = useMemo(() => collectTracks(layers), [layers])
@@ -470,7 +439,10 @@ export default function TimelineDock() {
         onEnd={() => { base.current = null }}
         onReset={() => setDockH(null)}
       />
-      <ScrubRuler t={t} len={loopSeconds} onSeek={seek} />
+      {/* the readout, ruler, loop window and head are kol-hardware's strip on the editor's clock (TimeStripInADock);
+          the gutter is the lanes' label column + its gap, so the ruler sits over the lanes. The hand-built ScrubRuler is in
+          `_tmp/2026-10-29-timestrip/`. */}
+      <TimeStrip transport={transport.clock} framed={false} span="loop" gutter={132} />
       <div className="flex flex-col gap-1 min-h-0 overflow-y-auto">
         {shown.map((track) => (
           <Fragment key={track.id}>

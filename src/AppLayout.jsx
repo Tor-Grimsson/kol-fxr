@@ -29,6 +29,7 @@ import { useAccountPrefs } from './editor/library/accountPrefs'
 const CoverHost = lazy(() => import('./editor/library/CoverHost'))
 import FileCover from './editor/library/FileCover'
 import HomeStage from './components/HomeStage'
+import AccountRail from './components/AccountRail'
 import DevCards from './pages/DevCards'
 import FxChangelog from './pages/FxChangelog.jsx'
 
@@ -248,6 +249,8 @@ export default function AppLayout() {
   const session = useLibrarySession()
   const account = useAccount()
   useAccountPrefs()
+  /* the account rail (frame D2) — the Hub's account row opens it; `/?account=1` (sign-up, the old /account) opens it on load */
+  const [accountOpen, setAccountOpen] = useState(() => new URLSearchParams(location.search).get('account') === '1')
   const signInRef = useRef(null)
   /* the Hub's Media row (signed in — the r2b2 stores, read-only; plan 15 § 4): a pick lands in the
      chrome under it — or, from a shell page, in the editor it opens */
@@ -372,6 +375,7 @@ export default function AppLayout() {
   return (
     <ModalProvider>
     <RailSignIn handlerRef={signInRef} />
+    <AccountRail open={accountOpen && !!account} onClose={() => { setAccountOpen(false); if (location.search.includes('account=1')) navigate(location.pathname, { replace: true }) }} />
     <NewFileDialog />
     {/* the live renderer for the covers only a mounted engine can draw (FileCover), one at a time, off the page */}
     <Suspense fallback={null}><CoverHost /></Suspense>
@@ -395,7 +399,7 @@ export default function AppLayout() {
       settings={{ ...hubSettings, comboLabel }}
       /* the Hub draws the foot rows and owns the picker and the password / sign-out dialogs */
       media={session ? { client: getMediaClient(), accept: ['image', 'video'], onSelect: onMediaPick } : undefined}
-      signIn={getLibraryApi() ? { signedIn: !!session, user: account ? { name: account.name || account.email, avatar: account.avatar ?? undefined } : undefined, onProfile: () => navigate('/account'), onPress: (creds) => signInRef.current?.(creds) } : undefined}
+      signIn={getLibraryApi() ? { signedIn: !!session, user: account ? { name: account.name || account.email, avatar: account.avatar ?? undefined } : undefined, onProfile: () => setAccountOpen(true), onPress: (creds) => signInRef.current?.(creds) } : undefined}
       shell={{ railToggleKey: '\\', navKeys: false, settingsKey: onChrome ? undefined : ',' }}
     />
     </ModalProvider>
