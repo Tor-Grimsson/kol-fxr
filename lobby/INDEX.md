@@ -64,6 +64,9 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [SettingsAccountTab](outbox/SettingsAccountTab.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-shell 0.88.0 | none — adopted 2026-10-29 |
+| 🟢 | [HubAppOwnsItsRows](outbox/HubAppOwnsItsRows.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-shell 0.88.0 | none — adopted 2026-10-29 |
+| 🟢 | [HomeMenuAccountRow](outbox/HomeMenuAccountRow.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-shell 0.88.0 | none — adopted 2026-10-29 |
 | 🟢 | [AccountRowNoPictureIsTheIcon](outbox/AccountRowNoPictureIsTheIcon.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-shell 0.87.2 | none — adopted 2026-10-29 |
 | 🟢 | [TimeStripInADock](outbox/TimeStripInADock.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-hardware 0.9.1 | none — adopted 2026-10-29 |
 | 🟢 | [PhonePillMoreTurnsToClose](outbox/PhonePillMoreTurnsToClose.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.87.0 | none — adopted 2026-10-28 |
@@ -155,6 +158,10 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-29 | **`SettingsAccountTab`, `HomeMenuAccountRow`, `HubAppOwnsItsRows` adopted** — kol-shell 0.88.0; the account is Settings › Account |
+| 2026-10-29 | **`SettingsAccountTab` filed to kol-ds-ui** |
+| 2026-10-29 | **`HubAppOwnsItsRows` filed to kol-ds-ui** |
+| 2026-10-29 | **`HomeMenuAccountRow` filed to kol-ds-ui** |
 | 2026-10-29 | **`TransportFromHardware` closed; `TimeStripInADock` adopted** — kol-hardware 0.9.1 |
 | 2026-10-29 | **`AccountRowNoPictureIsTheIcon` adopted** — kol-shell 0.87.2 |
 | 2026-10-29 | **`AccountRowNoPictureIsTheIcon` filed to kol-ds-ui** |

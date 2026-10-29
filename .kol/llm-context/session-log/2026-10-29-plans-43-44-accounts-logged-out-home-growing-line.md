@@ -48,3 +48,6 @@
 - kol-shell 0.87.2: the account row with no picture is the outline `user` glyph (`AccountRowNoPictureIsTheIcon`).
 - kol-hardware 0.9.1: `TimelineDock` draws `TimeStrip` docked (`framed={false} span="loop" gutter={132}`); `TransportFromHardware` closed.
 - Live: Worker deployed with invite requests; the app is not pushed yet.
+- The account is Settings › Account (kol-shell 0.88.0, `SettingsAccountTab`): `signIn.account = { content: <AccountPanel/>, footer: Sign out }`, `src/components/AccountPanel.jsx` (picture with hover-× to remove, Upload, Name, Email, Invites); Home's ••• ends on the account row (`HomeMenuAccountRow`). The account rail is in `_tmp/2026-10-29-account-rail/`.
+- `HubAppOwnsItsRows` (kol-shell 0.88.0): Home's menu, the rail foot, More and the signed-out + take `(defaults) => rows` — a row edit is fxr's own now, no ticket.
+- Nothing open; no tickets out.

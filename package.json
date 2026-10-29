@@ -40,7 +40,7 @@
     "@kolkrabbi/kol-hardware": "0.9.1",
     "@kolkrabbi/kol-icons": "0.50.0",
     "@kolkrabbi/kol-media-client": "0.7.0",
-    "@kolkrabbi/kol-shell": "0.87.2",
+    "@kolkrabbi/kol-shell": "0.88.0",
     "@kolkrabbi/kol-theme": "0.195.0",
     "@vitejs/plugin-react": "^6.0.5",
     "react": "^19.2.8",

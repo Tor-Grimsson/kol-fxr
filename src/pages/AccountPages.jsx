@@ -111,7 +111,7 @@ function JoinC({ invite }) {
       ]}
       footer={{ text: 'Already have an account?', link: 'Sign in', to: '/signin' }}
       check={(v) => (v.password !== v.confirm ? 'The passwords do not match.' : v.password.length < 8 ? 'The password needs at least 8 characters.' : null)}
-      onSubmit={async (v) => { await signUpLibrary({ invite, name: v.name, email: v.email.trim(), password: v.password }); navigate('/?account=1', { replace: true }) }}
+      onSubmit={async (v) => { await signUpLibrary({ invite, name: v.name, email: v.email.trim(), password: v.password }); navigate('/', { replace: true }) }}
     />
   )
 }
@@ -149,7 +149,7 @@ export function JoinPage() {
   return <JoinC invite={invite} />
 }
 
-/* /account is the account rail now (frame D2) — the route opens it over Home */
+/* /account is Settings › Account now (SettingsAccountTab) — the route goes Home, where the account row opens it */
 export function AccountPage() {
-  return <Navigate to="/?account=1" replace />
+  return <Navigate to="/" replace />
 }

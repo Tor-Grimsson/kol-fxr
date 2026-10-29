@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Avatar, Button, Input, Rail, RailActions, RailFoot, RailHeader, RailHint, RailRow, RailSection } from '@kolkrabbi/kol-component'
+import { Avatar, Button, Input, RailActions, RailHint, RailRow, RailSection } from '@kolkrabbi/kol-component'
 import { Icon } from '@kolkrabbi/kol-icons'
-import { useAccount, updateAccount, mintInvite, listInviteRequests, inviteFromRequest, signOutLibrary } from '../index.jsx'
+import { useAccount, updateAccount, mintInvite, listInviteRequests, inviteFromRequest } from '../index.jsx'
 
-/* THE ACCOUNT RAIL (frame D2, approved 2026-10-29) — the Hub's account row opens it over the app, a settings-role rail from
- * the DS kit: the standard header, Profile (picture, name, email) and Invites (a new link, the open requests) as sections,
- * Sign out in the foot. The `/account` page it replaces is in `_tmp/2026-10-29-account-page/`. */
+/* THE ACCOUNT TAB (SettingsAccountTab, kol-shell 0.88.0 — user 2026-10-29: "why isnt account just in settings in account
+ * tab?") — what the settings rail's Account tab holds, passed as `signIn.account.content`: Profile (picture with its hover-×,
+ * Upload, name, email) and Invites (a new link, the open requests), from the DS rail kit; Sign out is the tab's footer. The
+ * rail of its own it used to be is in `_tmp/2026-10-29-account-rail/`, the page before that in `_tmp/2026-10-29-account-page/`. */
 
 /* a picked photo → a 256px square webp data URL (centre crop), small enough for the account row */
 function toAvatar(file) {
@@ -24,7 +25,7 @@ function toAvatar(file) {
   })
 }
 
-export default function AccountRail({ open, onClose }) {
+export default function AccountPanel() {
   const account = useAccount()
   const fileRef = useRef(null)
   const [name, setName] = useState(account?.name ?? '')
@@ -33,27 +34,27 @@ export default function AccountRail({ open, onClose }) {
   const [links, setLinks] = useState({})
   const [error, setError] = useState('')
   useEffect(() => { setName(account?.name ?? '') }, [account?.name])
-  useEffect(() => { if (open && account) listInviteRequests().then(setRequests).catch(() => setRequests([])) }, [open, account])
+  useEffect(() => { if (account) listInviteRequests().then(setRequests).catch(() => setRequests([])) }, [account?.id])
   if (!account) return null
   const run = async (fn) => { setError(''); try { await fn() } catch (err) { setError(err.message) } }
   const saveName = () => { if (name.trim() !== (account.name ?? '')) run(() => updateAccount({ name })) }
   const pickAvatar = (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) run(async () => updateAccount({ avatar: await toAvatar(f) })) }
 
   return (
-    <Rail
-      role="settings"
-      open={open}
-      onClose={onClose}
-      header={<RailHeader title="Account" />}
-      footer={<RailFoot><Button size="md" className="w-full" onClick={() => { signOutLibrary(); onClose() }}>Sign out</Button></RailFoot>}
-    >
       <div className="flex flex-col gap-6">
         <RailSection label="Profile">
           <RailRow label="Picture">
             <div className="flex items-center gap-2">
-              {account.avatar ? <Avatar size="sm" initial="" src={account.avatar} alt={account.name} /> : <Icon name="user" size={24} />}
+              {/* the picture removes itself: hover shows an × over it (user 2026-10-29 — a Remove button broke the row) */}
+              {account.avatar
+                ? (
+                  <button type="button" aria-label="Remove picture" className="group relative rounded-full cursor-pointer" onClick={() => run(() => updateAccount({ avatar: null }))}>
+                    <Avatar size="sm" initial="" src={account.avatar} alt={account.name} />
+                    <span className="absolute inset-0 rounded-full flex items-center justify-center bg-black/60 text-fg-96 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"><Icon name="x" size={16} /></span>
+                  </button>
+                )
+                : <Icon name="user" size={24} />}
               <Button size="sm" onClick={() => fileRef.current?.click()}>Upload</Button>
-              {account.avatar && <Button size="sm" onClick={() => run(() => updateAccount({ avatar: null }))}>Remove</Button>}
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pickAvatar} />
             </div>
           </RailRow>
@@ -78,10 +79,8 @@ export default function AccountRail({ open, onClose }) {
               {links[r.id] && <Input preset="rail" width="100%" readOnly value={links[r.id]} onFocus={(e) => e.target.select()} />}
             </div>
           ))}
-          <RailHint>Requests from the sign-up page. Invite makes a one-use link to send.</RailHint>
         </RailSection>
         {error && <RailHint className="text-ui-error">{error}</RailHint>}
       </div>
-    </Rail>
   )
 }
