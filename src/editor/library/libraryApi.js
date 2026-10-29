@@ -148,3 +148,18 @@ export async function mintInvite() {
   const { token, expiresAt } = await call('/api/invites', { method: 'POST', body: '{}' }, session.token)
   return { url: `${window.location.origin}/join?invite=${encodeURIComponent(token)}`, expiresAt }
 }
+
+/* INVITE REQUESTS — anyone asks (`/join` with no link); the signed-in user lists them and turns one into a link */
+export async function requestInvite({ name, email }) {
+  if (!apiBase) throw new Error('no library api')
+  return call('/api/invite-requests', { method: 'POST', body: JSON.stringify({ name, email }) })
+}
+export async function listInviteRequests() {
+  if (!session) throw new UnauthorizedError()
+  return (await call('/api/invite-requests', {}, session.token)).requests
+}
+export async function inviteFromRequest(id) {
+  if (!session) throw new UnauthorizedError()
+  const { token, expiresAt, email, name } = await call(`/api/invite-requests/${encodeURIComponent(id)}/invite`, { method: 'POST', body: '{}' }, session.token)
+  return { url: `${window.location.origin}/join?invite=${encodeURIComponent(token)}`, expiresAt, email, name }
+}

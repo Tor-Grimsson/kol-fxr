@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react'
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { Avatar, Button, Input, LabeledControl, ModalProvider, PageHeader, useModal, VectorLoader } from '@kolkrabbi/kol-component'
+import { useEffect, useRef, useState } from 'react'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Avatar, Button, Input, LabeledControl, PageHeader, VectorLoader } from '@kolkrabbi/kol-component'
 import HomeStage from '../components/HomeStage'
-import { getLibraryApi, useAccount, signInLibrary, signUpLibrary, signOutLibrary, updateAccount, mintInvite, UnauthorizedError } from '../index.jsx'
+import { getLibraryApi, useAccount, signInLibrary, signUpLibrary, signOutLibrary, updateAccount, mintInvite, requestInvite, listInviteRequests, inviteFromRequest, UnauthorizedError } from '../index.jsx'
 
 /* THE ACCOUNT PAGES (plan 43 W2–W3, 2026-10-28) — sign in, sign up through an invite link, and your own page. Top-level
  * routes outside the Hub: a form wants the page to itself. The Hub's account row (HubAccountRow, kol-shell 0.85.0) signs in
@@ -27,32 +27,53 @@ function Frame({ title, subtitle, children }) {
 
 const initialOf = (u) => (u?.name || u?.email || '?').trim().charAt(0).toUpperCase()
 
-/* FRAME C (user 2026-10-28: "I like THIS ONE") — the sign-in and invite page: the mark and the chooser on the left, the
- * yellow button at the foot, the growing line on the right. The button opens the DS dialog; no form on the page. The
- * plan-43 form pages are in `_tmp/2026-10-28-account-forms/`. */
-const CHOOSER = [
-  { icon: 'refresh', label: 'Generate', to: '/randomiser?start=category' },
-  { icon: 'filter', label: 'Effects', to: '/randomiser?start=effects' },
-  { icon: 'globe', label: 'Labs', to: '/labs' },
-  { icon: 'swap', label: 'Morph', to: '/morph' },
-  { icon: 'desktop', label: 'Editor', to: '/editor' },
-]
-
-function FrameC({ cta, onCta }) {
+/* FRAME C, AS THE USER DREW IT (2026-10-28, canvas frames "Create account" and "Sign in") — the mark top-left; an eyebrow,
+ * the fields at the chooser's size and a line linking the other page in the middle; the one inverted button at the foot.
+ * Escape goes Home. The earlier versions (plan-43 forms, the dialog button) are in `_tmp/2026-10-28-account-forms/`. */
+function FrameC({ title, fields, okLabel, footer, check, onSubmit, done }) {
   const navigate = useNavigate()
+  const [vals, setVals] = useState(() => Object.fromEntries(fields.map((f) => [f.id, ''])))
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') navigate('/') }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [navigate])
+  const submit = async (e) => {
+    e.preventDefault()
+    const bad = check?.(vals)
+    if (bad) { setError(bad); return }
+    setBusy(true); setError('')
+    try { await onSubmit(vals) } catch (err) { setError(err instanceof UnauthorizedError ? 'Wrong email or password.' : err.message) } finally { setBusy(false) }
+  }
   return (
     <main className="h-dvh bg-surface-primary flex">
-      <div className="w-[672px] max-md:w-full shrink-0 box-border px-20 py-[72px] max-md:px-4 max-md:py-8 flex flex-col justify-between gap-12">
+      <form onSubmit={submit} className="w-[672px] max-md:w-full shrink-0 box-border px-20 py-[72px] max-md:px-4 max-md:py-8 flex flex-col justify-between gap-12">
         {/* the mark as the Hub draws it — VectorLoader inks it with the theme, not the OS */}
         <div className="w-24 h-24 -ml-2 text-emphasis"><VectorLoader src="/favicon/favicon.svg" size="100%" role="img" aria-label="FXR" /></div>
-        <div className="flex flex-col gap-2 max-w-[360px]">
-          <span className="kol-eyebrow text-body">Select chrome</span>
-          {CHOOSER.map((c) => (
-            <Button key={c.label} tone="primary" size="md" className="w-full justify-start" onClick={() => navigate(c.to)}>{c.label}</Button>
+        <div className="flex flex-col gap-2 w-full max-w-[360px]">
+          <span className="kol-eyebrow text-body">{title}</span>
+          {fields.map((f, i) => (
+            <Input
+              key={f.id}
+              type={f.type ?? 'text'}
+              autoComplete={f.autoComplete}
+              autoFocus={i === 0}
+              placeholder={f.placeholder}
+              aria-label={f.placeholder}
+              size="md"
+              value={vals[f.id]}
+              onChange={(e) => setVals((v) => ({ ...v, [f.id]: e.target.value }))}
+              className="w-full"
+            />
           ))}
+          {error && <p className="kol-mono-12 text-ui-error">{error}</p>}
+          {done && <p className="kol-mono-12 text-emphasis">{done}</p>}
+          <p className="kol-mono-12 text-meta mt-2">{footer.text} <Link to={footer.to} className="text-emphasis underline">{footer.link}</Link></p>
         </div>
-        <Button variant="accent" size="md" className="self-start" onClick={onCta}>{cta}</Button>
-      </div>
+        <Button type="submit" tone="inverted" size="md" className="self-start" disabled={busy || !!done}>{okLabel}</Button>
+      </form>
       <div className="flex-1 relative bg-surface-secondary overflow-hidden max-md:hidden">
         <div className="absolute inset-0"><HomeStage /></div>
       </div>
@@ -62,45 +83,70 @@ function FrameC({ cta, onCta }) {
 
 function SignInC() {
   const navigate = useNavigate()
-  const modal = useModal()
-  const ask = async () => {
-    const got = await modal.form('Sign in', [
-      { id: 'email', placeholder: 'Email', type: 'email', autoComplete: 'username' },
-      { id: 'password', placeholder: 'Password', type: 'password', autoComplete: 'current-password' },
-    ], { okLabel: 'Sign in' })
-    if (!got?.email || !got?.password) return
-    try { await signInLibrary({ email: got.email.trim(), password: got.password }); navigate('/', { replace: true }) } catch (err) { await modal.alert(err instanceof UnauthorizedError ? 'Wrong email or password.' : err.message) }
-  }
-  return <FrameC cta="Sign in" onCta={ask} />
+  return (
+    <FrameC
+      title="Sign in"
+      okLabel="Sign in"
+      fields={[
+        { id: 'email', placeholder: 'Email', type: 'email', autoComplete: 'username' },
+        { id: 'password', placeholder: 'Password', type: 'password', autoComplete: 'current-password' },
+      ]}
+      footer={{ text: "Don't have an account?", link: 'Sign up', to: '/join' }}
+      onSubmit={async (v) => { await signInLibrary({ email: v.email.trim(), password: v.password }); navigate('/', { replace: true }) }}
+    />
+  )
 }
 
 function JoinC({ invite }) {
   const navigate = useNavigate()
-  const modal = useModal()
-  const ask = async () => {
-    const got = await modal.form('Create account', [
-      { id: 'name', placeholder: 'Name', autoComplete: 'name' },
-      { id: 'email', placeholder: 'Email', type: 'email', autoComplete: 'username' },
-      { id: 'password', placeholder: 'Password, 8 characters or more', type: 'password', autoComplete: 'new-password' },
-    ], { okLabel: 'Create account' })
-    if (!got?.email || !got?.password) return
-    try { await signUpLibrary({ invite, name: got.name ?? '', email: got.email.trim(), password: got.password }); navigate('/account', { replace: true }) } catch (err) { await modal.alert(err.message) }
-  }
-  return <FrameC cta="Create account" onCta={ask} />
+  return (
+    <FrameC
+      title="Create account"
+      okLabel="Create"
+      fields={[
+        { id: 'name', placeholder: 'Name', autoComplete: 'name' },
+        { id: 'email', placeholder: 'Email', type: 'email', autoComplete: 'username' },
+        { id: 'password', placeholder: 'Create Password', type: 'password', autoComplete: 'new-password' },
+        { id: 'confirm', placeholder: 'Confirm Password', type: 'password', autoComplete: 'new-password' },
+      ]}
+      footer={{ text: 'Already have an account?', link: 'Sign in', to: '/signin' }}
+      check={(v) => (v.password !== v.confirm ? 'The passwords do not match.' : v.password.length < 8 ? 'The password needs at least 8 characters.' : null)}
+      onSubmit={async (v) => { await signUpLibrary({ invite, name: v.name, email: v.email.trim(), password: v.password }); navigate('/account', { replace: true }) }}
+    />
+  )
+}
+
+/* REQUEST AN INVITE (frame "C · Request an invite", approved 2026-10-28) — `/join` with no link: Name and Email, Request */
+function RequestC() {
+  const [done, setDone] = useState('')
+  return (
+    <FrameC
+      title="Request an invite"
+      okLabel="Request"
+      fields={[
+        { id: 'name', placeholder: 'Name', autoComplete: 'name' },
+        { id: 'email', placeholder: 'Email', type: 'email', autoComplete: 'email' },
+      ]}
+      footer={{ text: 'Already have an account?', link: 'Sign in', to: '/signin' }}
+      done={done}
+      onSubmit={async (v) => { await requestInvite({ name: v.name, email: v.email.trim() }); setDone('Request sent.') }}
+    />
+  )
 }
 
 export function SignInPage() {
   const account = useAccount()
   if (account) return <Navigate to="/" replace />
   if (!getLibraryApi()) return <Frame title="Sign in" subtitle="Accounts are not configured on this build." />
-  return <ModalProvider><SignInC /></ModalProvider>
+  return <SignInC />
 }
 
 export function JoinPage() {
   const [params] = useSearchParams()
   const invite = params.get('invite') || ''
-  if (!invite) return <Frame title="Create account" subtitle="Accounts are made through an invite link." />
-  return <ModalProvider><JoinC invite={invite} /></ModalProvider>
+  if (!getLibraryApi()) return <Frame title="Create account" subtitle="Accounts are not configured on this build." />
+  if (!invite) return <RequestC />
+  return <JoinC invite={invite} />
 }
 
 /* a picked photo → a 256px square webp data URL (centre crop), small enough for the account row */
@@ -118,6 +164,29 @@ function toAvatar(file) {
     img.onerror = reject
     img.src = URL.createObjectURL(file)
   })
+}
+
+/* the open invite requests — each turns into a one-use link to send (the app sends no email) */
+function InviteRequests() {
+  const [rows, setRows] = useState(null)
+  const [links, setLinks] = useState({})
+  useEffect(() => { listInviteRequests().then(setRows).catch(() => setRows([])) }, [])
+  if (!rows?.length) return null
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="kol-eyebrow text-body">Invite requests</span>
+      {rows.map((r) => (
+        <div key={r.id} className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <span className="kol-mono-14 text-emphasis truncate">{r.name || r.email}</span>
+            {r.name && <span className="kol-mono-12 text-meta truncate">{r.email}</span>}
+            {!links[r.id] && <Button tone="grey" size="sm" className="ml-auto" onClick={async () => { const l = await inviteFromRequest(r.id); setLinks((m) => ({ ...m, [r.id]: l.url })) }}>Make invite</Button>}
+          </div>
+          {links[r.id] && <Input size="md" width="100%" readOnly value={links[r.id]} onFocus={(e) => e.target.select()} />}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export function AccountPage() {
@@ -146,6 +215,7 @@ export function AccountPage() {
         <Field label="Name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
         <Button type="submit" tone="grey" size="md" disabled={name.trim() === (account.name ?? '')}>Save name</Button>
       </form>
+      <InviteRequests />
       <div className="flex flex-col gap-2">
         <Button tone="grey" size="md" iconLeft="plus" onClick={() => run(async () => setInvite(await mintInvite()))}>New invite link</Button>
         {invite && <Input size="md" width="100%" readOnly value={invite.url} onFocus={(e) => e.target.select()} />}

@@ -38,3 +38,13 @@ CREATE TABLE IF NOT EXISTS invites (
   used_by    TEXT
 );
 CREATE INDEX IF NOT EXISTS documents_user ON documents (user_id);
+
+-- INVITE REQUESTS (2026-10-28): `/join` with no invite link asks for one. A request is name + email, one row per email; the
+-- signed-in user sees the open ones on /account and turns one into an invite link (`handled_at` set). No email is sent.
+CREATE TABLE IF NOT EXISTS invite_requests (
+  id         TEXT PRIMARY KEY,
+  name       TEXT NOT NULL DEFAULT '',
+  email      TEXT NOT NULL UNIQUE,
+  created_at INTEGER NOT NULL,
+  handled_at INTEGER
+);

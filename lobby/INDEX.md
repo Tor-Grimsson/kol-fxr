@@ -64,7 +64,7 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
-| 🔵 | [TimeStripInADock](outbox/TimeStripInADock.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🔵 filed 2026-10-28 | **none** |
+| 📌 | [TimeStripInADock](outbox/TimeStripInADock.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 closed 2026-10-28 · hardware 0.9.0 | bump; `TimelineDock` on `TimeStrip` docked (`framed={false}` `span="loop"` `gutter`) |
 | 🟢 | [PhonePillMoreTurnsToClose](outbox/PhonePillMoreTurnsToClose.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.87.0 | none — adopted 2026-10-28 |
 | 🟢 | [HubHomeSignedOut](outbox/HubHomeSignedOut.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.86.0 · kol-component 0.311.0 | none — adopted 2026-10-28 |
 | 🟢 | [PhoneNavDock](outbox/PhoneNavDock.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-28 — kol-shell 0.86.0 · kol-component 0.311.0 | none — adopted 2026-10-28 |

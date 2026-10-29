@@ -6,6 +6,9 @@
  *   GET    /api/me              the signed-in user
  *   PATCH  /api/me              { name?, avatar?, prefs? } — prefs merge key by key
  *   POST   /api/invites         mint a sign-up link token (signed in)
+ *   POST   /api/invite-requests { name, email } — anyone, no token: ask for an invite (one open request per email)
+ *   GET    /api/invite-requests the open requests (signed in)
+ *   POST   /api/invite-requests/:id/invite  mint a link for that request and close it (signed in)
  *   GET    /api/documents       the user's rows, tombstones included (the client merges, newest wins)
  *   PUT    /api/documents/:id   { kind, name, spec, updatedAt } — upsert; an OLDER put is a no-op
  *   DELETE /api/documents/:id   tombstone: deleted = 1, updated_at = now
@@ -39,6 +42,7 @@ const json = (body, status, extra = {}) => new Response(JSON.stringify(body), { 
 const SESSION_MS = 90 * 24 * 60 * 60 * 1000
 const INVITE_MS = 7 * 24 * 60 * 60 * 1000
 const PBKDF2_ITERATIONS = 100000 // workerd's ceiling
+const REQUESTS_MAX = 200 // open requests held at once; past it a new one is refused, so the public route cannot fill the table
 const AVATAR_MAX = 200000 // a 256px webp data URL is ~20 KB; this only stops a full photo landing in a row
 
 const enc = new TextEncoder()
@@ -71,6 +75,13 @@ async function userOf(request, env) {
     'SELECT users.* FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token_hash = ?1 AND sessions.expires_at > ?2',
   ).bind(await sha256(h.slice(7).trim()), Date.now()).first()
   return row ?? null
+}
+
+async function mintInvite(env) {
+  const token = randomToken(18)
+  const expiresAt = Date.now() + INVITE_MS
+  await env.DB.prepare('INSERT INTO invites (token, created_at, expires_at) VALUES (?1, ?2, ?3)').bind(token, Date.now(), expiresAt).run()
+  return { token, expiresAt }
 }
 
 const body = async (request) => { try { return (await request.json()) || {} } catch { return null } }
@@ -126,13 +137,30 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors })
     const url = new URL(request.url)
 
+    /* asking for an invite needs no account (the one public write) */
+    if (/^\/api\/invite-requests\/?$/.test(url.pathname) && request.method === 'POST') {
+      const b = await body(request)
+      if (!b) return json({ error: 'bad json' }, 400, cors)
+      const email = normEmail(b.email)
+      if (!validEmail(email)) return json({ error: 'a valid email is required' }, 400, cors)
+      const open = await env.DB.prepare('SELECT COUNT(*) AS n FROM invite_requests WHERE handled_at IS NULL').first()
+      if ((open?.n ?? 0) >= REQUESTS_MAX) return json({ error: 'too many open requests, try again later' }, 429, cors)
+      const name = typeof b.name === 'string' ? b.name.trim().slice(0, 80) : ''
+      await env.DB.prepare(
+        `INSERT INTO invite_requests (id, name, email, created_at) VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(email) DO UPDATE SET name = excluded.name, created_at = excluded.created_at, handled_at = NULL`,
+      ).bind(randomToken(12), name, email, Date.now()).run()
+      return json({ ok: true }, 200, cors)
+    }
+
     const a = url.pathname.match(/^\/api\/auth\/(signin|signup|signout)\/?$/)
     if (a) return request.method === 'POST' ? auth(request, env, cors, a[1]) : json({ error: 'method not allowed' }, 405, cors)
 
     const isMe = /^\/api\/me\/?$/.test(url.pathname)
     const isInvites = /^\/api\/invites\/?$/.test(url.pathname)
+    const req = url.pathname.match(/^\/api\/invite-requests(?:\/([A-Za-z0-9_-]+)\/invite)?\/?$/)
     const m = url.pathname.match(/^\/api\/documents(?:\/([A-Za-z0-9_-]+))?\/?$/)
-    if (!isMe && !isInvites && !m) return json({ error: 'not found' }, 404, cors)
+    if (!isMe && !isInvites && !req && !m) return json({ error: 'not found' }, 404, cors)
 
     const user = await userOf(request, env)
     if (!user) return json({ error: 'unauthorized' }, 401, cors)
@@ -151,10 +179,22 @@ export default {
 
     if (isInvites) {
       if (request.method !== 'POST') return json({ error: 'method not allowed' }, 405, cors)
-      const token = randomToken(18)
-      const expiresAt = Date.now() + INVITE_MS
-      await env.DB.prepare('INSERT INTO invites (token, created_at, expires_at) VALUES (?1, ?2, ?3)').bind(token, Date.now(), expiresAt).run()
-      return json({ token, expiresAt }, 200, cors)
+      return json(await mintInvite(env), 200, cors)
+    }
+
+    if (req) {
+      if (!req[1] && request.method === 'GET') {
+        const { results } = await env.DB.prepare('SELECT id, name, email, created_at FROM invite_requests WHERE handled_at IS NULL ORDER BY created_at DESC').all()
+        return json({ requests: results.map((r) => ({ id: r.id, name: r.name, email: r.email, createdAt: r.created_at })) }, 200, cors)
+      }
+      if (req[1] && request.method === 'POST') {
+        const r = await env.DB.prepare('SELECT * FROM invite_requests WHERE id = ?1 AND handled_at IS NULL').bind(req[1]).first()
+        if (!r) return json({ error: 'no such open request' }, 404, cors)
+        const invite = await mintInvite(env)
+        await env.DB.prepare('UPDATE invite_requests SET handled_at = ?2 WHERE id = ?1').bind(r.id, Date.now()).run()
+        return json({ ...invite, email: r.email, name: r.name }, 200, cors)
+      }
+      return json({ error: 'method not allowed' }, 405, cors)
     }
 
     const id = m[1]
