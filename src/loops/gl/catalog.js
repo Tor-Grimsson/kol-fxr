@@ -23,7 +23,7 @@ import { ENVIRONMENTS } from './envScenes.js'
 import { SHAPES as MESH_SHAPES, DRIVERS as MESH_DRIVERS, BG_STYLES as MESH_BG_STYLES, PALETTES as MESH_PALETTES } from './meshPalettes.js'
 
 /* the Model primitive's default file — in the app's R2 bucket (kol-media), CORS-open */
-export const MESH_DEFAULT = 'https://r2.kolkrabbi.io/meshes/stanford-bunny.obj'
+export const MESH_DEFAULT = 'https://r2.kolkrabbi.io/kol-3d/stanford-bunny.obj'
 
 export const GL_GROUPS = [
   { id: 'drift',       label: 'Drift' },

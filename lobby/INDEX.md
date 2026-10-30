@@ -35,6 +35,7 @@ Parking, declaring stale, reopening and any design decision stay the **user's ca
 
 | | Entry | About | Staged | State |
 |---|---|---|---|---|
+| 🟢 | [mesh-default-moved-to-kol-3d](done/mesh-default-moved-to-kol-3d.md) | **kol-website** — R2 `meshes/` is now `kol-3d/`; `MESH_DEFAULT` (`src/loops/gl/catalog.js:26`) 404s until repointed | 2026-10-30 | 🟢 `closed` 2026-10-30 — `MESH_DEFAULT` on `kol-3d/` (network 200), no `meshes/` left in `src/` or `docs/` |
 | 🟢 | [TransportFromHardware](done/TransportFromHardware.md) | bump kol-hardware 0.8.0; the editor's clock on `createTransport()` (phase · epoch · setLoopSeconds kept), the timeline's ruler and head from `TimeStrip`, your keyframe lanes as its children | 2026-10-28 | 🟢 `closed` 2026-10-29 — the clock on `createTransport()`, the dock's strip from `TimeStrip` (kol-hardware 0.9.1) |
 | 🟢 | [IdentitySetFromPackage](done/IdentitySetFromPackage.md) | **kol-ds-ui** — take the home-screen icons, favicon and OG from kol-icons `identity/fxr/`: bump, `pnpm icons` copies, generator + sharp retire | 2026-10-28 | 🟢 `closed` 2026-10-28 — five packages pinned, `pnpm icons` copies `identity/fxr/` (plus the tile SVG the manifest links), generator + sharp to `_tmp/2026-10-28-icons-from-package/`; PNGs pixel-identical, walked `vite preview` 0 console messages |
 | 🟢 | [FxrLibraryOnAppPreset](done/FxrLibraryOnAppPreset.md) | bump kol-component 0.291.0 · kol-shell 0.75.0; Library on `CatalogPage preset="app"`, Home file cards `variant: "app"`; FileCard.jsx parts retire | 2026-10-23 | 🟢 `closed` 2026-10-23 — 0.291.0 · 0.75.0 pinned, Library + Home on the `app` card, parts to `_tmp/2026-10-23-filecard-app-variant/`; walked `/library` on `vite preview`: menu, duplicate, delete confirm, 0 console messages |
@@ -59,11 +60,12 @@ _(none yet — ownership, deferral and context notes land in `archive/`)_
 
 Tickets this ledger does **not** govern — each row names the destination ledger
 that does. The **Remainder** is this repo's to do; the state is theirs to report.
-Fifty-four went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
+Fifty-five went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
 last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/INDEX.md`).
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [HubSignedOutGutterAndSeams](outbox/HubSignedOutGutterAndSeams.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-shell 0.90.0 | none — adopted 2026-10-29 |
 | 🟢 | [SettingsAccountTab](outbox/SettingsAccountTab.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-shell 0.88.0 | none — adopted 2026-10-29 |
 | 🟢 | [HubAppOwnsItsRows](outbox/HubAppOwnsItsRows.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-shell 0.88.0 | none — adopted 2026-10-29 |
 | 🟢 | [HomeMenuAccountRow](outbox/HomeMenuAccountRow.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-shell 0.88.0 | none — adopted 2026-10-29 |
@@ -158,6 +160,11 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-30 | **`mesh-default-moved-to-kol-3d` filed from kol-website** — R2 `meshes/` renamed `kol-3d/`; the default mesh URL needs the new path |
+| 2026-10-30 | **`mesh-default-moved-to-kol-3d` closed** — `MESH_DEFAULT` repointed to `kol-3d/` (200); moved to `done/` |
+| 2026-10-29 | **`HubSignedOutGutterAndSeams` adopted** — kol-shell 0.90.0; signed-out gutter, hidden rail, `/signin` everywhere, Sign out in the rail foot |
+| 2026-10-29 | **`HubSignedOutGutterAndSeams` returned** — kol-shell 0.90.0: one 64 gutter, `home.railHidden`, `signIn.page`, `account.footer` in the rail foot; the bump and the three workaround retirements still owed |
+| 2026-10-29 | **`HubSignedOutGutterAndSeams` filed to kol-ds-ui** |
 | 2026-10-29 | **`SettingsAccountTab`, `HomeMenuAccountRow`, `HubAppOwnsItsRows` adopted** — kol-shell 0.88.0; the account is Settings › Account |
 | 2026-10-29 | **`SettingsAccountTab` filed to kol-ds-ui** |
 | 2026-10-29 | **`HubAppOwnsItsRows` filed to kol-ds-ui** |

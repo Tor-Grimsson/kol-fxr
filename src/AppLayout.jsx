@@ -396,7 +396,7 @@ export default function AppLayout() {
       settings={{ ...hubSettings, comboLabel }}
       /* the Hub draws the foot rows and owns the picker and the password / sign-out dialogs */
       media={session ? { client: getMediaClient(), accept: ['image', 'video'], onSelect: onMediaPick } : undefined}
-      signIn={getLibraryApi() ? { signedIn: !!session, user: account ? { name: account.name || account.email, avatar: account.avatar ?? undefined } : undefined, onPress: (creds) => signInRef.current?.(creds), account: { content: <AccountPanel />, footer: { label: 'Sign out', onPress: () => signOutLibrary() } } } : undefined}
+      signIn={getLibraryApi() ? { signedIn: !!session, user: account ? { name: account.name || account.email, avatar: account.avatar ?? undefined } : undefined, onPress: (creds) => signInRef.current?.(creds), page: '/signin', account: { content: <AccountPanel />, footer: { label: 'Sign out', onPress: () => signOutLibrary() } } } : undefined}
       shell={{ railToggleKey: '\\', navKeys: false, settingsKey: onChrome ? undefined : ',' }}
     />
     </ModalProvider>
