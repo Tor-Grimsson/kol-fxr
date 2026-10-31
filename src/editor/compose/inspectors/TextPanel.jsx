@@ -277,15 +277,12 @@ function SizeCombo({ layer, setProp }) {
   const p = metric('size', 'Size')
   const chevron = (
     <Tooltip asChild label="Size presets">
-      <button
-        type="button"
+      <Button
         ref={popover.refs.setReference}
         {...popover.getReferenceProps()}
-        aria-label="Size presets"
-        className={`inline-flex items-center justify-center shrink-0 text-emphasis ${open ? '' : 'kol-btn-quiet'}`}
-      >
-        <Icon name="chevron-down" size={glyphSize('sm')} />
-      </button>
+        tone="ghost" size="sm" quiet={!open} iconOnly="chevron-down" aria-label="Size presets"
+        className="shrink-0"
+      />
     </Tooltip>
   )
   return (

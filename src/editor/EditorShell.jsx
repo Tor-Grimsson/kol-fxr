@@ -140,7 +140,9 @@ function Rail({ side, panels, resizable, workspace, ctx }) {
 const NO_CTX = {}
 const useNoCtx = () => NO_CTX
 
-export default function EditorShell({ registry }) {
+/* `rightIn(rail)` — where the right rail renders instead of the grid's third column (plan 46 W1: Labs on a phone
+ * portals it into AppShell's bottom Rail). Unset, it stays in the grid. */
+export default function EditorShell({ registry, rightIn }) {
   useLabelColumns()
   seedWorkspace(registry?.panes ?? [], registry?.tabs ?? [])
   const workspace = (registry?.tabs ?? []).length > 0
@@ -197,8 +199,9 @@ export default function EditorShell({ registry }) {
             </div>
           )}
         </div>
-        <Rail side="right" panels={registry?.panels} resizable={registry?.resizableRails} workspace={workspace} ctx={ctx} />
+        {!rightIn && <Rail side="right" panels={registry?.panels} resizable={registry?.resizableRails} workspace={workspace} ctx={ctx} />}
       </div>
+      {rightIn?.(<Rail side="right" panels={registry?.panels} resizable={registry?.resizableRails} workspace={workspace} ctx={ctx} />)}
       <TabGhost />
       <ShortcutsOverlay />
       <SettingsDrawerHost />

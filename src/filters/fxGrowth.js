@@ -1,6 +1,6 @@
 import { mulberry32 } from '../loops/gl/rng.js'
 import { transport } from '../editor/params/transport.js'
-import { Growth, densityFrom, SIM_W } from '../loops/growth/engine.js'
+import { Growth, densityFrom, SIM_W, waveAt, playedClock } from '../loops/growth/engine.js'
 
 // Growing line as an EFFECT (plan 43 § 4.2) — the layer's own photo or video frame is the density: one closed line
 // grows over it and packs tighter where it is darker, drawn ink on paper in place of the image. The same engine is the
@@ -11,6 +11,7 @@ import { Growth, densityFrom, SIM_W } from '../loops/growth/engine.js'
 
 let sim = null
 let simKey = ''
+const waveClock = playedClock()
 let lastSrc = null
 
 const ensure = (src, w, h, p) => {
@@ -26,6 +27,8 @@ export default {
   id: 'fx-growth',
   label: 'Growing line',
   animated: true,
+  /* INPUTS' shortlist (plan 48) */
+  inputs: ['growth', 'weight', 'contrast'],
   params: [
     { key: 'paper', label: 'Background', type: 'color', role: 'bg', default: '#f4f1ea', section: 'Color' },
     { key: 'ink', label: 'Line color', type: 'color', role: 'fg', default: '#141414', section: 'Color' },
@@ -38,12 +41,16 @@ export default {
     { key: 'nodes', label: 'Length', type: 'range', min: 1000, max: 14000, step: 500, default: 9000, noRandom: true },
     { key: 'growth', label: 'Growth', type: 'range', min: 0, max: 20, step: 1, default: 8, noRandom: true },
     { key: 'speed', label: 'Speed', type: 'range', min: 1, max: 8, step: 1, default: 3, noRandom: true },
+    /* the slow wave Home's line has (plan 45 4.3) — the drawn line drifts, the sim stays still */
+    { key: 'wave', label: 'Wave', type: 'toggle', default: true, noRandom: true },
   ],
   apply(ctx, src, w, h, p) {
     ensure(src, w, h, p)
-    sim.setParams({ minGap: p.minGap, maxGap: p.maxGap, contrast: p.contrast, growth: p.growth, cap: p.nodes })
-    if (transport.isPlaying()) for (let i = 0; i < Math.round(p.speed); i++) sim.step()
-    sim.draw(ctx, w, h, { ink: p.ink, paper: p.paper, width: p.weight * Math.min(w, h) / 900 })
+    /* the line settles (plan 45 W1) — a grown line rests instead of jittering at the edges */
+    sim.setParams({ minGap: p.minGap, maxGap: p.maxGap, contrast: p.contrast, growth: p.growth, cap: p.nodes, settle: 60 })
+    const playing = transport.isPlaying()
+    if (playing && (!sim.full || sim.hot > 0)) for (let i = 0; i < Math.round(p.speed); i++) sim.step()
+    sim.draw(ctx, w, h, { ink: p.ink, paper: p.paper, width: p.weight * Math.min(w, h) / 900, wave: p.wave !== false ? waveAt(waveClock(playing)) : null })
   },
   /* vector export: the paper and the one path, in layer units */
   svg(w, h, p) {

@@ -1,3 +1,4 @@
+import { getAppSettings } from '../lib/appSettings'
 /**
  * transport — the motion clock + live-input store (param-graph RFC Phase 2).
  *
@@ -89,7 +90,8 @@ export const transport = {
    * callers that omit it read as up. Notifies like mousemove so
    * paused-but-bound layers track it. */
   setStagePointer(x, y, down = false) {
-    stage = x == null ? null : { x, y, down: !!down }
+    /* Interactions off (Settings, plan 49 3.2) — the pointer reaches no generator */
+    stage = x == null || getAppSettings().interactions === false ? null : { x, y, down: !!down }
     if (pointerInterest && subs.size > 0) notify()
   },
   /* See `pointerInterest` above — compose state scans layers for pointer

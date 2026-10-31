@@ -53,7 +53,7 @@ export default function UrlIntents() {
         setTimeout(() => {
           loadPreset(item)
           /* the morph's length is the transport's (plan 14 § 4 — the rail has no Length of its own) */
-          if (item.mode === 'morph') { if (item.morph?.seconds > 0) transport.setLoopSeconds(item.morph.seconds); transport.play() }
+          if (item.mode === 'morph' && item.morph?.seconds > 0) transport.setLoopSeconds(item.morph.seconds) /* NOTHING AUTO-STARTS (plan 49 10.1, user 2026-10-31: "NEVER AUTO START, just start on play") */
           /* a shipped file's cover is drawn on demand (FileCover) — never a data URL in the user's quota */
           if (!item.thumb && !item.shipped) setTimeout(async () => {
             const thumb = await fileRef.current?.captureThumb()

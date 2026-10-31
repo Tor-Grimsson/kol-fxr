@@ -14,9 +14,26 @@ const themeBoot = {
   },
 }
 
+/* THE BOOT INTRO IN DEV PLAYS ON A HARD REFRESH ONLY (user 2026-10-31) — a plain reload, a typed URL and Vite's own
+   full reloads skip it. A hard refresh asks for the page with `Cache-Control: no-cache` (Chrome, Firefox, Safari);
+   anything else gets `__fxrNoIntro` ahead of index.html's stamp. Production is untouched.
+   ponytail: one module-level flag for the last page request — fine for one person on one dev server. */
+let hardRefresh = false
+const devIntroOnHardRefresh = {
+  name: 'fxr-dev-intro-hard-refresh',
+  apply: 'serve',
+  configureServer(server) {
+    server.middlewares.use((req, _res, next) => {
+      if (req.headers.accept?.includes('text/html')) hardRefresh = /no-cache/.test(`${req.headers['cache-control']} ${req.headers.pragma}`)
+      next()
+    })
+  },
+  transformIndexHtml: () => (hardRefresh ? [] : [{ tag: 'script', children: 'window.__fxrNoIntro=1', injectTo: 'head-prepend' }]),
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), svgr(), tailwindcss(), devFavicon({ label: 'X', ground: '#F2D24B' }), themeBoot, loaderApp({ graphic: 'src/assets/fxr-mark.svg', size: 128 })],
+  plugins: [react(), svgr(), tailwindcss(), devFavicon({ label: 'X', ground: '#F2D24B' }), themeBoot, devIntroOnHardRefresh, loaderApp({ graphic: 'src/assets/fxr-mark.svg', size: 128 })],
   // Single react / react-dom copy — the published DS packages peer-depend on
   // React, and a duplicated copy crashes at runtime with a null dispatcher.
   resolve: {

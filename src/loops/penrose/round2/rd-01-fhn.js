@@ -9,7 +9,7 @@ import { num } from '../knobs.js'
 import { clear, strokeOutline, wrapLoop, rampRGB, roleRGB, stampGrid } from '../common.js'
 
 const PARAMS          = [
-  { key: 'res',    type: 'int',   min: 80,   max: 220, default: 160,  step: 20,   label: 'grid' },
+  { key: 'res',    type: 'int',   min: 80,   max: 480, default: 360,  step: 20,   label: 'grid' },
   { key: 'dU',     type: 'range', min: 0.05, max: 2.0, default: 1.0,  step: 0.05, label: 'diffU' },
   { key: 'dV',     type: 'range', min: 0.0,  max: 0.5, default: 0.05, step: 0.01, label: 'diffV' },
   { key: 'eps',    type: 'range', min: 0.005, max: 0.1, default: 0.02, step: 0.005, label: 'epsilon' },
@@ -27,7 +27,7 @@ export const r2_rd_01_fhn            = {
   params: PARAMS,
 
   init({ ctx, sdf, W, H, rng, params, pointer }) {
-    const res  = num(params, 'res',  160)
+    const res  = num(params, 'res',  360)
     const dU   = num(params, 'dU',   1.0)
     const dV   = num(params, 'dV',   0.05)
     const eps  = num(params, 'eps',  0.02)

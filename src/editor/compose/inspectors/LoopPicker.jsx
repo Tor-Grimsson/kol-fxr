@@ -2,6 +2,9 @@ import { useComposeState } from '../state'
 import { groupById, presetsInGroup, presetParams } from '../../../loops/registry'
 import { PICKER_TREE, LEGACY_GROUP_LABELS } from '../../../loops/taxonomy'
 import { PickerRow, PickerDropdown } from './TreePicker'
+import { Button } from '@kolkrabbi/kol-component'
+import { useControlSize } from '../../params/controlSize'
+import { stepPreset } from '../../labs/presetStep'
 
 /**
  * LoopPicker — the app hierarchy (METHOD > TYPE > CATEGORY > PRESET, see
@@ -26,6 +29,7 @@ import { PickerRow, PickerDropdown } from './TreePicker'
  */
 export function LoopPicker({ layer, tree = PICKER_TREE, inline = true }) {
   const { updateLayer } = useComposeState()
+  const cs = useControlSize()
   const group = layer.loopGroup ?? 'shape'
   const parent = tree.find((t) => t.groups.includes(group)) ?? null
   const presets = presetsInGroup(group)
@@ -94,13 +98,19 @@ export function LoopPicker({ layer, tree = PICKER_TREE, inline = true }) {
           onChange={onSub}
         />
       )}
-      <PickerRow
-        inline={inline}
-        label="Preset"
-        options={subPresets.map((p) => ({ value: p.id, label: p.label }))}
-        value={layer.presetId}
-        onChange={(id) => applyPreset(presets.find((p) => p.id === id))}
-      />
+      {/* ‹ › walk the category (plan 49 2.3); h · l / ← → do the same in Labs, k · j / ↑ ↓ walk categories */}
+      <PickerRow inline={inline} label="Preset">
+        <div className="flex w-full gap-1">
+          {subPresets.length > 1 && <Button size={cs} iconOnly="chevron-left" aria-label="Previous preset (H)" onClick={() => { const pt = stepPreset(layer, -1); if (pt) updateLayer(layer.id, pt) }} />}
+          <PickerDropdown
+            className="flex-1 min-w-0"
+            options={subPresets.map((p) => ({ value: p.id, label: p.label }))}
+            value={layer.presetId}
+            onChange={(id) => applyPreset(presets.find((p) => p.id === id))}
+          />
+          {subPresets.length > 1 && <Button size={cs} iconOnly="chevron-right" aria-label="Next preset (L)" onClick={() => { const pt = stepPreset(layer, 1); if (pt) updateLayer(layer.id, pt) }} />}
+        </div>
+      </PickerRow>
     </>
   )
 }

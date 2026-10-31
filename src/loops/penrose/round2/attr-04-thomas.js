@@ -13,6 +13,9 @@ const PARAMS          = [
   { key: 'trails', type: 'int', min: 1, max: 6, default: 3, label: 'trail count' },
   { key: 'tail', type: 'int', min: 200, max: 4000, default: 1500, label: 'tail length' },
   { key: 'spin', type: 'range', min: 0, max: 0.5, default: 0.08, step: 0.01, label: 'cam spin' },
+  { key: 'yaw', type: 'range', min: -180, max: 180, default: 0, step: 1, label: 'view yaw' },
+  { key: 'pitch', type: 'range', min: -85, max: 85, default: 0, step: 1, label: 'view pitch' },
+  { key: 'dist', type: 'range', min: 0.4, max: 2.5, default: 1, step: 0.05, label: 'view distance' },
   { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]
 
@@ -61,11 +64,13 @@ export const r2_attr_04_thomas            = {
   summary: '3D Thomas cyclically symmetric attractor; RK4-integrated trails projected onto the [1,1,1] perpendicular plane with slow camera precession revealing 3-fold symmetry.',
   helps: 'The 3-lobe rotation is visually interpretable as a spinning object — clean rhythmic motion for the letterform.',
   params: PARAMS,
+  cameraKeys: { yaw: 'yaw', pitch: 'pitch', dist: 'dist' }, /* VIEW (plan 51 3.4): yaw · pitch · distance as live params, so a drag turns the view (Orbit) and 3D zoom scales it */
   init({ ctx, sdf, W, H, rng, params, clock, pointer }) {
     const maxTail = 4000
     const maxTrails = 6
     const bufs = Array.from({ length: maxTrails }, (_, i) => ({
       pxs: new Float32Array(maxTail),
+      VX: new Float32Array(maxTail), VY: new Float32Array(maxTail), VZ: new Float32Array(maxTail),
       pys: new Float32Array(maxTail),
       zs: new Float32Array(maxTail), // depth
       head: 0, len: 0,
@@ -141,18 +146,25 @@ export const r2_attr_04_thomas            = {
         for (let s = 0; s < STEPS; s++) {
           const [nx, ny, nz] = rk4Thomas(tr.cx, tr.cy, tr.cz, b, dt)
           tr.cx = nx; tr.cy = ny; tr.cz = nz
-          const [pu, pv] = project(nx, ny, nz, angle)
-          // depth: component along [1,1,1]
-          const depth = (nx + ny + nz) / (3 * Math.sqrt(3))
-          tr.pxs[tr.head] = pu
-          tr.pys[tr.head] = pv
-          tr.zs[tr.head] = depth
+          /* raw points; the view is applied below, per frame (plan 51 3.4) */
+          tr.pxs[tr.head] = nx
+          tr.pys[tr.head] = ny
+          tr.zs[tr.head] = nz
           tr.head = (tr.head + 1) % maxTail
           if (tr.len < maxTail) tr.len++
         }
         // NaN hygiene — non-finite state resets to seed (guarded every frame)
         if (!isFinite(tr.cx + tr.cy + tr.cz)) { tr.cx = 0.1; tr.cy = 0; tr.cz = 0.05 }
         const drawLen = Math.min(tr.len, tail)
+        const ang = angle + (num(params, 'yaw', 0) * Math.PI) / 180, pit = (num(params, 'pitch', 0) * Math.PI) / 180
+        const cpt = Math.cos(pit), spt = Math.sin(pit), sc = SC / Math.max(0.2, num(params, 'dist', 1))
+        for (let i = 0; i < drawLen; i++) {
+          const k = (tr.head - 1 - i + maxTail) % maxTail
+          const x = tr.pxs[k], y = tr.pys[k], z = tr.zs[k]
+          const [pu, pv] = project(x, y, z, ang)
+          const pw = (x + y + z) / Math.sqrt(3)
+          tr.VX[k] = OX + pu * sc; tr.VY[k] = OY + (pv * cpt - pw * spt) * sc; tr.VZ[k] = (pv * spt + pw * cpt) / 3
+        }
         // rotate the lead role per trail — warm / accent / fg
         // (batched: depth+alpha quantized to buckets → ≤32 strokes per trail
         // instead of one beginPath/stroke per segment)
@@ -161,7 +173,7 @@ export const r2_attr_04_thomas            = {
         for (let i = 0; i < drawLen - 1; i++) {
           const age = i / drawLen
           const i0 = (tr.head - 1 - i + maxTail) % maxTail
-          const d = Math.max(0, Math.min(1, tr.zs[i0] * 0.5 + 0.5))
+          const d = Math.max(0, Math.min(1, tr.VZ[i0] * 0.5 + 0.5))
           const db = Math.min(DB - 1, Math.floor(d * DB))
           const alpha = (1 - age) * (0.45 + d * 0.55)
           const abkt = Math.min(ABK - 1, Math.floor(alpha * ABK))
@@ -176,8 +188,8 @@ export const r2_attr_04_thomas            = {
           ctx.beginPath()
           for (const i0 of seg) {
             const i1 = (i0 - 1 + maxTail) % maxTail
-            ctx.moveTo(OX + tr.pxs[i0]*SC, OY + tr.pys[i0]*SC)
-            ctx.lineTo(OX + tr.pxs[i1]*SC, OY + tr.pys[i1]*SC)
+            ctx.moveTo(tr.VX[i0], tr.VY[i0])
+            ctx.lineTo(tr.VX[i1], tr.VY[i1])
           }
           ctx.stroke()
         }
@@ -185,7 +197,7 @@ export const r2_attr_04_thomas            = {
         // glowing head per trail
         if (tr.len > 0) {
           const hi = (tr.head - 1 + maxTail) % maxTail
-          const hx = OX + tr.pxs[hi]*SC, hy = OY + tr.pys[hi]*SC
+          const hx = tr.VX[hi], hy = tr.VY[hi]
           // fake glow — halo fill replaces the shadowBlur pass
           ctx.fillStyle = `rgba(${cr},${cg},${cb},0.3)`
           ctx.beginPath()

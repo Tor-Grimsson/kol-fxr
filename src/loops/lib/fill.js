@@ -12,10 +12,15 @@ export const FILL_OPTIONS = [
 
 // Shared params spread into a filled loop's schema. `tab:'color'` routes them to
 // the rail's Color tab (next to the swatches), not the Edit/transform tab.
+/* A FILL CONTROL SHOWS WHEN IT DRAWS (plan 49 10.2, user 2026-10-31: "DONT show controls that dont work"). The probe moved
+   every control end to end: Angle and Polar stops changed nothing on a solid fill, and the whole fill set changed nothing
+   while the shape's own fill (Fill shape / Fill rings) was off. Each now shows only when it draws. A loop without a
+   fill toggle leaves it undefined, which counts as on. */
+const filled = (l) => l.fillShape !== false && l.ringFill !== false
 export const FILL_PARAMS = [
-  { key: 'fill', label: 'Fill', type: 'select', options: FILL_OPTIONS, default: 'solid', tab: 'color', collapsed: true },
-  { key: 'fillAngle', label: 'Angle', type: 'range', min: 0, max: 360, step: 1, default: 0, tab: 'color', noRandom: true, collapsed: true },
-  { key: 'fillStops', label: 'Polar stops', type: 'range', min: 2, max: 16, step: 1, default: 6, tab: 'color', noRandom: true, collapsed: true },
+  { key: 'fill', label: 'Fill', type: 'select', options: FILL_OPTIONS, default: 'solid', tab: 'color', collapsed: true, when: filled },
+  { key: 'fillAngle', label: 'Angle', type: 'range', min: 0, max: 360, step: 1, default: 0, tab: 'color', noRandom: true, collapsed: true, when: (l) => filled(l) && ['linear', 'conic', 'polar'].includes(l.fill) },
+  { key: 'fillStops', label: 'Polar stops', type: 'range', min: 2, max: 16, step: 1, default: 6, tab: 'color', noRandom: true, collapsed: true, when: (l) => filled(l) && l.fill === 'polar' },
 ]
 
 // Extra params for loops that fill a single closed curve (vs concentric discs):
@@ -23,8 +28,8 @@ export const FILL_PARAMS = [
 // curves like rose / lissajous). Spread alongside FILL_PARAMS.
 export const SHAPE_FILL_PARAMS = [
   { key: 'fillShape', label: 'Fill shape', type: 'toggle', default: false, tab: 'color', collapsed: true },
-  { key: 'fillAlpha', label: 'Fill opacity', type: 'range', min: 0.05, max: 1, step: 0.05, default: 0.5, tab: 'color', noRandom: true, collapsed: true },
-  { key: 'fillRule', label: 'Fill rule', type: 'select', options: [{ value: 'nonzero', label: 'Nonzero' }, { value: 'evenodd', label: 'Even-odd' }], default: 'nonzero', tab: 'color', collapsed: true },
+  { key: 'fillAlpha', label: 'Fill opacity', type: 'range', min: 0.05, max: 1, step: 0.05, default: 0.5, tab: 'color', noRandom: true, collapsed: true, when: (l) => !!l.fillShape },
+  { key: 'fillRule', label: 'Fill rule', type: 'select', options: [{ value: 'nonzero', label: 'Nonzero' }, { value: 'evenodd', label: 'Even-odd' }], default: 'nonzero', tab: 'color', collapsed: true, when: (l) => !!l.fillShape },
 ]
 
 // Canvas winding rule from the loop's param (defaults to nonzero).

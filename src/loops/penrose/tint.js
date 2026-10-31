@@ -15,6 +15,7 @@
 // rampRGB/roleRGB in common.js.
 
 import { OPACITY } from './palette.js'
+import { roleUse } from './roles.js'
 
 // Parse a CSS colour string → [r, g, b, a] (0–255, 0–1) or null if unparseable.
 const NAMED = { white: [255, 255, 255], black: [0, 0, 0] }
@@ -63,6 +64,7 @@ export function makeMapper(palette) {
   // A prototype that already pulls its colours from the palette (via pc()) has
   // placed them deliberately — pass those through verbatim so the luminance remap
   // never second-guesses an intentional role (e.g. a bright accent → fg).
+  const hiddenStops = (palette.hidden ?? []).map(stop)
   const stops = [fg, accent, dim, warm]
   const isStop = (r, g, b) => stops.some((s) => Math.abs(r - s[0]) <= 6 && Math.abs(g - s[1]) <= 6 && Math.abs(b - s[2]) <= 6)
   return (value) => {
@@ -70,14 +72,15 @@ export function makeMapper(palette) {
     if (!c) return value // gradient / pattern / unparseable → leave it
     const [r, g, b, a] = c
     if (nearBg(r, g, b)) return out(bg, a) // the bg fill / clear → bg, whatever its luminance
-    if (isStop(r, g, b)) return value // explicit palette role (pc()) → leave it exactly
+    if (hiddenStops.some((h) => Math.abs(r - h[0]) <= 6 && Math.abs(g - h[1]) <= 6 && Math.abs(b - h[2]) <= 6)) return out(bg, a) // a hidden layer (plan 49 4.3)
+    if (isStop(r, g, b)) return value // explicit palette role (pc()) → leave it exactly — pc() already reported it
     const L = lum(r, g, b)
     if (L < 24) return out(bg, a) // very dark authored ink trails → the new bg
     // map to a role + scale by that role's live opacity multiplier
-    if (r - b > 14) return out(warm, a * (OPACITY.warm ?? 1)) // warm highlight → warm
-    if (L >= 200) return out(fg, a * (OPACITY.fg ?? 1)) // bright cool structure → fg
-    if (L >= 120) return out(accent, a * (OPACITY.accent ?? 1)) // mid cool → accent
-    return out(dim, a * (OPACITY.dim ?? 1)) // dark cool → dim
+    if (r - b > 14) { roleUse('warm'); return out(warm, a * (OPACITY.warm ?? 1)) } // warm highlight → warm
+    if (L >= 200) { roleUse('fg'); return out(fg, a * (OPACITY.fg ?? 1)) } // bright cool structure → fg
+    if (L >= 120) { roleUse('accent'); return out(accent, a * (OPACITY.accent ?? 1)) } // mid cool → accent
+    roleUse('dim'); return out(dim, a * (OPACITY.dim ?? 1)) // dark cool → dim
   }
 }
 

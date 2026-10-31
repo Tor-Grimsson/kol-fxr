@@ -5,6 +5,7 @@ import { hideLoaderApp } from '@kolkrabbi/kol-framework/src/loaderApp.js'
 import './index.css'
 import { dropStoredShipped } from './editor/library/shipped'
 import { isWalkSave } from './editor/library/mergeRemote'
+import { INTRO, introClaimed, endIntro } from './components/intro.js'
 
 /* THE WALK SAVES LEAVE (plan 37 § 4.1, again in plan 40 § 2.1): the saves the 2026-10-08 walk scripts left in this browser
    (`Plan08 …`, `Sync A <ms>`, `Morph W <ms>`) leave the library on every load — a signed-in merge used to bring the cloud
@@ -30,5 +31,7 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 )
 
-/* The app loader (kol-framework's loaderApp, written into index.html by vite.config.js) leaves once React has painted. */
-hideLoaderApp()
+/* The app loader (kol-framework's loaderApp, written into index.html by vite.config.js) leaves once React has painted —
+   on `/` signed-out Home's stage takes it over instead (plan 45 W4); unclaimed after a beat, the plain loader goes */
+if (!INTRO) hideLoaderApp()
+else setTimeout(() => { if (!introClaimed()) { endIntro(); hideLoaderApp({ minMs: 0 }) } }, 600)

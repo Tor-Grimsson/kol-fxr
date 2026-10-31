@@ -3,8 +3,6 @@ import { setRailExtras, RAIL_EXTRA_PREFIX } from '../../railExtras'
 import { useComposeState } from '../compose/state'
 import { useLabsLayer } from './useLabsLayer'
 import { buildLabsCatalog, SECTION_ICONS } from './catalog'
-import { transport } from '../params/transport'
-import { isMobileDevice, wantsDesktop } from '../mobile/device'
 
 /**
  * LabsNav — labs mode's left rail (plan.md Phase 11.3): the persistent,
@@ -99,12 +97,9 @@ export default function LabsNav() {
        no entry, and AppLayout uses the difference to close the touch drawer on
        a pick but leave it open when a section is just being expanded.
 
-       ON TOUCH A PICK STARTS THE CLOCK. Desktop keeps its contract — a pick
-       lands a still and Space runs it — but a phone has no Space and its ▶ sits
-       in the params drawer, closed; a pick that lands a frozen frame reads as
-       broken there (the randomiser has always played on pick). */
-    const touch = isMobileDevice() && !wantsDesktop()
-    setRailExtras({ items, dispatch: (p) => { const fn = dispatch.get(p); if (!fn) return false; fn(); if (touch) transport.play(); return true } })
+       A PICK NEVER STARTS THE CLOCK, on touch either (plan 49 10.1, user 2026-10-31: "NEVER AUTO START, just
+       start on play") — it lands a still; the transport float's ▶ (phone) or Space (desk) runs it. */
+    setRailExtras({ items, dispatch: (p) => { const fn = dispatch.get(p); if (!fn) return false; fn(); return true /* plays on Play only (plan 49 10.1) */ } })
     return () => setRailExtras(null)
   })
 

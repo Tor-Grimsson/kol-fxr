@@ -12,7 +12,7 @@ import { clear, strokeOutline, wrapLoop, roleRGB, stampGrid } from '../common.js
 // Reference: Drossel & Schwabl (1992) PRL 69:1629.
 
 const PARAMS          = [
-  { key: 'res', label: 'grid res',       type: 'int',   min: 80,   max: 220,  default: 160, step: 10    },
+  { key: 'res', label: 'grid res',       type: 'int',   min: 80,   max: 480,  default: 360, step: 10    },
   { key: 'growthP',   label: 'growth chance', type: 'range', min: 0.001,max: 0.08, default: 0.02,step: 0.001 },
   { key: 'lightningF', label: 'lightning chance', type: 'range', min: 0.00005,max: 0.005, default: 0.0003, step: 0.00005 },
   { key: 'stepsPerFrame', label: 'steps/frame', type: 'int', min: 1, max: 8, default: 3, step: 1 },
@@ -33,7 +33,7 @@ export const r2_soc_03_forestfire            = {
   params: PARAMS,
 
   init({ ctx, sdf, W, H, rng, params, pointer }) {
-    const G     = num(params, 'res', 160)
+    const G     = num(params, 'res', 360)
     const p     = num(params, 'growthP', 0.02)
     const f     = num(params, 'lightningF', 0.0003)
     // capped at 4 generations/frame — above that the burn/regrow cycle strobes

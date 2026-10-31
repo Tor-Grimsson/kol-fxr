@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { MenuDropdownItem, PopoverPanel, usePopover, Tooltip } from '@kolkrabbi/kol-component'
+import { ParamBindDot } from '@kolkrabbi/kol-component'
+import { useControlSize } from './controlSize'
 import { getSources, getSource } from './sources'
 import { isGamepadSource } from './gamepad'
 import { isBinding, resolveValue } from './resolve'
@@ -21,8 +21,7 @@ import { useBindDots } from './dotVisibility'
  * tall enough to overflow the viewport.
  */
 export default function BindDot({ layer, param, setProp }) {
-  const [open, setOpen] = useState(false)
-  const popover = usePopover({ open, onOpenChange: setOpen, placement: 'bottom-end', offset: 4, role: 'menu' })
+  const cs = useControlSize()
   const dotsOn = useBindDots()
 
   const value = layer[param.key]
@@ -45,7 +44,6 @@ export default function BindDot({ layer, param, setProp }) {
     param.min != null && param.max != null ? [param.min, param.max] : [0, 1]
 
   const pick = (m) => {
-    setOpen(false)
     if (m === 'none') {
       setProp(param.key, current())
     } else if (m === 'track') {
@@ -70,46 +68,15 @@ export default function BindDot({ layer, param, setProp }) {
     ...(firstPad ? [{ value: firstPad.id, label: 'Joystick' }] : []),
   ]
 
+  /* the dot and its menu are KOL's ParamBindDot (kol-component 0.330, plan 51 4.4) — fxr keeps the source list and
+     the binding logic; a capped, scrolling menu is the Menu's own */
+  const label = entries.find((e) => e.value === mode)?.label ?? mode
   return (
-    <>
-      <Tooltip label={bound ? `Modulated (${mode}) — shape it in the Animation tab` : 'Modulate'}><button
-        ref={popover.refs.setReference}
-        {...popover.getReferenceProps()}
-        type="button"
-        aria-label={`Modulate ${param.label ?? param.key}`}
-        className="inline-flex items-center justify-center w-5 h-5 rounded shrink-0"
-        style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
-      >
-        <span
-          aria-hidden="true"
-          className="rounded-full"
-          style={{
-            width: 7, height: 7,
-            background: bound ? 'var(--kol-accent-primary)' : 'transparent',
-            border: `1.5px solid ${bound ? 'var(--kol-accent-primary)' : 'var(--kol-fg-48)'}`,
-          }}
-        />
-      </button></Tooltip>
-      {/* Cap + scroll on the FLOATING element itself (what floating-ui
-          positions) — the DS popover has no height-clamp, so the cap must
-          live here, not on an inner child, or flip/shift can't keep a tall
-          list on-screen. 50vh ≤ half the viewport, so flip always finds a
-          side it fits on. */}
-      <PopoverPanel
-        popover={popover}
-        panel={false}
-        focus={false}
-        className="z-50 bg-surface-secondary border border-oq-08 rounded shadow-lg"
-        style={{ maxHeight: '50vh', overflowY: 'auto', overscrollBehavior: 'contain' }}
-      >
-        <div className="w-[220px]">
-          {entries.map((e) => (
-            <MenuDropdownItem key={e.value} onClick={() => pick(e.value)} shortcut={mode === e.value ? '✓' : undefined}>
-              {e.label}
-            </MenuDropdownItem>
-          ))}
-        </div>
-      </PopoverPanel>
-    </>
+    <ParamBindDot
+      size={cs} bound={bound} mode={label} label={param.label ?? param.key}
+      tooltip={bound ? `Modulated (${mode}) — shape it in the Animation tab` : 'Modulate'}
+      minWidth={220}
+      items={entries.map((e) => ({ label: e.label, onClick: () => pick(e.value), checked: mode === e.value }))}
+    />
   )
 }

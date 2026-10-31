@@ -11,7 +11,7 @@ import { clear, strokeOutline, wrapLoop, rampRGB, roleRGB, stampGrid } from '../
 // Reference: Bak, Tang, Wiesenfeld (1987) PRL 59:381.
 
 const PARAMS          = [
-  { key: 'res', label: 'grid res',           type: 'int',   min: 80,  max: 220, default: 150, step: 10 },
+  { key: 'res', label: 'grid res',           type: 'int',   min: 80,  max: 480, default: 360, step: 10 },
   { key: 'dropsPerFrame', label: 'drops/frame', type: 'int',   min: 1,   max: 120, default: 30,  step: 1  },
   { key: 'threshold', label: 'threshold',     type: 'int',   min: 2,   max: 8,   default: 4,   step: 1  },
   { key: 'maxRelax', label: 'max relax',      type: 'int',   min: 50,  max: 2000,default: 400, step: 50 },
@@ -29,7 +29,7 @@ export const r2_soc_01_btw            = {
   params: PARAMS,
 
   init({ ctx, sdf, W, H, rng, params, pointer }) {
-    const G      = num(params, 'res', 150)
+    const G      = num(params, 'res', 360)
     const thresh = num(params, 'threshold', 4)
     const drops  = num(params, 'dropsPerFrame', 30)
     // capped at 60 full-grid sweeps/frame — grid persists, so an avalanche the cap

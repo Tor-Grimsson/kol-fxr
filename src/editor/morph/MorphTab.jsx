@@ -14,6 +14,8 @@ import { buildMorph, CURVES, CYCLES } from './buildMorph'
 import { hasOutline, canCrossfade, morphKeys } from './shape'
 import { useMorph, setMorph, addStep, updateStep, removeStep, reorderStep, pickParams, stepLabel } from './morphStore'
 import { stepFromLayer } from './StepPicker'
+import { TreePicker } from '../compose/inspectors/TreePicker'
+import { MORPH_TYPES, morphPresets, morphTree, morphPresetById, loadMorphPreset } from './presets'
 
 /**
  * MorphTab — the Morph rail (plan 10): labs' right rail while the MORPH row is the surface in use,
@@ -129,7 +131,7 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
     if (readOnly || editing != null || sig === lastSig.current || (steps.length >= 2 && blocked[mode])) return
     lastSig.current = sig
     rebuildRef.current()
-    if (steps.length >= 2 && !transport.isPlaying()) transport.play()
+    /* NOTHING AUTO-STARTS (plan 49 10.1, user 2026-10-31: "NEVER AUTO START, just start on play") */
   }, [sig, editing, steps.length, readOnly]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* the editing rule, half one: the fields write to the step on the stage */
@@ -180,6 +182,20 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
       {/* the mode is the rail's strip, where labs puts Generate · Style · Animation */}
       <SegmentedToggle tone="sunken" value={mode} onChange={(v) => !readOnly && setMorph({ mode: v })} options={modeOptions} size={cs} className={stripClamp(cs)} />
 
+      {/* TYPE · CATEGORY · PRESET (plan 47 W2), the header every generator has — a pick loads that run; a morph
+          built by hand shows its mode as the type and no preset */}
+      {!readOnly && (
+        <LabeledControlSection divided>
+          <TreePicker
+            tree={morphTree()}
+            presets={morphPresets()}
+            current={morphPresetById(morph.presetId) ?? { typeLabel: MORPH_TYPES.find((t) => t.id === mode)?.label }}
+            subLabel={(s) => s.split(' · ').pop()}
+            onPick={loadMorphPreset}
+          />
+        </LabeledControlSection>
+      )}
+
       <LabeledControlSection divided>
         {/* the DS list (kol-component 0.245.0, `StepList` — filed from here 2026-10-09); the local copy
             is in _tmp/2026-10-09-morph-steplist/. `grab` is a pointer sort, so it works under a finger. */}
@@ -209,9 +225,10 @@ export default function MorphTab({ layer, readOnly = false, editTabs = null }) {
 
       <AutoControls schema={SETTINGS} layer={morph} setProp={setSetting} inline />
 
-      {!readOnly && (
+      {/* a morph needs two steps to save — until then the button is not drawn (plan 51 3.1) */}
+      {!readOnly && steps.length >= 2 && (
         <LabeledControlSection divided>
-          <Button tone="primary" size={cs} className="w-full" disabled={steps.length < 2} onClick={save}>{fileId ? 'Save' : 'Save…'}</Button>
+          <Button tone="primary" size={cs} className="w-full" onClick={save}>{fileId ? 'Save' : 'Save…'}</Button>
         </LabeledControlSection>
       )}
     </div>

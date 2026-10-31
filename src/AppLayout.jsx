@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { AppStudio, useNavHidden } from '@kolkrabbi/kol-shell'
+import { usePhoneFloats, setRailHost } from './phoneFloats'
 import { ModalProvider, useModal } from '@kolkrabbi/kol-component'
 
 import NewFileDialog, { openNewFile } from './components/NewFileDialog'
@@ -165,6 +166,19 @@ const SHORTCUTS = shortcutsBySection(null)
 
 const typing = (t) => t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName)
 
+/* SIGN IN OVER HOME (FloatingStyleAndSignInDemos, kol-shell 0.91.0) — /signin's own form, as `signIn.form`: the column
+   slides over Home on a desk, the box on a phone. /signin stays for a link. */
+const SIGN_IN_FORM = (navigate) => ({
+  title: 'Sign in',
+  okLabel: 'Sign in',
+  fields: [
+    { id: 'email', placeholder: 'Email', type: 'email', autoComplete: 'username' },
+    { id: 'password', placeholder: 'Password', type: 'password', autoComplete: 'current-password' },
+  ],
+  footer: { text: "Don't have an account?", link: 'Sign up', onPress: () => navigate('/join') },
+  onSubmit: (v) => signInLibrary({ email: v.email.trim(), password: v.password }),
+})
+
 /* The sign-in gesture, under the shell's own ModalProvider so the KOL alert serves it on every route — the chromes carry
    their own provider inside. ACCOUNTS (plan 43, HubAccountRow, kol-shell 0.85.0): signed out, the Hub's row asks Email and
    Password itself and hands `{ email, password }` here; signed in, the row is you and opens /account, where sign-out lives. */
@@ -201,6 +215,31 @@ function useLabsRows() {
         if (section?.sub) section.sub.push(row); else items.push(row)
       })
       setRows(items)
+    })
+    return () => { on = false }
+  }, [])
+  return rows
+}
+
+/* HOME'S DOCK MORPH (plan 47 § 2.3) — Morph's ladder as nested rows: type → category → preset, a preset loading its
+ * run and opening /morph. Lazily, for the same reason as Labs' rows: the presets pull the engines. */
+function useMorphRows() {
+  const [rows, setRows] = useState([])
+  useEffect(() => {
+    let on = true
+    import('./editor/morph/presets.js').then(({ MORPH_TYPES, morphPresets, loadMorphPreset }) => {
+      if (!on) return
+      const all = morphPresets()
+      setRows(MORPH_TYPES.map((t) => {
+        const ofType = all.filter((p) => p.type === t.id)
+        return {
+          icon: t.icon, label: t.label,
+          sub: [...new Set(ofType.map((p) => p.category))].map((category) => ({
+            label: category,
+            sub: ofType.filter((p) => p.category === category).map((p) => ({ label: p.label, onPress: () => loadMorphPreset(p) })),
+          })),
+        }
+      }))
     })
     return () => { on = false }
   }, [])
@@ -244,7 +283,11 @@ export default function AppLayout() {
      a second component per chrome. Their paths are sentinels, so they dispatch
      instead of routing. */
   const extras = useRailExtras()
+  /* LABS ON A PHONE (plan 46 W1): Labs publishes its floats; on its routes the shell runs KOL's two floats with them */
+  const phoneFloats = usePhoneFloats()
+  const labsFloats = phoneFloats && (location.pathname === '/labs' || location.pathname === '/morph')
   const labsRows = useLabsRows()
+  const morphRows = useMorphRows()
   const hubSettings = useHubSettings()
   const session = useLibrarySession()
   const account = useAccount()
@@ -272,6 +315,10 @@ export default function AppLayout() {
   const onNavigate = (path) => {
     if (path?.startsWith(RAIL_EXTRA_PREFIX)) {
       if (!extras.dispatch) { pendingPick.current = path; enter('labs'); return }
+      /* A LABS PICK LEAVES MORPH (plan 47 § 1.1): /morph and /labs are one mounted LabsView, so the pick ran in
+         place and the Morph rail stayed. Hop to /labs first — the same view stays mounted, the layer with it, and
+         the route lets go of Morph's rail. */
+      if (location.pathname === '/morph' && !path.startsWith(`${RAIL_EXTRA_PREFIX}morph:`)) navigate('/labs')
       /* A labs pick swaps the layer without a route change, and the touch
          drawer only closes itself on `currentPath` — so it stayed open over
          the thing just picked. The scrim is the DS's own close control; press
@@ -282,6 +329,10 @@ export default function AppLayout() {
     }
     navigate(path)
   }
+
+  /* the dock's Labs rows — the catalog's sections (not Color, a row on its own), each opening its groups
+     (nested `sub`, kol-shell 0.98.0, plan 46 W2); a group runs the rail's own pick */
+  const labsSections = labsRows.filter((s) => s.sub?.length).map((s) => ({ icon: s.icon, label: s.label, sub: s.sub.map((g) => ({ icon: g.icon, label: g.label, onPress: () => onNavigate(g.path) })) }))
 
   /* a file card opens its file in its chrome — UrlIntents reads `open` there */
   const openFile = (p) => navigate(`/${chromeOf(p)}?open=${encodeURIComponent(p.id)}`)
@@ -329,12 +380,25 @@ export default function AppLayout() {
        dock, the phone's nav). Only where accounts exist: a build without the API has nothing to sign in to. */
     signedOut: getLibraryApi() ? !session : false,
     stage: <HomeStage />,
+    /* THE FLOAT SURFACE ON HOME (HubHomeFloatSurface, kol-shell 0.93.0) — not baked in (user 2026-10-31): solid unless
+       `?float=glass-dark` or `?float=glass-light`. Glass-dark is his favourite for the dock; the + should not follow it */
+    surface: new URLSearchParams(window.location.search).get('float') || 'solid',
+    /* THE ROUND 3 BOARD'S ROWS (AppFloatNav, kol-shell 0.91.0): Editor · Labs · Randomiser · Morph, Generate and Effects
+       under Randomiser; the dock adds ··· itself */
     chromes: [
-      { icon: CHROMES.randomiser.icon, label: 'Generate', onPress: () => navigate('/randomiser?start=category') },
-      { icon: 'filter', label: 'Effects', onPress: () => navigate('/randomiser?start=effects') },
-      { icon: CHROMES.labs.icon, label: 'Labs', onPress: () => navigate('/labs') },
-      { icon: CHROMES.morph.icon, label: 'Morph', onPress: () => navigate('/morph') },
-      { icon: CHROMES.editor.icon, label: 'Editor', onPress: () => navigate('/editor') },
+      /* EVERY CHROME OPENS ROWS (user 2026-10-31, "these should all give you sub menus"): Editor → New File · Library;
+         Labs → its four sections, each pressing that section's first group (the rail's own pick, `pendingPick` when
+         Labs is not mounted yet); Morph stays a button until he names rows */
+      { icon: CHROMES.editor.icon, label: 'Editor', onPress: () => navigate('/editor'), sub: [
+        { icon: 'plus', label: 'New File', onPress: openNewFile },
+        { icon: 'nav-library', label: 'Library', onPress: () => navigate('/library') },
+      ] },
+      { icon: CHROMES.labs.icon, label: 'Labs', onPress: () => navigate('/labs'), sub: labsSections.length ? labsSections : undefined },
+      { icon: CHROMES.randomiser.icon, label: 'Randomiser', onPress: () => navigate('/randomiser'), sub: [
+        { icon: CHROMES.randomiser.icon, label: 'Generate', onPress: () => navigate('/randomiser?start=category') },
+        { icon: 'filter', label: 'Effects', onPress: () => navigate('/randomiser?start=effects') },
+      ] },
+      { icon: CHROMES.morph.icon, label: 'Morph', onPress: () => navigate('/morph'), sub: morphRows.length ? morphRows : undefined },
     ],
     /* THE CHROME CHOOSER ON A PHONE (user, 2026-10-26: the old mobile card, between the heading and the
        files; 2026-10-28: "I want taht instead of this 2x2") — HubHome's stacked doors under the eyebrow, the old
@@ -396,8 +460,26 @@ export default function AppLayout() {
       settings={{ ...hubSettings, comboLabel }}
       /* the Hub draws the foot rows and owns the picker and the password / sign-out dialogs */
       media={session ? { client: getMediaClient(), accept: ['image', 'video'], onSelect: onMediaPick } : undefined}
-      signIn={getLibraryApi() ? { signedIn: !!session, user: account ? { name: account.name || account.email, avatar: account.avatar ?? undefined } : undefined, onPress: (creds) => signInRef.current?.(creds), page: '/signin', account: { content: <AccountPanel />, footer: { label: 'Sign out', onPress: () => signOutLibrary() } } } : undefined}
-      shell={{ railToggleKey: '\\', navKeys: false, settingsKey: onChrome ? undefined : ',' }}
+      signIn={getLibraryApi() ? { signedIn: !!session, user: account ? { name: account.name || account.email, avatar: account.avatar ?? undefined } : undefined, onPress: (creds) => signInRef.current?.(creds), form: SIGN_IN_FORM(navigate), account: { content: <AccountPanel />, footer: { label: 'Sign out', onPress: () => signOutLibrary() } } } : undefined}
+      shell={{
+        railToggleKey: '\\', navKeys: false, settingsKey: onChrome ? undefined : ',',
+        /* `touch="floats"` on Labs' routes while Labs is in its touch frame. Labs decides touch itself (a phone, or a
+           window under 1024), so `drawerBelow` hands that call to it — AppShell's own fold is 768; and its route
+           leaves `barHiddenOn` (the Studio hides the bar on every `bar: false` page, which would turn the floats off).
+           ponytail: drawerBelow 100000 = "always narrow" here; a `narrow` prop on AppShell would say it plainly. */
+        ...(labsFloats && {
+          touch: 'floats',
+          drawerBelow: 100000,
+          barHiddenOn: CHROME_ROWS.filter((c) => c.bar === false && c.path !== location.pathname).map((c) => c.path),
+          floats: {
+            items: phoneFloats.items,
+            actions: phoneFloats.actions,
+            transport: phoneFloats.transport,
+            rail: phoneFloats.railOpen ? <div ref={setRailHost} className="h-full" /> : null,
+            railHeight: phoneFloats.railHeight,
+          },
+        }),
+      }}
     />
     </ModalProvider>
   )

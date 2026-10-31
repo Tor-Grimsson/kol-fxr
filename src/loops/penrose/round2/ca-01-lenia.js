@@ -8,7 +8,7 @@ import { num } from '../knobs.js'
 import { clear, strokeOutline, wrapLoop, rampRGB, roleRGB, stampGrid } from '../common.js'
 
 const PARAMS          = [
-  { key: 'res',   type: 'int',   min: 80,   max: 200, default: 128, step: 16, label: 'grid res' },
+  { key: 'res',   type: 'int',   min: 80,   max: 320, default: 176, step: 16, label: 'grid res' },
   { key: 'R',     type: 'int',   min: 5,    max: 18,  default: 12,           label: 'kernel radius' },
   { key: 'mu',    type: 'range', min: 0.1,  max: 0.5, default: 0.15, step: 0.005, label: 'growth mean' },
   { key: 'sigma', type: 'range', min: 0.01, max: 0.12, default: 0.017, step: 0.001, label: 'growth sigma' },
@@ -24,7 +24,7 @@ export const r2_ca_01_lenia            = {
   helps: 'Self-moving gliders trapped inside the glyph — literal living forms orbiting the letterform interior.',
   params: PARAMS,
   init({ ctx, sdf, W, H, rng, params, pointer }) {
-    const G = num(params, 'res', 128)
+    const G = num(params, 'res', 176)
     const R = num(params, 'R', 12)
     const mu = num(params, 'mu', 0.15)
     const sigma = num(params, 'sigma', 0.017)
@@ -183,7 +183,7 @@ export const r2_ca_01_lenia            = {
       }
       clear(ctx, W, H)
       offCtx.putImageData(img, 0, 0)
-      ctx.imageSmoothingEnabled = false
+      ctx.imageSmoothingEnabled = true /* smooth field, not blocks — plan 49 5.3 */
       ctx.drawImage(offCanvas, 0, 0, W, H)
       ctx.imageSmoothingEnabled = true
       strokeOutline(ctx, sdf, W, H, 'rgba(240, 230, 210, 0.35)', 2)

@@ -61,6 +61,9 @@ const DRIFT_STYLES = {
  * shaders: uWarp/clouds-sheen exist only in the air fragment (clouds branch);
  * the water caustics branch returns before uFlow/uLight/uAmp/uFoam/uSheen. */
 const notCaustics = (l) => l.style !== 'caustics'
+/* THE POINTER DECLARES ITSELF (plan 49 7.1 / 3.2, user: "if they are bound to mouse by default, it should be toggled!! its not"):
+   the finger steers the flow and a press surges the gust (DriftEngine.setPointer) — on by default, so the toggle reads on */
+const MOUSE = { key: 'mouse', label: 'Mouse', type: 'toggle', default: true, noRandom: true, tab: 'anim', section: 'Interaction' }
 const driftCommon = (family) => [
   { key: 'style', label: 'Style', type: 'select', noRandom: true, default: DRIFT_STYLES[family][0].value, options: DRIFT_STYLES[family], section: 'Field' },
   { key: 'palette', label: 'Palette', type: 'select', default: PALETTES[family][0].value, options: opts(PALETTES[family]), section: 'Field' },
@@ -69,7 +72,7 @@ const driftCommon = (family) => [
   ...(family === 'air'
     ? [{ ...range('warp', 'Warp', 0, 3, 0.05, 1.6, { section: 'Field' }), when: (l) => (l.style ?? 'clouds') === 'clouds' }]
     : []),
-  range('evolve', 'Evolve', 0, 1, 0.01, 0.16, ANIM),
+  range('evolve', 'Evolve', 0, 1, 0.01, 0.08, ANIM), /* half speed, plan 49 7.1 */
   family === 'water'
     ? { ...range('direction', 'Direction', 0, 360, 1, 25, ANIM), when: notCaustics }
     : range('direction', 'Direction', 0, 360, 1, 25, ANIM),
@@ -83,7 +86,7 @@ const driftCommon = (family) => [
 ]
 const DRIFT_FAMILY_EXTRAS = {
   air: [
-    range('wind', 'Gust', 0, 1.5, 0.02, 0.22, ANIM),
+    range('wind', 'Gust', 0, 1.5, 0.02, 0.11, ANIM), /* half speed, plan 49 7.1 */
     range('coverage', 'Coverage', 0, 1, 0.01, 0.6, { section: 'Sky' }),
     range('soft', 'Softness', 0, 1, 0.01, 0.6, { section: 'Sky' }),
   ],
@@ -96,18 +99,26 @@ const DRIFT_FAMILY_EXTRAS = {
   cloth: [
     range('fold', 'Fold', 0, 2, 0.02, 0.7, { section: 'Cloth' }),
     range('drape', 'Drape', 0, 1.5, 0.02, 0.5, { section: 'Cloth' }),
-    range('sway', 'Sway', 0, 1.5, 0.02, 0.5, ANIM),
+    range('sway', 'Sway', 0, 1.5, 0.02, 0.25, ANIM), /* half speed, plan 49 7.1 */
     range('light', 'Light', 0, 360, 1, 50, { section: 'Cloth' }),
   ],
 }
 const driftLoop = (family, label) => ({
   id: `drift-${family}`, label, group: 'drift', kind: 'engine', engine: 'drift', family,
   drive: 'phase', duration: 8,
-  params: [...driftCommon(family), ...DRIFT_FAMILY_EXTRAS[family]],
+  params: [...driftCommon(family), ...DRIFT_FAMILY_EXTRAS[family], MOUSE],
 })
 const DRIFT_LOOPS = [driftLoop('air', 'Air'), driftLoop('water', 'Water'), driftLoop('cloth', 'Cloth')]
+/* PLAN 49 7.1 (user 2026-10-31): categories read as names, not ids ("category should not be lowercase"); Drift opens on
+   something contrasty, Storm, not Air's soft Clouds ("you can not make AIR first preset"); every Drift runs at half its
+   old speed ("every drift should be 50% slower by default") — the motion knobs (Evolve, Gust, Sway) halve, the phase
+   loop stays seamless. */
+const DRIFT_CATEGORY = { air: 'Air', water: 'Water', cloth: 'Cloth' }
+const HALF = ['evolve', 'wind', 'sway']
+const halved = (d) => Object.fromEntries(Object.entries(d).map(([k, v]) => [k, HALF.includes(k) && typeof v === 'number' ? +(v / 2).toFixed(4) : v]))
+const firstFirst = (pages, id) => [...pages.filter((p) => p.id === id), ...pages.filter((p) => p.id !== id)]
 const DRIFT_PRESETS = Object.entries(SUBPAGES).flatMap(([family, pages]) =>
-  pages.map((p) => ({ id: `drift-${family}-${p.id}`, label: p.label, loop: `drift-${family}`, sub: family, params: { ...p.defaults } })),
+  (family === 'air' ? firstFirst(pages, 'storm') : pages).map((p) => ({ id: `drift-${family}-${p.id}`, label: p.label, loop: `drift-${family}`, sub: DRIFT_CATEGORY[family], params: halved(p.defaults) })),
 )
 
 /* ── Gradients (IridescentEngine) — cat×type pinned by preset ────────── */
@@ -171,6 +182,7 @@ const IRIDESCENT_LOOP = {
      * wind / ripple travel) — a motion knob, gated to the branches that read it */
     { ...range('spin', 'Spin', -3, 3, 0.1, 1, ANIM), when: (l) => (iCat(l) === 0 && (iType(l) === 1 || iType(l) === 3)) || (iCat(l) === 2 && (iType(l) === 1 || iType(l) === 3)) || iCat(l) === 3 },
     range('speed', 'Speed', 0, 3, 0.05, 1, ANIM),
+    MOUSE,
   ],
 }
 /* cat 0=field / 1=pole / 2=volume / 3=tunnel; type indexes the shader branch. The cat
@@ -179,7 +191,22 @@ const IP = (id, label, cat, type, extra = {}) =>
   ({ id: `irid-${id}`, label, loop: 'iridescent', sub: ['Field', 'Pole', 'Volume', 'Tunnel'][cat], params: { cat, form: type, ...extra } })
 /* Extras on the labs-ported presets pin that type's labs registry defaults
  * where they differ from the engine's (blobs-centric) uniform defaults. */
+/* TUNNEL FIRST, TEN OF THEM, AT HALF SPEED (plan 49 8.1, user 2026-10-31: "Gradient/TUnnel should be first, we need more
+   presets of tunnel, I think 10? … they shoudl all be 200% [half faster]") — speed 0.5 is twice the loop's duration.
+   BLOB STARTS WIDE (8.2: "too zoommed in … we want it to start around here") — smaller forms, ground around them. */
+const TUNNEL_BASE = { spectral: false, irid: 2, freq: 1, squash: 1.4, drop: -0.15, soft: 0.45, warp: 0.12, grain: 0.04, lines: 0.08, speed: 0.5 }
+const T = (id, label, type, extra) => IP(id, label, 3, type, { ...TUNNEL_BASE, ...extra })
 const IRIDESCENT_PRESETS = [
+  T('tunnel', 'Tunnel', 0, { palette: 'violet' }),
+  T('halo', 'Halo', 1, { palette: 'violet', irid: 1, size: 1, squash: 1.3, drop: -0.1, soft: 0.35, sheen: 0.5, warp: 0.1 }),
+  T('horizon', 'Horizon', 2, { palette: 'violet', size: 0.6, squash: 1, drop: 0.05, soft: 0.5, warp: 0.08 }),
+  T('tunnel-hex', 'Hex tunnel', 0, { palette: 'aqua', shape: 'polygon', sides: 6, squash: 1.2 }),
+  T('tunnel-star', 'Star tunnel', 0, { palette: 'magma', shape: 'star', sides: 5, soft: 0.35 }),
+  T('tunnel-square', 'Square tunnel', 0, { palette: 'candy', shape: 'square', squash: 1, soft: 0.4 }),
+  T('tunnel-iris', 'Iris', 0, { palette: 'iris', squash: 1, drop: 0, soft: 0.6, warp: 0.2 }),
+  T('tunnel-triangle', 'Triangle', 0, { palette: 'spectrum', shape: 'polygon', sides: 3, squash: 1.1, soft: 0.3 }),
+  T('halo-star', 'Star halo', 1, { palette: 'aqua', shape: 'star', sides: 6, irid: 1, size: 1, squash: 1.2, soft: 0.4, sheen: 0.6 }),
+  T('horizon-magma', 'Magma horizon', 2, { palette: 'magma', size: 0.7, squash: 1, drop: 0.1, soft: 0.55 }),
   IP('field', 'Silk field', 0, 0),
   IP('banded', 'Banded', 0, 1, { freq: 1.4 }),
   IP('radial', 'Radial bloom', 0, 2),
@@ -188,14 +215,10 @@ const IRIDESCENT_PRESETS = [
   IP('multipole', 'Multipole', 1, 1, { count: 6 }),
   IP('mesh', 'Mesh blend', 1, 2, { spectral: false, palette: 'candy', warp: 0.18 }),
   IP('aurora', 'Aurora', 1, 3, { irid: 1, hue: 0.5, spectral: false, palette: 'aqua', warp: 0 }),
-  IP('blob', 'Blob', 2, 0),
+  IP('blob', 'Blob', 2, 0, { size: 0.4, count: 5, spread: 0.75 }), /* his frame's own values (Count 5 · Size 0.40 · Spread 0.75) */
   IP('spiral', 'Spiral', 2, 1),
   IP('dome', 'Dome', 2, 2, { size: 0.6, irid: 1.1, hue: 0.3, sheen: 0.6, gloss: 30, relief: 1, warp: 0.08 }),
   IP('ripple', 'Ripple', 2, 3, { irid: 1, hue: 0.55, spectral: false, palette: 'aqua', freq: 3, relief: 1, gloss: 20, warp: 0.05, backdrop: 'abyss' }),
-  /* Tunnel — the soft-ring fly-through (ref: dev/ref/new style) */
-  IP('tunnel', 'Tunnel', 3, 0, { spectral: false, palette: 'violet', irid: 2, freq: 1, squash: 1.4, drop: -0.15, soft: 0.45, warp: 0.12, grain: 0.04, lines: 0.08 }),
-  IP('halo', 'Halo', 3, 1, { spectral: false, palette: 'violet', irid: 1, size: 1, squash: 1.3, drop: -0.1, soft: 0.35, sheen: 0.5, warp: 0.1, grain: 0.04, lines: 0.08 }),
-  IP('horizon', 'Horizon', 3, 2, { spectral: false, palette: 'violet', irid: 2, size: 0.6, squash: 1, drop: 0.05, soft: 0.5, warp: 0.08, grain: 0.04, lines: 0.08 }),
 ]
 
 /* ── Soft forms 2D / 3D — scenes carry `forms` arrays as opaque params ── */
@@ -229,6 +252,7 @@ const SOFTFORMS_LOOP = {
     /* 2D-only surface knobs — the 3D engine's param map reads neither */
     range('bulge', 'Bulge', 0.2, 1.2, 0.01, 0.55, { section: 'Form', collapsed: true }),
     range('relief', 'Relief', 0.2, 2.5, 0.05, 1, { section: 'Form' }),
+    MOUSE,
   ],
 }
 const SOFTFORMS_PRESETS = SCENES.map((s) => ({

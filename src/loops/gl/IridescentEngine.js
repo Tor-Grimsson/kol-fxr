@@ -328,7 +328,8 @@ export class IridescentEngine {
   setPointer(p) {
     if (!this.uniforms || !p) return
     const u = this.uniforms
-    u.uHue.value = ((u.uHue.value + (p.x - 0.5) * 0.5) % 1 + 1) % 1
+    /* a quarter of the old hue swing (plan 49 8.2: "too much mouse interactive changing color") */
+    u.uHue.value = ((u.uHue.value + (p.x - 0.5) * 0.125) % 1 + 1) % 1
     if (p.down) u.uWarp.value = u.uWarp.value + 0.6
   }
 

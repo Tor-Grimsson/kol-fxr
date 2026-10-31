@@ -6,7 +6,9 @@ const vite = await createServer({ server: { middlewareMode: true }, appType: 'cu
 const load = (p) => vite.ssrLoadModule(new URL(p, import.meta.url).pathname)
 const R = await load('../../loops/registry.js')
 const { visibleParams, paramTab, paramSection } = await load('./schema.js')
-const { allScopeParams } = await load('./rolls.jsx')
+/* a generator allowed past 12 by the user's word (2026-10-31: *"just allow growing to be 13 , its fine"*) */
+const ROW_CAP = { 'flow-growth': 13 }
+const { allScopeParams, deriveScopes } = await load('./rolls.jsx')
 const COLOUR = new Set(['color'])
 const bad = []
 let presets = 0
@@ -22,8 +24,11 @@ for (const pr of R.PRESETS) {
       const sec = paramSection(p)
       rows.add(sec && vis.some((q) => paramSection(q) === sec && q.collapsed) ? `§${sec}` : p.key)
     }
-    if (rows.size > 12) bad.push(`${pr.id} (${def.id}) ${tab}: ${rows.size} rows`)
+    if (rows.size > (ROW_CAP[def.id] ?? 12)) bad.push(`${pr.id} (${def.id}) ${tab}: ${rows.size} rows`)
   }
+  /* one roll cell per label (plan 49 2.1) */
+  const labels = deriveScopes(def.params, layer).map((sc) => sc.label)
+  if (new Set(labels).size !== labels.length) bad.push(`${pr.id} (${def.id}) roll cells repeat a label: ${labels.join(' · ')}`)
   const roll = allScopeParams(def.params, layer).filter((p) => !p.noRandom && !['text', 'hidden'].includes(p.type) && !p.roll)
   /* colour rolls (colour params, and the Color section's palette and look selects) are one palette, not N values */
   const looks = roll.filter((p) => !COLOUR.has(p.type) && paramSection(p) !== 'Color' && p.key !== 'palette')

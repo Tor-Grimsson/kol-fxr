@@ -77,7 +77,7 @@ export const r2_frac_01_flame            = {
     const mapHue = Array.from({ length: N }, (_, i) => i / N)
 
     // persistent log-density histogram — decays slowly instead of clearing
-    const RES = 160
+    const RES = 480 /* was 160 — plan 49 5.3 */
     const hist = new Float32Array(RES * RES * 2) // [freq, color] interleaved
     const DECAY = 0.96
 

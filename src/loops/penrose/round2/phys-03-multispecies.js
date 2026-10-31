@@ -20,7 +20,7 @@ const PARAMS          = [
   { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]
 
-const GS = 160
+const GS = 400 /* was 160 — plan 49 5.3 */
 const N_SPECIES = 2
 
 export const r2_phys_03_multispecies            = {

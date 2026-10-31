@@ -66,7 +66,7 @@ export const SHORTCUTS = [
   { id: 'tool-rect',    combo: 'R', label: 'Rectangle tool',    section: 'Tools', views: ['editor'] },
   { id: 'tool-ellipse', combo: 'O', label: 'Ellipse tool',      section: 'Tools', views: ['editor'] },
   { id: 'tool-zoom',    combo: 'Z', label: 'Zoom tool',         section: 'Tools', views: ['editor'] },
-  { id: 'tool-orbit',   combo: 'C', label: 'Orbit tool (3D camera)', section: 'Tools', views: ['editor', 'labs'] },
+  { id: 'tool-orbit',   combo: 'C', label: 'Grab / orbit (Settings › Canvas › Grab in Labs)', section: 'Tools', views: ['editor', 'labs'] },
 
   /* View */
   { id: 'toggle-grid',  combo: 'G', label: 'Show/hide grid',    section: 'View' },
@@ -140,6 +140,12 @@ export const SHORTCUTS = [
   { id: 'labs-zoom-in',  combo: 'Plus',  label: 'Zoom the stage in',  section: 'Labs', views: ['labs'], passive: true },
   { id: 'labs-zoom-out', combo: '-',     label: 'Zoom the stage out', section: 'Labs', views: ['labs'], passive: true },
   { id: 'labs-zoom-fit', combo: '0',     label: 'Fit the stage',      section: 'Labs', views: ['labs'], passive: true },
+  /* previous / next (plan 49 2.3) — handled in LabsView (presetStep.js); passive here, listed for the sheet */
+  { id: 'labs-zoom-lock',     combo: 'Z', label: 'Zoom lock (Settings › Canvas)', section: 'Labs', views: ['labs'], passive: true },
+  { id: 'labs-preset-prev',   combo: 'H', label: 'Previous preset (or ←)',   section: 'Labs', views: ['labs'], passive: true },
+  { id: 'labs-preset-next',   combo: 'L', label: 'Next preset (or →)',       section: 'Labs', views: ['labs'], passive: true },
+  { id: 'labs-category-prev', combo: 'K', label: 'Previous category (or ↑)', section: 'Labs', views: ['labs'], passive: true },
+  { id: 'labs-category-next', combo: 'J', label: 'Next category (or ↓)',     section: 'Labs', views: ['labs'], passive: true },
   { id: 'labs-reroll', combo: 'Shift+R', label: 'Reroll',            section: 'Labs', views: ['labs', 'randomiser'] },
 ]
 

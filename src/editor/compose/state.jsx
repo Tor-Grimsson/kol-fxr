@@ -729,6 +729,15 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
     }
   }, [])
 
+  /* THE LOADED PATCH IS THE FLOOR (plan 49 3.4): a chrome that seeds its stage on mount (Labs' deep link, the frame fit
+   * to the aspect) records those writes too, so undo could walk past what the user opened — back to an empty stage or
+   * an unfitted frame. The host clears the stacks once its boot has settled. */
+  const clearHistory = useCallback(() => {
+    if (txRef.current !== null) return
+    pastRef.current = []; futureRef.current = []
+    setPast([]); setFuture([])
+  }, [])
+
   const undo = useCallback(() => {
     /* Mid-transaction (drag in flight) undo would rewind layers while the
      * gesture keeps writing patches, then commit would push the pre-drag
@@ -1986,7 +1995,7 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
     /* history */
     canUndo,
     canRedo,
-    undo, redo,
+    undo, redo, clearHistory,
     /* the stacks themselves, for the History panel (G6) — snapshots, oldest first / next first */
     historyPast: past, historyFuture: future,
     beginTransaction, commitTransaction,
@@ -2005,7 +2014,7 @@ export function ComposeStateProvider({ children, persistDraft = true, draftKey =
     addFilter, removeFilter, toggleFilter, moveFilter, patchFilter, replaceFilter,
     flipLayer, flipSelected, booleanGroup, flattenSelected, convertShapeToPath,
     groupLayers, ungroupLayer, releaseBoolean, reparentLayer, alignSelected, flattenPattern, flattenText, flattenParatype, addFlattenedFromFrame, loadPreset, insertFromLibrary,
-    canUndo, canRedo, undo, redo, beginTransaction, commitTransaction, past, future,
+    canUndo, canRedo, undo, redo, clearHistory, beginTransaction, commitTransaction, past, future,
   ])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

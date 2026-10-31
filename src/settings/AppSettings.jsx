@@ -131,6 +131,14 @@ const sectionsFor = (s) => [
     ],
   },
   {
+    label: 'Canvas',
+    rows: [
+      { label: 'Grab (C)', render: () => <SettingsSwitch label="Grab (C)" on={!!s.grab} onChange={(v) => setAppSetting('grab', v)} /> },
+      { label: 'Interactions', render: () => <SettingsSwitch label="Interactions" on={s.interactions !== false} onChange={(v) => setAppSetting('interactions', v)} /> },
+      { label: 'Zoom lock (Z)', render: () => <SettingsSwitch label="Zoom lock (Z)" on={!!s.zoomLock} onChange={(v) => setAppSetting('zoomLock', v)} /> },
+    ],
+  },
+  {
     label: 'Transport',
     rows: [
       {
@@ -250,6 +258,11 @@ export function useHubSettings() {
         ...(pack('generators') ? [{ label: 'Loop theme', type: 'choice', options: pack('generators').THEME_OPTIONS, value: s.defaultTheme, onChange: (v) => setAppSetting('defaultTheme', v) }] : []),
         { label: 'Clip to frame', type: 'switch', on: s.clipToFrame, onChange: (v) => setAppSetting('clipToFrame', v) },
         { label: 'Modulation dots', type: 'switch', on: dots, onChange: (v) => { if (v !== dots) toggleDots() } },
+      ] },
+      { label: 'Canvas', rows: [
+        { label: 'Grab (C)', type: 'switch', on: !!s.grab, onChange: (v) => setAppSetting('grab', v) },
+        { label: 'Interactions', type: 'switch', on: s.interactions !== false, onChange: (v) => setAppSetting('interactions', v) },
+        { label: 'Zoom lock (Z)', type: 'switch', on: !!s.zoomLock, onChange: (v) => setAppSetting('zoomLock', v) },
       ] },
       { label: 'Transport', rows: [
         { label: 'Autoplay', type: 'switch', on: s.autoplay, onChange: (v) => setAppSetting('autoplay', v) },

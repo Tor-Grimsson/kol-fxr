@@ -6,7 +6,7 @@ import { LabeledControl, SettingsRow } from '@kolkrabbi/kol-component'
 import { useControlSize, RAIL_LABEL_W } from '../../params/controlSize'
 import { PopoverPanel, usePopover } from '@kolkrabbi/kol-component'
 import AlignmentPanel from '../AlignmentPanel'
-import { SegmentedToggle } from '@kolkrabbi/kol-component'
+import { SegmentedToggle, OriginPicker } from '@kolkrabbi/kol-component'
 import StrokePanel from '../../color/StrokePanel'
 import { Icon } from '@kolkrabbi/kol-icons'
 import { useComposeState, COVER_TYPES, resolveColor } from '../state'
@@ -69,7 +69,7 @@ export default function LayerInspector({ layer }) {
             <div className="col-span-2 min-w-0"><AlignmentPanel /></div>
             <span />
             <PositionFields layer={layer} setProp={setProp} />
-            <AnchorPicker value={anchor} onChange={setAnchor} />
+            <OriginPicker value={anchor} onChange={setAnchor} size={cs} ariaLabel="Transform origin" />
             <LayoutFields layer={layer} setProp={setProp} patch={edit.patch} anchor={anchor} />
             {/* SHEAR (G3 — Affinity's S field): degrees along each axis, about the layer's centre */}
             <AxisField label="SX" suffix="°" tooltip="Skew horizontal" value={Math.round(layer.skewX ?? 0)}
@@ -581,23 +581,6 @@ function rotateAboutAnchor(layer, next, [ax, ay]) {
 
 /* The 9-point transform origin (G4 — Affinity's anchor selector): the pressed dot is the point
  * the typed W / H / rotation hold still. */
-function AnchorPicker({ value, onChange }) {
-  const steps = [0, 0.5, 1]
-  return (
-    <div role="radiogroup" aria-label="Transform origin" className="grid grid-cols-3 gap-px p-1 rounded bg-surface-secondary shrink-0">
-      {steps.flatMap((y) => steps.map((x) => {
-        const on = value[0] === x && value[1] === y
-        return (
-          <button key={`${x}${y}`} type="button" role="radio" aria-checked={on}
-            aria-label={`Origin ${['left', 'center', 'right'][x * 2]} ${['top', 'middle', 'bottom'][y * 2]}`}
-            onClick={() => onChange([x, y])}
-            className="w-[6px] h-[6px] p-0 m-[1px] rounded-full border-0 cursor-pointer"
-            style={{ background: on ? 'var(--kol-accent-primary)' : 'var(--kol-fg-24)' }} />
-        )
-      }))}
-    </div>
-  )
-}
 
 /* ColorField extracted to ./ColorField; re-exported (imported at top) so
  * existing importers (CanvasInspector, TypeControls, pattern/ColorPicker)

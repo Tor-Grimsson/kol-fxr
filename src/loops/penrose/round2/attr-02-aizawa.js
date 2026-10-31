@@ -13,6 +13,9 @@ const PARAMS          = [
   { key: 'c', type: 'range', min: 0.3, max: 0.9, default: 0.6, step: 0.01, label: 'c (tube)' },
   { key: 'dt', type: 'range', min: 0.005, max: 0.04, default: 0.01, step: 0.001, label: 'step dt' },
   { key: 'tail', type: 'int', min: 200, max: 4000, default: 2000, label: 'tail length' },
+  { key: 'yaw', type: 'range', min: -180, max: 180, default: 0, step: 1, label: 'view yaw' },
+  { key: 'pitch', type: 'range', min: -85, max: 85, default: 0, step: 1, label: 'view pitch' },
+  { key: 'dist', type: 'range', min: 0.4, max: 2.5, default: 1, step: 0.05, label: 'view distance' },
   { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]
 
@@ -52,12 +55,14 @@ export const r2_attr_02_aizawa            = {
   summary: '3D Aizawa toroidal attractor integrated via RK4; projected with a slowly precessing camera angle to reveal the spinning ring structure.',
   helps: 'The precessing torus orbit is the most sculptural animated motion in this set — fills letterform interiors naturally.',
   params: PARAMS,
+  cameraKeys: { yaw: 'yaw', pitch: 'pitch', dist: 'dist' }, /* VIEW (plan 51 3.4): yaw · pitch · distance as live params, so a drag turns the view (Orbit) and 3D zoom scales it */
   init({ ctx, sdf, W, H, rng, params, clock, pointer }) {
     const maxTail = 4000
     const xs = new Float32Array(maxTail)
     const ys = new Float32Array(maxTail)
     const zs = new Float32Array(maxTail)
     let head = 0, len = 0
+    const VX = new Float32Array(maxTail), VY = new Float32Array(maxTail), VZ = new Float32Array(maxTail) /* the viewed trail */
     let cx = 0.1 + rng() * 0.05
     let cy = rng() * 0.05
     let cz = rng() * 0.05
@@ -116,16 +121,12 @@ export const r2_attr_02_aizawa            = {
       if (!isFinite(cx + cy + cz) || Math.abs(cx) + Math.abs(cy) + Math.abs(cz) > 40) {
         cx = 0.1; cy = 0; cz = 0
       }
-      const camAngle = cam
-      const cosA = Math.cos(camAngle), sinA = Math.sin(camAngle)
 
       for (let s = 0; s < STEPS; s++) {
         const [nx, ny, nz] = rk4Aizawa(cx, cy, cz, a, b, c, dt)
         cx = nx; cy = ny; cz = nz
-        // Rotate around z axis for camera precession
-        const rx = nx * cosA - ny * sinA
-        const ry = nx * sinA + ny * cosA
-        xs[head] = rx; ys[head] = ry; zs[head] = nz
+        /* raw points — the view (precession + yaw + pitch) is applied at draw, so turning it turns the whole trail */
+        xs[head] = nx; ys[head] = ny; zs[head] = nz
         head = (head + 1) % maxTail
         if (len < maxTail) len++
       }
@@ -136,12 +137,21 @@ export const r2_attr_02_aizawa            = {
       const [ar, ag, ab] = roleRGB('accent')
       const [wr, wg, wb] = roleRGB('warm')
       const drawLen = Math.min(len, tail)
+      const yawR = cam + (num(params, 'yaw', 0) * Math.PI) / 180, pitR = (num(params, 'pitch', 0) * Math.PI) / 180
+      const vcy = Math.cos(yawR), vsy = Math.sin(yawR), vcp = Math.cos(pitR), vsp = Math.sin(pitR)
+      const vsc = SC / Math.max(0.2, num(params, 'dist', 1))
+      for (let i = 0; i < drawLen; i++) {
+        const k = (head - 1 - i + maxTail) % maxTail
+        const x = xs[k], y = ys[k], z = zs[k]
+        const rx = x * vcy - y * vsy, ry = x * vsy + y * vcy
+        VX[k] = OX + rx * vsc; VY[k] = OY + (ry * vcp - z * vsp) * vsc; VZ[k] = ry * vsp + z * vcp
+      }
       for (const b of buckets) b.length = 0
       for (let i = 0; i < drawLen - 1; i++) {
         const age = i / drawLen
         const i0 = (head - 1 - i + maxTail) % maxTail
         // z in [-1, 1.5]; depth cue
-        const depth = Math.max(0, Math.min(1, (zs[i0] + 1) / 2.5))
+        const depth = Math.max(0, Math.min(1, (VZ[i0] + 1) / 2.5))
         const db = depth > 0.65 ? 3 : depth > 0.5 ? 2 : depth > 0.25 ? 1 : 0
         const alpha = (1 - age) * (0.45 + depth * 0.55)
         const abkt = Math.min(ABK - 1, Math.floor(alpha * ABK))
@@ -159,8 +169,8 @@ export const r2_attr_02_aizawa            = {
         ctx.beginPath()
         for (const i0 of seg) {
           const i1 = (i0 - 1 + maxTail) % maxTail
-          ctx.moveTo(OX + xs[i0] * SC, OY + ys[i0] * SC)
-          ctx.lineTo(OX + xs[i1] * SC, OY + ys[i1] * SC)
+          ctx.moveTo(VX[i0], VY[i0])
+          ctx.lineTo(VX[i1], VY[i1])
         }
         ctx.stroke()
       }
@@ -168,7 +178,7 @@ export const r2_attr_02_aizawa            = {
       // glowing head at the live phase point
       if (len > 0) {
         const hi = (head - 1 + maxTail) % maxTail
-        const hx = OX + xs[hi] * SC, hy = OY + ys[hi] * SC
+        const hx = VX[hi], hy = VY[hi]
         // fake glow — halo fill replaces the shadowBlur pass
         ctx.fillStyle = pc('warm', 0.3)
         ctx.beginPath()

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { Button, Input, MenuDropdownItem, Slider, LabeledControl } from '@kolkrabbi/kol-component'
+import { useEffect, useState } from 'react'
+import { Button, FunctionPlot, Input, MenuDropdownItem, Slider, LabeledControl } from '@kolkrabbi/kol-component'
 import { getSource } from './sources'
 import { learnCC } from './midi'
 import { learnGamepad, isGamepadSource } from './gamepad'
@@ -40,108 +40,21 @@ const EXPR_EXAMPLES = [
 const PLOT_W = 196
 const PLOT_H = 64
 function ExprPlot({ expr }) {
-  const ref = useRef(null)
+  /* the plot is KOL's FunctionPlot (kol-component 0.330, plan 51 4.4); fxr feeds it the expression over one loop, the
+     0–1 rails kept in range, and the loop phase as the cursor — re-read each frame so audio / rand expressions move */
+  const [u, setU] = useState(0)
   useEffect(() => {
-    const cv = ref.current
-    if (!cv) return undefined
-    const dpr = Math.min(2, window.devicePixelRatio || 1)
-    cv.width = PLOT_W * dpr
-    cv.height = PLOT_H * dpr
-    const ctx = cv.getContext('2d')
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     let raf = 0
-
-    const draw = () => {
-      raf = requestAnimationFrame(draw)
-      const cs = getComputedStyle(cv)
-      const accent = cs.getPropertyValue('--kol-accent-primary').trim() || '#2dd4bf'
-      const fg = cs.color || 'rgb(160,160,160)'
-      const c = compileExpr(expr)
-      const secs = transport.getLoopSeconds()
-      const u = transport.getCtx().t ?? 0
-      const pad = 6
-      const innerW = PLOT_W - pad * 2
-      const innerH = PLOT_H - pad * 2
-
-      ctx.clearRect(0, 0, PLOT_W, PLOT_H)
-
-      const N = innerW
-      const vs = new Float64Array(N + 1)
-      let vMin = Infinity
-      let vMax = -Infinity
-      for (let i = 0; i <= N; i++) {
-        const v = c.ok ? c.fn((i / N) * secs) : 0
-        vs[i] = v
-        if (v < vMin) vMin = v
-        if (v > vMax) vMax = v
-      }
-      const vMid = (vMin + vMax) / 2
-      const lo = Math.min(vMin, 0)
-      const hi = Math.max(vMax, 1)
-      const span = (hi - lo) || 1
-      const toY = (v) => pad + innerH * (1 - (v - lo) / span)
-      const toX = (i) => pad + (i / N) * innerW
-
-      ctx.strokeStyle = 'rgba(231,76,60,0.35)'
-      ctx.lineWidth = 1
-      ctx.setLineDash([4, 4])
-      for (const v of [0, 1]) {
-        const y = toY(v)
-        ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(PLOT_W - pad, y); ctx.stroke()
-      }
-      ctx.setLineDash([])
-
-      if (c.ok) {
-        ctx.font = '8px var(--kol-font-family-mono, monospace)'
-        ctx.strokeStyle = fg
-        ctx.fillStyle = fg
-        for (const v of [vMax, vMid, vMin]) {
-          const y = toY(v)
-          ctx.globalAlpha = 0.12
-          ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(PLOT_W - pad, y); ctx.stroke()
-          ctx.globalAlpha = 0.5
-          ctx.fillText(v.toFixed(2), pad + 2, y - 2)
-        }
-        ctx.globalAlpha = 1
-
-        const curve = (endI) => {
-          ctx.beginPath()
-          for (let i = 0; i <= endI; i++) {
-            const y = toY(vs[i])
-            if (i === 0) ctx.moveTo(toX(0), y)
-            else ctx.lineTo(toX(i), y)
-          }
-          ctx.stroke()
-        }
-        ctx.strokeStyle = accent
-        ctx.lineWidth = 1
-        ctx.globalAlpha = 0.25
-        curve(N)
-
-        const px2 = pad + u * innerW
-        ctx.globalAlpha = 0.4
-        ctx.beginPath(); ctx.moveTo(px2, pad); ctx.lineTo(px2, PLOT_H - pad); ctx.stroke()
-
-        ctx.globalAlpha = 1
-        ctx.lineWidth = 1.5
-        curve(Math.round(u * N))
-
-        ctx.fillStyle = accent
-        ctx.beginPath()
-        ctx.arc(px2, toY(c.fn(u * secs)), 2.5, 0, Math.PI * 2)
-        ctx.fill()
-      }
-    }
-    draw()
+    const tick = () => { setU(transport.getCtx().t ?? 0); raf = requestAnimationFrame(tick) }
+    raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [expr])
-  return (
-    <canvas
-      ref={ref}
-      aria-label="Expression plot over one loop"
-      style={{ width: PLOT_W, height: PLOT_H, display: 'block', borderRadius: 3, background: 'var(--kol-oq-04)' }}
-    />
-  )
+  }, [])
+  const c = compileExpr(expr)
+  const secs = transport.getLoopSeconds()
+  const N = PLOT_W
+  const samples = Array.from({ length: N + 1 }, (_, i) => (c.ok ? c.fn((i / N) * secs) : 0))
+  const lo = Math.min(0, ...samples), hi = Math.max(1, ...samples)
+  return <FunctionPlot samples={samples} min={lo} max={hi} cursor={u} height={PLOT_H} ariaLabel="Expression plot over one loop" />
 }
 
 export function ModulationEditor({ layer, param, setProp }) {

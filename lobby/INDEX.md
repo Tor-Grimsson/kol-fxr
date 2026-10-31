@@ -65,6 +65,21 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [RailDragHoldsWidth](outbox/RailDragHoldsWidth.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-component 0.327.0 | none — adopted and walked |
+| 🟢 | [OriginPicker](outbox/OriginPicker.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-component 0.329.0 | none — adopted and walked |
+| 🟢 | [BezierPathEditor](outbox/BezierPathEditor.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-component 0.330.0 | none — adopted and walked |
+| 🟢 | [ParamBindDot](outbox/ParamBindDot.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-component 0.330.0 | none — adopted and walked |
+| 🟢 | [FunctionPlot](outbox/FunctionPlot.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-component 0.330.0 | none — adopted and walked |
+| 🟢 | [ItemList](outbox/ItemList.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-component 0.330.0 | none — adopted and walked |
+| 🟢 | [ColorPickerPopoverExtras](outbox/ColorPickerPopoverExtras.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-component 0.330.0 | none — adopted and walked |
+| 🟢 | [FloatsOwnItems](outbox/FloatsOwnItems.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-shell 0.98.0 | none — adopted 2026-10-31 (plan 46) |
+| 🟢 | [PhoneTwoFloatLayout](outbox/PhoneTwoFloatLayout.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-shell 0.97.0 · kol-theme 0.207.0 | none — adopted 2026-10-31 (plan 46 W1) |
+| 🟢 | [HomeDockRound4](outbox/HomeDockRound4.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-shell 0.95.0 | none — adopted 2026-10-31 |
+| 🔵 | [GrowthLineIntro](outbox/GrowthLineIntro.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🔵 `filed` 2026-10-31 | none — for Atlas |
+| 🔵 | [HubHomeFloatSurface](outbox/HubHomeFloatSurface.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🔵 `filed` 2026-10-31 | bump kol-shell when it returns |
+| 🟢 | [HomeDockShadow](outbox/HomeDockShadow.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-shell 0.91.3 | none — adopted 2026-10-31 |
+| 🔵 | [SignedOutStageStill](outbox/SignedOutStageStill.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🔵 `filed` 2026-10-30 | none — fxr's own HomeStage already holds both fixes |
+| 🟠 | [FloatingStyleAndSignInDemos](outbox/FloatingStyleAndSignInDemos.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟠 `addressed` 2026-10-31 — kol-shell 0.92.0 | none — adopted 2026-10-31 |
 | 🟢 | [HubSignedOutGutterAndSeams](outbox/HubSignedOutGutterAndSeams.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-shell 0.90.0 | none — adopted 2026-10-29 |
 | 🟢 | [SettingsAccountTab](outbox/SettingsAccountTab.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-shell 0.88.0 | none — adopted 2026-10-29 |
 | 🟢 | [HubAppOwnsItsRows](outbox/HubAppOwnsItsRows.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-29 — kol-shell 0.88.0 | none — adopted 2026-10-29 |
@@ -160,6 +175,32 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-10-31 | **`PhoneTwoFloatLayout` + `FloatsOwnItems` adopted** — Labs on a phone runs `touch="floats"` with its own rows; fxr's phone layout CSS to `_tmp/` (plan 46 W1) |
+| 2026-10-31 | **`BezierPathEditor` filed to kol-ds-ui** — plan 51 4.4 |
+| 2026-10-31 | **`ParamBindDot` filed to kol-ds-ui** — plan 51 4.4 |
+| 2026-10-31 | **`FunctionPlot` filed to kol-ds-ui** — plan 51 4.4 |
+| 2026-10-31 | **`ItemList` filed to kol-ds-ui** — plan 51 4.4 |
+| 2026-10-31 | **`ColorPickerPopoverExtras` filed to kol-ds-ui** — plan 51 4.4 |
+| 2026-10-31 | **`BezierPathEditor` adopted** — kol-component 0.330.0; ProfileEditor and Kinetic path points render it; the local SVG editors in `_tmp/2026-10-31-beziereditor/` |
+| 2026-10-31 | **`ColorPickerPopoverExtras` adopted** — kol-component 0.330.0; ColorField renders ColorPickerPopover with its palette swatches and Theme / None in the footer; the old one in `_tmp/2026-10-31-raw-triggers/` |
+| 2026-10-31 | **`FunctionPlot` adopted** — kol-component 0.330.0; ModulationEditor's expression plot draws through it; the canvas plot in `_tmp/2026-10-31-exprplot/` |
+| 2026-10-31 | **`ItemList` adopted** — kol-component 0.330.0; both Layers sections render StepList (Soft forms reorders by drag — StepList's arrows grey out at the ends); LayerRow in `_tmp/2026-10-31-layerrow/` |
+| 2026-10-31 | **`ParamBindDot` adopted** — kol-component 0.330.0; BindDot renders it; the old dot in `_tmp/2026-10-31-binddot/` |
+| 2026-10-31 | **`OriginPicker` adopted** — kol-component 0.329.0; LayerInspector's AnchorPicker swapped, old one in `_tmp/2026-10-31-anchorpicker/` |
+| 2026-10-31 | **`OriginPicker` filed to kol-ds-ui** — a 3×3 transform-origin value picker (plan 49 9.2) |
+| 2026-10-31 | **`RailDragHoldsWidth` adopted** — kol-component 0.327.0; drag holds, click snaps, icons below 160 |
+| 2026-10-31 | **`RailDragHoldsWidth` filed to kol-ds-ui** — the rail keeps a dragged width; a click still snaps |
+| 2026-10-31 | **`FloatsOwnItems` returned** — kol-shell 0.98.0; dock Labs → section → group nested and walked |
+| 2026-10-31 | **`FloatsOwnItems` filed to kol-ds-ui** — a page's own rows in the floats layout's top float |
+| 2026-10-31 | **`PhoneTwoFloatLayout` filed to kol-ds-ui** — the two-float phone layout as a studio-hub preset; an upward sheet shadow token |
+| 2026-10-31 | **`HomeDockRound4` adopted** — kol-shell 0.95.0; walked `/?float=glass-dark`: + solid, ··· in the pill opening a card, slot hover |
+| 2026-10-31 | **`HomeDockRound4` filed to kol-ds-ui** — the + keeps solid, ··· joins the pill and opens like the + menu, dock hover |
+| 2026-10-31 | **`GrowthLineIntro` filed to kol-ds-ui** — fxr's line and load intro into kol-growth + GrowthLineStage, for Atlas |
+| 2026-10-31 | **`HubHomeFloatSurface` filed to kol-ds-ui** — HubHome forwards a float surface to the dock and + |
+| 2026-10-31 | **`FloatingStyleAndSignInDemos` adopted** — kol-theme 0.203.0 · kol-component 0.320.0 · kol-shell 0.92.0; fxr floats stay solid |
+| 2026-10-30 | **`SignedOutStageStill` filed to kol-ds-ui** — HubHome sign in overlays without resizing the stage; kol-growth / GrowthLineStage settle once finished (plan 44 W6) |
+| 2026-10-30 | **`FloatingStyleAndSignInDemos` adopted** — kol-theme 0.201.0 · kol-component 0.318.0 · kol-shell 0.91.1; dock rows Editor · Labs · Randomiser (Generate, Effects) · Morph; Sign in is `signIn.form` over Home; Labs on `AppFloatNav`; the menu shadow is `--kol-shadow-float` |
+| 2026-10-30 | **`FloatingStyleAndSignInDemos` filed to kol-ds-ui** — floating style B beside A, AppFloatNav, sign in over Home, demo apps style + modal |
 | 2026-10-30 | **`mesh-default-moved-to-kol-3d` filed from kol-website** — R2 `meshes/` renamed `kol-3d/`; the default mesh URL needs the new path |
 | 2026-10-30 | **`mesh-default-moved-to-kol-3d` closed** — `MESH_DEFAULT` repointed to `kol-3d/` (200); moved to `done/` |
 | 2026-10-29 | **`HubSignedOutGutterAndSeams` adopted** — kol-shell 0.90.0; signed-out gutter, hidden rail, `/signin` everywhere, Sign out in the rail foot |

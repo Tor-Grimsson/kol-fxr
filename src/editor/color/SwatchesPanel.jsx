@@ -111,10 +111,13 @@ export function SwatchesBody({ onPick, currentHex }) {
       </div>
       <div className="flex items-center gap-2">
         <Dropdown variant="subtle" size={cs} options={PALETTES} value={palette} onChange={setPalette} className="flex-1 min-w-0" />
-        <Tooltip label="Add swatch">
-          <Button tone="ghost" quiet size={cs} iconOnly="plus" aria-label="Add swatch" disabled={!currentHex}
-            onClick={() => { addCustom(currentHex); setPalette('custom') }} />
-        </Tooltip>
+        {/* nothing picked → nothing to add; the slot stays (plan 51 3.1) */}
+        <span className={currentHex ? 'contents' : 'invisible pointer-events-none'} aria-hidden={!currentHex || undefined}>
+          <Tooltip label="Add swatch">
+            <Button tone="ghost" quiet size={cs} iconOnly="plus" aria-label="Add swatch" tabIndex={currentHex ? undefined : -1}
+              onClick={() => { if (currentHex) { addCustom(currentHex); setPalette('custom') } }} />
+          </Tooltip>
+        </span>
         {FIXED.map((f) => (
           <ColorSwatch key={f.name} hex={f.hex ?? undefined} showTransparent={!f.hex} size={16} radius="tight" title={f.name} onClick={() => pick(f.hex)} />
         ))}

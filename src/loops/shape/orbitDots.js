@@ -16,7 +16,7 @@ export default {
     { key: 'colB', label: 'Color B', type: 'color', role: 'accent', default: '#5a7fb0' },
     ...FILL_PARAMS,
     { key: 'ringFill', label: 'Fill rings', type: 'toggle', default: false, tab: 'color' },
-    { key: 'ringAlpha', label: 'Fill opacity', type: 'range', min: 0.05, max: 1, step: 0.05, default: 0.5, tab: 'color', noRandom: true },
+    { key: 'ringAlpha', label: 'Fill opacity', type: 'range', min: 0.05, max: 1, step: 0.05, default: 0.5, tab: 'color', noRandom: true, when: (l) => !!l.ringFill },
     { key: 'rings', label: 'Rings', type: 'range', min: 2, max: 10, step: 1, default: 6, noRandom: true },
     { key: 'dotsPer', label: 'Dots / ring', type: 'range', min: 1, max: 6, step: 1, default: 1, noRandom: true },
     { key: 'size', label: 'Reach', type: 'range', min: 0.5, max: 0.95, step: 0.02, default: 0.88 },

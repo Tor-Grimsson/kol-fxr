@@ -40,7 +40,7 @@ const W             = [
 ]
 
 const PARAMS          = [
-  { key: 'res',    type: 'int',   min: 64,  max: 160, default: 112, step: 16,  label: 'grid res' },
+  { key: 'res',    type: 'int',   min: 64,  max: 256, default: 192, step: 16,  label: 'grid res' },
   { key: 'rate',   type: 'range', min: 0.1, max: 0.9, default: 0.5, step: 0.05, label: 'update rate' },
   { key: 'speed',  type: 'range', min: 0.5, max: 3.0, default: 1.0, step: 0.1,  label: 'step / frame' },
   { key: 'bright', type: 'range', min: 0.5, max: 3.0, default: 2.0, step: 0.1,  label: 'brightness' },
@@ -55,7 +55,7 @@ export const r2_nca_01_munca            = {
   helps: 'Minimal NCA skeleton — permanent wave motion, zero runtime deps, baked weights.',
   params: PARAMS,
   init({ ctx, sdf, W: W2, H, rng, params, pointer }) {
-    const G      = num(params, 'res',    112)
+    const G      = num(params, 'res',    192)
     const rate   = num(params, 'rate',   0.5)
     const stepsF = num(params, 'speed',  1.0)
     const bright = num(params, 'bright', 1.4)
@@ -204,7 +204,7 @@ export const r2_nca_01_munca            = {
       }
       clear(ctx, W2, H)
       tc.putImageData(img, 0, 0)
-      ctx.imageSmoothingEnabled = false
+      ctx.imageSmoothingEnabled = true /* smooth field, not blocks — plan 49 5.3 */
       ctx.drawImage(tmp, 0, 0, W2, H)
       ctx.imageSmoothingEnabled = true
       strokeOutline(ctx, sdf, W2, H, 'rgba(240, 230, 210, 0.35)', 2)

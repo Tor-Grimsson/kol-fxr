@@ -74,13 +74,15 @@ export const reactionDiff            = {
     const tmpCtx = tmp.getContext('2d')
     const LUT = new Uint8ClampedArray(256 * 3)
 
-    const laplace = (buf              , x        , y        , i        )         => {
-      const l = x > 0 ? buf[i - 1] : buf[i]
-      const r = x < GRID - 1 ? buf[i + 1] : buf[i]
-      const u = y > 0 ? buf[i - GRID] : buf[i]
-      const d = y < GRID - 1 ? buf[i + GRID] : buf[i]
-      return l + r + u + d - 4 * buf[i]
-    }
+    /* THE STABLE STENCIL (plan 49 5.4 — the user: "these two are broken"): the 4-neighbour sum (weights −4 … +1) with
+       diffusion 1.0 at dt 1 is four times past explicit Euler's limit — the field blew up to NaN within frames, and NaN
+       read as the ramp's darkest stop, a blank frame. Gray-Scott's usual 3×3 kernel (Sims): 0.2 sides, 0.05 corners,
+       −1 centre — weights sum to 0, stable at these rates. Edges clamp to the cell itself. */
+    const at = (buf, x, y, i) => (x < 0 || x >= GRID || y < 0 || y >= GRID ? buf[i] : buf[y * GRID + x])
+    const laplace = (buf, x, y, i) =>
+      0.2 * (at(buf, x - 1, y, i) + at(buf, x + 1, y, i) + at(buf, x, y - 1, i) + at(buf, x, y + 1, i))
+      + 0.05 * (at(buf, x - 1, y - 1, i) + at(buf, x + 1, y - 1, i) + at(buf, x - 1, y + 1, i) + at(buf, x + 1, y + 1, i))
+      - buf[i]
 
     let prevDown = false
 
@@ -163,7 +165,7 @@ export const reactionDiff            = {
       }
       clear(ctx, W, H)
       tmpCtx.putImageData(img, 0, 0)
-      ctx.imageSmoothingEnabled = false
+      ctx.imageSmoothingEnabled = true /* smooth field, not blocks — plan 49 5.3 */
       ctx.drawImage(tmp, 0, 0, W, H)
       ctx.imageSmoothingEnabled = true
     })

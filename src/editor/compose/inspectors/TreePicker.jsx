@@ -36,13 +36,16 @@ export function PickerRow({ label, options, value, onChange, children, inline = 
  *   onPick  — (preset) => void; type/category hops land on the target's
  *             first preset (preset semantics: a curated starting point,
  *             not a patch)
+ *   subLabel — (sub) => string, when `sub` is a key rather than its label
+ *             (Morph's categories repeat across types, so its subs are
+ *             `Shape · Loops`); `current.typeLabel` names the type outright
  *
  * LoopPicker's registry-backed picker shares PickerRow / PickerDropdown but
  * keeps its own logic — its hierarchy has an extra registry-group level plus
  * a read-only legacy fallback that don't fit this flat shape.
  */
-export function TreePicker({ tree, presets, current, onPick, inline = true }) {
-  const type = tree.find((t) => t.subs.includes(current.sub)) ?? tree[0]
+export function TreePicker({ tree, presets, current, onPick, inline = true, subLabel = (s) => s }) {
+  const type = tree.find((t) => t.label === current.typeLabel) ?? tree.find((t) => t.subs.includes(current.sub)) ?? tree[0]
   const subPresets = presets.filter((p) => p.sub === current.sub)
   const firstOf = (sub) => presets.find((p) => p.sub === sub)
 
@@ -61,7 +64,7 @@ export function TreePicker({ tree, presets, current, onPick, inline = true }) {
       <PickerRow
         inline={inline}
         label="Category"
-        options={type.subs.map((s) => ({ value: s, label: s }))}
+        options={type.subs.map((s) => ({ value: s, label: subLabel(s) }))}
         value={current.sub}
         onChange={(s) => onPick(firstOf(s))}
       />

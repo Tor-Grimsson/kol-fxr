@@ -1,6 +1,6 @@
 import { Icon } from '@kolkrabbi/kol-icons'
-import { Fragment, useEffect, useRef, useState } from 'react'
-import { Button,
+import { Fragment, useEffect, useState } from 'react'
+import { BezierPathEditor, Button,
   Dropdown, LabeledControl, SettingsRow, Slider, Textarea, SegmentedToggle,
   ToggleCheckbox, usePopover, PopoverPanel, MenuDropdownItem, Tooltip } from '@kolkrabbi/kol-component'
 import { ColorField } from './ColorField'
@@ -12,7 +12,7 @@ import { useRollSeed, SeedField } from '../../params/rolls'
 import { KINETIC_PRESETS, KINETIC_TREE, presetComp, mergeInstance } from '../../../kinetic/presets'
 import { KINETIC_KNOBS, knobOptions, knobRange, randomiseComp, knobBridgeKey } from '../../../kinetic/knobs'
 import { OPENTYPE_FEATURES } from '../../../kinetic/features'
-import { DEFAULT_POINTS, buildPath } from '../../../kinetic/paths'
+import { DEFAULT_POINTS } from '../../../kinetic/paths'
 import { THEME_OPTIONS, DEFAULT_THEME, resolveTheme } from '../../../loops/lib/themes'
 import { useControlSize, RAIL_LABEL_W } from '../../params/controlSize'
 
@@ -442,39 +442,42 @@ function ElementList({ insts, idx, onSelect, onWrite, marked, onMark, onGroup, o
                 aria-label="Duplicate element"
                 onClick={(e) => { e.stopPropagation(); duplicate(i) }}
               /></Tooltip>
-              <Tooltip label="Delete element"><Button
+              <span className={(insts.length <= 1) ? 'invisible pointer-events-none' : 'contents'} aria-hidden={(insts.length <= 1) || undefined}><Tooltip label="Delete element"><Button
                 tone="ghost" size={cs} quiet iconOnly="x" iconSize={10}
                 aria-label="Delete element"
-                disabled={insts.length <= 1}
                 onClick={(e) => { e.stopPropagation(); remove(i) }}
-              /></Tooltip>
+              /></Tooltip></span>
             </div>
           )
         })}
       </div>
-      <div className="grid grid-cols-2 gap-1">
-        <Button tone="primary" size={cs} disabled={marked.length < 2} onClick={onGroup}>
-          Group
-        </Button>
-        <Button tone="primary" size={cs} disabled={!marked.length} onClick={onUngroup}>
-          Ungroup
-        </Button>
-      </div>
+      {marked.length > 0 && ( /* not drawn when it cannot act (plan 51 3.1) */
+        <div className="grid grid-cols-2 gap-1">
+          {marked.length >= 2 && (
+            <Button tone="primary" size={cs} onClick={onGroup}>
+              Group
+            </Button>
+          )}
+          <Button tone="primary" size={cs} onClick={onUngroup}>
+            Ungroup
+          </Button>
+        </div>
+      )}
       <div className="flex items-center gap-1">
         <Button tone="primary" size={cs} className="flex-1" iconLeft="plus" iconSize={12} onClick={add}>
           Add element
         </Button>
         {/* the DS icon button on the rail's rung (R6.7) — a hand-styled glyph child sat at 22 */}
-        <Tooltip label="Move element up"><Button
+        <span className={(idx <= 0) ? 'invisible pointer-events-none' : 'contents'} aria-hidden={(idx <= 0) || undefined}><Tooltip label="Move element up"><Button
           tone="ghost" size={cs} quiet iconOnly="chevron-down" className="rotate-180"
           aria-label="Move element up"
-          disabled={idx <= 0} onClick={() => move(-1)}
-        /></Tooltip>
-        <Tooltip label="Move element down"><Button
+          onClick={() => move(-1)}
+        /></Tooltip></span>
+        <span className={(idx >= insts.length - 1) ? 'invisible pointer-events-none' : 'contents'} aria-hidden={(idx >= insts.length - 1) || undefined}><Tooltip label="Move element down"><Button
           tone="ghost" size={cs} quiet iconOnly="chevron-down"
           aria-label="Move element down"
-          disabled={idx >= insts.length - 1} onClick={() => move(1)}
-        /></Tooltip>
+          onClick={() => move(1)}
+        /></Tooltip></span>
       </div>
     </>
   )
@@ -541,11 +544,11 @@ function MotionStack({ motions, mIdx, onSelect, onAdd, onRemove }) {
           tone="ghost" size={cs} quiet iconOnly="plus" iconSize={12}
           aria-label="Add motion layer" onClick={onAdd}
         /></Tooltip>
-        <Tooltip label="Delete motion layer (the primary can only be set to None)"><Button
+        <span className={(mIdx === 0) ? 'invisible pointer-events-none' : 'contents'} aria-hidden={(mIdx === 0) || undefined}><Tooltip label="Delete motion layer (the primary can only be set to None)"><Button
           tone="ghost" size={cs} quiet iconOnly="x" iconSize={10}
           aria-label="Delete motion layer"
-          disabled={mIdx === 0} onClick={onRemove}
-        /></Tooltip>
+          onClick={onRemove}
+        /></Tooltip></span>
       </div>
     </div>
   )
@@ -556,6 +559,7 @@ function MotionStack({ motions, mIdx, onSelect, onAdd, onRemove }) {
  * per feature with a check when on; clicking toggles and keeps the menu open
  * (no single-pick close); the trigger shows the active count. */
 function OpenTypeMenu({ value = {}, onToggle }) {
+  const cs = useControlSize()
   const [open, setOpen] = useState(false)
   const popover = usePopover({
     open, onOpenChange: setOpen,
@@ -565,28 +569,14 @@ function OpenTypeMenu({ value = {}, onToggle }) {
 
   return (
     <div className="relative w-full">
-      <button
+      <Button
         ref={popover.refs.setReference}
         {...popover.getReferenceProps()}
-        type="button"
-        className="w-full flex items-center justify-between kol-helper-12 rounded"
-        style={{
-          border: '1px solid transparent',
-          borderRadius: open ? '4px 4px 0 0' : '4px',
-          backgroundColor: 'var(--kol-surface-secondary)',
-          color: 'var(--kol-surface-on-primary)',
-          padding: '4px 12px',
-          cursor: 'pointer',
-        }}
-        aria-haspopup="listbox"
-        aria-expanded={open}
+        tone="primary" size={cs} className="w-full justify-between" iconRight="chevron-down"
+        aria-haspopup="listbox" aria-expanded={open}
       >
-        <span>{count ? `${count} feature${count > 1 ? 's' : ''}` : 'None'}</span>
-        <Icon
-          name="chevron-down" size={10} className="ml-auto"
-          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 300ms' }}
-        />
-      </button>
+        {count ? `${count} feature${count > 1 ? 's' : ''}` : 'None'}
+      </Button>
       <PopoverPanel
         popover={popover}
         panel={false}
@@ -616,65 +606,27 @@ function OpenTypeMenu({ value = {}, onToggle }) {
  * build the engine walks (buildPath 'custom'). */
 function CustomPathPoints({ inst, layer, onPoints }) {
   const cs = useControlSize()
-  const boxRef = useRef(null)
-  const drag = useRef(null)
   const stored = inst?.path?.points
   const points = Array.isArray(stored) && stored.length >= 2 ? stored : DEFAULT_POINTS
   const ratio = layer.w > 0 && layer.h > 0 ? layer.w / layer.h : 1
-  const d = buildPath('custom', 100, 100, { points }).d
-
-  const onDown = (i) => (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    e.currentTarget.setPointerCapture(e.pointerId)
-    drag.current = { i }
-  }
-  const onMove = (e) => {
-    const dg = drag.current
-    const box = boxRef.current
-    if (!dg || !box) return
-    const r = box.getBoundingClientRect()
-    if (!r.width || !r.height) return
-    const nx = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width))
-    const ny = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))
-    onPoints(points.map((p, k) => (k === dg.i ? [Number(nx.toFixed(3)), Number(ny.toFixed(3))] : p)))
-  }
-  const onUp = (e) => { drag.current = null; try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* */ } }
 
   return (
     <div className="flex flex-col gap-2">
-      <div
-        ref={boxRef}
-        className="relative w-full rounded border border-oq-08 overflow-hidden"
-        style={{ aspectRatio: `${ratio}` }}
-      >
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d={d} fill="none" stroke="var(--kol-accent-primary)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-        </svg>
-        {points.map((p, i) => (
-          <div
-            key={i}
-            onPointerDown={onDown(i)}
-            onPointerMove={onMove}
-            onPointerUp={onUp}
-            className="absolute cursor-grab rounded-full"
-            style={{
-              left: `${p[0] * 100}%`, top: `${p[1] * 100}%`,
-              width: 12, height: 12, marginLeft: -6, marginTop: -6,
-              background: 'var(--kol-accent-primary)',
-              border: '2px solid white',
-              boxShadow: '0 0 0 1px rgba(0,0,0,0.5)',
-            }}
-          />
-        ))}
-      </div>
+      {/* the editor is KOL's BezierPathEditor (kol-component 0.330, plan 51 4.4): the custom path's points as corner nodes */}
+      <BezierPathEditor
+        value={points.map(([x, y]) => ({ x, y }))}
+        onChange={(pts) => onPoints(pts.map((p) => [Number(p.x.toFixed(3)), Number(p.y.toFixed(3))]))}
+        aspect={ratio} size={cs} minPoints={2} ariaLabel="Custom path points"
+      />
       <div className="grid grid-cols-2 gap-2">
         <Button tone="primary" size={cs} onClick={() => onPoints([...points, [0.5, 0.5]])}>
           Add point
         </Button>
-        <Button tone="primary" size={cs} disabled={points.length <= 2} onClick={() => onPoints(points.slice(0, -1))}>
-          Remove point
-        </Button>
+        {points.length > 2 && ( /* not drawn when it cannot act (plan 51 3.1) */
+          <Button tone="primary" size={cs} onClick={() => onPoints(points.slice(0, -1))}>
+            Remove point
+          </Button>
+        )}
       </div>
     </div>
   )

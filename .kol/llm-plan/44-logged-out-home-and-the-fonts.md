@@ -9,7 +9,7 @@
 - P6 *"/public/fonts these cant all be in use? … these are not by our convention... not DS approved"*
 - P7 *"I think Public should just use link. ticket that to DS add to plan"*
 
-**Status:** built 2026-10-28, every W.
+**Status:** W1–W5 built 2026-10-28; W6 6.1 · 6.2 built 2026-10-30. Open: 6.3, his pick of a loader frame.
 **Shape:** W › phase › list.
 **Laws carried:** never delete, retire to `_tmp/`; user copy verbatim; Tailwind first; no local DS shims (Hub and PhoneNav gaps go to kol-ds-ui); the reference frame is the build, nothing added to it; a green build is not verification.
 **How a phase closes:** acceptance line first, gates green, then Playwright against his own words.
@@ -64,3 +64,26 @@
 - kol-theme's `core` declares Public Sans self-hosted at `/fonts/public-sans/`; it moves to a Google Fonts link where it is used (apps/document). fxr adds no font folder for it.
 - **Acceptance:** on the bump, `kol-theme/core` declares no Public Sans `@font-face`; fxr's console has no `/fonts/public-sans` request.
 
+
+## W6 — The stage settles, and the loader lands on the logo (raised 2026-10-30)
+
+Points verbatim: *"when morph reaches the edges is just jitters, its very bugged … I feel like we should allow growth outside of viewport and limit it in some other way so it just sits still, not this jittering?"* · *"this signin/signup shelf should not interfere with the growth, its just supposed to change bg color and overlay the home view... nothing should retrigger the growth."* · *"re loader, no you would just develop it here. you are not limited to the current loader. just scope something cool from loader to logo location"*
+
+### 6.1 — The line grows past the edges and sits still — ✅ built 2026-10-30
+- Cause: the engine clamps nodes 2 units inside the frame (`src/loops/growth/engine.js` `step` / `poke`), so growth piles up on the wall and fights the clamp every step the pointer keeps it awake.
+- Fix: the line may run past the viewport; a node off-screen freezes (no force, no split, no growth). Opt-in (`bleed`), so the effect and generator keep their framed paper.
+- Acceptance: grown to the cap with the pointer moving over it, nothing at the screen edge moves; headless check — per-step motion at the edge ≈ 0.
+
+### 6.2 — Sign in overlays, the growth never restarts — ✅ built 2026-10-30 (fxr; KOL ticket `SignedOutStageStill`)
+- Cause: the sign-in column resizes the stage box (HubHome re-centres it), and HomeStage's ResizeObserver restarts the sim.
+- Fix: the column overlays a full-bleed stage and only the background changes; the stage keeps its size. HubHome is kol-shell's, so the overlay goes to kol-ds-ui as a ticket; HomeStage restarts on a real viewport resize only.
+- Acceptance: open and close sign in mid-growth and after the cap — the same line, never reseeded.
+
+### 6.3 — Loader → logo — TALK (frames up 2026-10-30, canvas page "Loader → logo": A Lands · B Grows · C Opens)
+- Scope something built here, not bound to kol-framework's `loaderApp`: the boot mark travels and morphs into Home's logo at its spot (desk and phone).
+- Frames on the canvas first; nothing built before his pick.
+- Acceptance: written once he picks a frame.
+
+## PARKED
+
+- **Interactions live in modulation** (user 2026-10-30, "another session") — make it clear that pointer interactions are modulation, and make it easy to set any param to follow the mouse or a click from settings. Today each sim carries its own Mouse / Click / Strength knobs (Growing line, penrose's `interact`).

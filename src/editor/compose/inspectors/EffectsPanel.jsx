@@ -246,7 +246,7 @@ function LayerEffects({ layer }) {
  * the range clamp all behave exactly as they do for a generator — one
  * implementation, not a second dialect.
  */
-export function StageRolls({ def, view, tab, onPatch, inline = false }) {
+export function StageRolls({ def, view, tab, onPatch, inline = false, levels = null }) {
   const cs = useControlSize()
   const seed = useRollSeed(view)
   const motion = tab === 'anim'
@@ -276,10 +276,13 @@ export function StageRolls({ def, view, tab, onPatch, inline = false }) {
       {allParams.length >= SEED_MIN_PARAMS && <SeedField seed={seed} inline={inline} />}
       {allParams.length > 0 && (
         <div className="flex gap-2">
-          <Button tone="primary" size={cs} className="flex-1 min-w-0"
-            onClick={(e) => (e.altKey ? reset(allParams) : roll(allParams))}>
-            {motion ? 'Randomize motion' : 'Randomize all'}
-          </Button>
+          {/* labs' effect pages pass the four-level row (plan 51 3.2) in place of Randomize all */}
+          {levels ?? (
+            <Button tone="primary" size={cs} className="flex-1 min-w-0"
+              onClick={(e) => (e.altKey ? reset(allParams) : roll(allParams))}>
+              {motion ? 'Randomize motion' : 'Randomize all'}
+            </Button>
+          )}
           {/* reset, visible — it was only ⌥ on the button beside it */}
           <Tooltip label="Reset to defaults" shortcut="R"><Button tone="primary" size={cs} iconOnly="refresh" aria-label="Reset to defaults" onClick={() => reset(allParams)} className="shrink-0" /></Tooltip>
         </div>
@@ -303,15 +306,19 @@ export function StageRolls({ def, view, tab, onPatch, inline = false }) {
 function StageRow({ stage, selected, options, onSelect, onPick, onToggle, onRemove, onUp, onDown, canUp, canDown }) {
   const cs = useControlSize()
   const enabled = stage.enabled !== false
-  const iconBtn = (label, onClick, disabled, icon, className = '') => (
-    <Tooltip label={label}><Button
-      tone="ghost" quiet size={cs} iconOnly={icon}
-      aria-label={label}
-      disabled={disabled}
-      onClick={(e) => { e.stopPropagation(); onClick() }}
-      className={`shrink-0 ${className}`}
-    /></Tooltip>
-  )
+  /* a move that cannot happen keeps its slot but is not drawn (plan 51 3.1 — no disabled button in view) */
+  const iconBtn = (label, onClick, disabled, icon, className = '') => {
+    const btn = (
+      <Tooltip label={label}><Button
+        tone="ghost" quiet size={cs} iconOnly={icon}
+        aria-label={label}
+        tabIndex={disabled ? -1 : undefined}
+        onClick={(e) => { e.stopPropagation(); if (!disabled) onClick() }}
+        className={`shrink-0 ${className}`}
+      /></Tooltip>
+    )
+    return disabled ? <span aria-hidden="true" className="invisible pointer-events-none shrink-0">{btn}</span> : btn
+  }
   /* a slot: eye · the effect's own dropdown (pick to swap it) · reorder · delete. Its row lights
      while its panel is open below it. */
   return (

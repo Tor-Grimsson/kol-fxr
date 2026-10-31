@@ -62,6 +62,14 @@ export function measureLabelColumns(root = document) {
     panel.style.removeProperty('--fxr-label-w')
     let w = 0
     for (const label of panel.querySelectorAll(LABEL_SEL)) if (label.closest(PANEL_SEL) === panel) w = Math.max(w, textWidth(label))
+    /* ONE COLUMN ACROSS TABS (plan 49 9.1, user 2026-10-31: "when I hop between generate and Style the UI Labelledcontrol
+       hop around"): only the open tab's rows are in the DOM, so each tab measured its own longest label and the column
+       jumped 7–42 px on every switch. The panel keeps the widest it has measured while the same generator / effect is open
+       (`data-label-scope`); a new one starts over. */
+    const scope = panel.querySelector('[data-label-scope]')?.dataset.labelScope ?? ''
+    if (panel._labelScope === scope) w = Math.max(w, panel._labelMax ?? 0)
+    panel._labelScope = scope
+    panel._labelMax = w
     const px = w ? `${Math.min(RAIL_LABEL_MAX, Math.max(40, Math.ceil(w) + 4))}px` : ''
     if (px) panel.style.setProperty('--fxr-label-w', px)
     else if (was) panel.style.removeProperty('--fxr-label-w')

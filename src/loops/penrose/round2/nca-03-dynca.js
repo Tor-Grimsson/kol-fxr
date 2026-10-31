@@ -10,7 +10,7 @@ import { num } from '../knobs.js'
 import { clear, strokeOutline, wrapLoop, rampRGB, roleRGB, stampGrid } from '../common.js'
 
 const PARAMS          = [
-  { key: 'res',    type: 'int',   min: 64,   max: 160,  default: 112,  step: 16,  label: 'grid res' },
+  { key: 'res',    type: 'int',   min: 64,   max: 256,  default: 192,  step: 16,  label: 'grid res' },
   { key: 'angle',  type: 'range', min: 0,    max: 360,  default: 45,   step: 5,   label: 'flow angle°' },
   { key: 'speed',  type: 'range', min: 0.05, max: 0.5,  default: 0.15, step: 0.05, label: 'flow speed' },
   { key: 'rate',   type: 'range', min: 0.2,  max: 1.0,  default: 0.5,  step: 0.05, label: 'update rate' },
@@ -30,7 +30,7 @@ export const r2_nca_03_dynca            = {
   helps: 'Choreographed letterform fill — strokes flow along glyph axes rather than randomly.',
   params: PARAMS,
   init({ ctx, sdf, W, H, rng, params, pointer }) {
-    const G      = num(params, 'res',    112)
+    const G      = num(params, 'res',    192)
     const NC_A   = 3   // appearance
     const NC_M   = 2   // motion (vx, vy)
     const NC     = NC_A + NC_M
@@ -217,7 +217,7 @@ export const r2_nca_03_dynca            = {
       }
       clear(ctx, W, H)
       tc.putImageData(img, 0, 0)
-      ctx.imageSmoothingEnabled = false
+      ctx.imageSmoothingEnabled = true /* smooth field, not blocks — plan 49 5.3 */
       ctx.drawImage(tmp, 0, 0, W, H)
       ctx.imageSmoothingEnabled = true
       strokeOutline(ctx, sdf, W, H, 'rgba(240, 230, 210, 0.35)', 2)

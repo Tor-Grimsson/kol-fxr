@@ -9,6 +9,7 @@
 // Everything else is byte-for-byte labs.
 
 import { PALETTE, OPACITY } from './palette.js'
+import { roleUse } from './roles.js'
 
 const _hexRGB = (h) => {
   const m = /^#?([0-9a-f]{6})$/i.exec(h || '')
@@ -29,6 +30,7 @@ const _hexRGB = (h) => {
 let _rampStops = null
 let _rampSig = ''
 export function rampRGB(t) {
+  roleUse('dim'); roleUse('accent'); roleUse('fg'); roleUse('warm') /* a ramp field draws every stop (plan 49 4.3) */
   const sig = `${PALETTE.bg}|${PALETTE.dim}|${PALETTE.accent}|${PALETTE.fg}|${PALETTE.warm}`
   if (sig !== _rampSig) {
     _rampSig = sig
@@ -46,13 +48,14 @@ export function rampRGB(t) {
 
 // Discrete palette colour by role → [r,g,b]. For pixel-field protos that colour
 // distinct species/states (map each to a role: accent/fg/warm/dim).
-export function roleRGB(role) { return _hexRGB(PALETTE[role] ?? PALETTE.fg) }
+export function roleRGB(role) { roleUse(role); return _hexRGB(PALETTE[role] ?? PALETTE.fg) }
 
 // Palette colour with alpha — prototypes pull each element's colour from the live
 // theme by ROLE (bg / fg / accent / dim / warm) so colours land where the author
 // intends, instead of being luminance-guessed by the tint. The role's live
 // opacity multiplier scales the authored alpha. Returns rgba().
 export function pc(role, a = 1) {
+  roleUse(role)
   const hex = PALETTE[role] ?? PALETTE.fg
   const alpha = Math.min(1, a * (OPACITY[role] ?? 1))
   const m = /^#?([0-9a-f]{6})$/i.exec(hex)
@@ -137,7 +140,13 @@ export function strokeOutline(
     }
     _outlinePts.set(sdf.data, raw)
   }
-  ctx.fillStyle = color
+  /* THE OUTLINE IS QUIET (plan 49 3.1, user 2026-10-31: "REMOVE yellow accent focus!! make white and wayyy less
+     attention demanding"): whatever a proto asks for, the dotted mask edge draws in the foreground at 0.16 — the
+     callers' colours (and the tint's luminance remap of the hardcoded ones) landed it on the accent. `color` is kept in
+     the signature so the 54 call sites need no edit. */
+  void color
+  const [fr, fgG, fb] = roleRGB('fg') /* not pc(): the role's opacity slider would scale it back up */
+  ctx.fillStyle = `rgba(${fr}, ${fgG}, ${fb}, 0.16)`
   const sx = W / sdf.w, sy = H / sdf.h
   ctx.beginPath()
   for (let i = 0; i < raw.length; i++) {

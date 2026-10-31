@@ -10,7 +10,7 @@ import { num } from '../knobs.js'
 import { clear, strokeOutline, wrapLoop, rampRGB, roleRGB } from '../common.js'
 
 const PARAMS          = [
-  { key: 'res',   type: 'int',   min: 80,   max: 220, default: 180,  step: 20,   label: 'grid' },
+  { key: 'res',   type: 'int',   min: 80,   max: 480, default: 360,  step: 20,   label: 'grid' },
   { key: 'dA',    type: 'range', min: 0.0,  max: 0.2, default: 0.02, step: 0.005, label: 'diffA' },
   { key: 'dB',    type: 'range', min: 0.1,  max: 2.0, default: 0.4,  step: 0.05, label: 'diffB' },
   { key: 'c',     type: 'range', min: 0.01, max: 0.2, default: 0.06, step: 0.005, label: 'autocatalysis c' },
@@ -28,7 +28,7 @@ export const r2_rd_04_seashell            = {
   params: PARAMS,
 
   init({ ctx, sdf, W, H, rng, params, clock, pointer }) {
-    const res   = num(params, 'res',   180)
+    const res   = num(params, 'res',   360)
     const dA    = num(params, 'dA',    0.02)
     const dB    = num(params, 'dB',    0.4)
     const c     = num(params, 'c',     0.06)

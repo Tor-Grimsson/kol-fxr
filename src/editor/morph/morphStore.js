@@ -25,6 +25,7 @@ const INITIAL = {
   fileId: null,       /* the saved morph file this came from, so Save overwrites */
   fileName: null,
   picker: null,       /* 'preset' | 'file' | null — the step picker overlay */
+  presetId: null,     /* the Morph preset this came from (plan 47 W2, presets.js) — the header's Type · Category · Preset */
 }
 let state = { ...INITIAL }
 const listeners = new Set()

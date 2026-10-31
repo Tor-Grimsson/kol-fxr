@@ -19,11 +19,12 @@ import rose from './rose.js'
 import gridRotor from './gridRotor.js'
 import blob from './blob.js'
 import radialBars from './radialBars.js'
+import slicedSolid from './slicedSolid.js'
 
 export const SHAPE_LOOPS = [
   morphCircle, squareToCircle, barsWave, ringPulse, lissajous, spiral,
   starMorph, orbitDots, waveGrid, checkerPulse, arcSweep, concentricArcs,
-  rose, gridRotor, blob, radialBars,
+  rose, gridRotor, blob, radialBars, slicedSolid,
 ]
 
 const P = (id, label, loop, params = {}, sub) => ({ id, label, loop, params, sub })
@@ -63,4 +64,10 @@ export const SHAPE_PRESETS = [
   P('orbit-dots', 'Orbit dots', 'orbit-dots', {}, 'Particles'),
   P('orbit-dense', 'Orbit dots dense', 'orbit-dots', { rings: 9, dotsPer: 3, dotR: 5, colB: '#7fd1ff' }, 'Particles'),
   P('orbit-wide', 'Orbit dots wide', 'orbit-dots', { rings: 4, dotsPer: 5, dotR: 11, colB: '#c2502e' }, 'Particles'),
+  /* SLICED — a solid of revolution cut into translucent discs (plan 51 W2), presets after the user's references */
+  P('sliced-bloom', 'Bloom', 'sliced-solid', { bgOn: true, bg: '#e6a2e2', colA: '#ff86cf', colB: '#e3233f', colC: '#6b4cff', shape: 'capsule', slices: 11, tilt: 30, width: 0.84, discAlpha: 0.34 }, 'Sliced'),
+  P('sliced-tunnel', 'Tunnel', 'sliced-solid', { bgOn: true, bg: '#e6a2e2', colA: '#ff86cf', colB: '#f0457a', colC: '#6b4cff', shape: 'capsule', slices: 14, tilt: 34, width: 0.8, discAlpha: 0.26 }, 'Sliced'),
+  P('sliced-lens', 'Lens', 'sliced-solid', { bgOn: true, bg: '#eaa6e6', colA: '#f6a0e4', colB: '#ff4f86', colC: '#7a5cff', shape: 'sphere', slices: 9, tilt: 36, width: 0.86, discAlpha: 0.24 }, 'Sliced'),
+  P('sliced-dark-core', 'Dark core', 'sliced-solid', { bgOn: true, bg: '#e6a2e2', colA: '#5a1030', colB: '#d01534', colC: '#f07ad0', shape: 'capsule', slices: 13, tilt: 28, width: 0.84, discAlpha: 0.36 }, 'Sliced'),
+  P('sliced-dome', 'Dome', 'sliced-solid', { bgOn: true, bg: '#e6a2e2', colA: '#ff86cf', colB: '#e3233f', colC: '#f6b8ee', shape: 'capsule', inner: 'dome', innerScale: 0.6, slices: 12, tilt: 30, width: 0.86, discAlpha: 0.242 }, 'Sliced'),
 ]

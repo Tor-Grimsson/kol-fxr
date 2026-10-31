@@ -43,15 +43,19 @@ const SCOPE_LABELS = { [COLOR_SCOPE]: 'Color', Frame: 'Motion Frame', Form: 'Mot
  */
 export function deriveScopes(schema, layer) {
   const scopes = []
-  const byId = new Map()
+  /* keyed by LABEL, not id (plan 49 2.1, user 2026-10-31: "color color? thats weird. one does nothing"): Penrose's
+     opacity sliders sit in a section named Color beside the colour-param scope also labelled Color — two cells,
+     one name, the second moving only opacities. One label is one cell. */
+  const byLabel = new Map()
   for (const p of visibleParams(schema ?? [], layer)) {
     if (NEVER_ROLL.has(p.key)) continue
     const id = p.type === 'color' ? COLOR_SCOPE : p.section
     if (!id) continue
-    let scope = byId.get(id)
+    const label = SCOPE_LABELS[id] ?? id
+    let scope = byLabel.get(label)
     if (!scope) {
-      scope = { id, label: SCOPE_LABELS[id] ?? id, motion: MOTION_SECTIONS.has(id), params: [] }
-      byId.set(id, scope)
+      scope = { id, label, motion: MOTION_SECTIONS.has(id), params: [] }
+      byLabel.set(label, scope)
       scopes.push(scope)
     }
     scope.params.push(p)

@@ -20,8 +20,9 @@ import waveform from './waveform.js'
 import fields from './fields.js'
 import curves from './curves.js'
 import orbits from './orbits.js'
+import pendulum from './pendulum.js'
 
-export const MATH_LOOPS = [expression, spinner, threads, surface, waveform, fields, curves, orbits]
+export const MATH_LOOPS = [expression, spinner, threads, surface, waveform, fields, curves, orbits, pendulum]
 
 const P = (id, label, loop, params = {}, sub) => ({ id, label, loop, params, sub })
 
@@ -98,4 +99,10 @@ export const MATH_PRESETS = [
   // curves (the uzumaki clip library) + orbits (n-body trails).
   P('param-curves', 'Curves', 'math-curves', {}, 'Parametric'),
   P('param-orbits', 'Orbits', 'math-orbits', {}, 'Parametric'),
+  /* SYNC — the pendulum wave (plan 51 W1), presets after the user's references (IMG_3099–3105) */
+  P('pendulum-dark', 'Dark', 'math-pendulum', {}, 'Sync'),
+  P('pendulum-light', 'Light', 'math-pendulum', { bg: '#f4f3ef', ink: '#141416', glowCol: '#f39b3b' }, 'Sync'),
+  P('pendulum-ripple', 'Ripple', 'math-pendulum', { count: 24, layout: 'row', n0: 24, amp: 32, rod: 0.85, bob: 0.3 }, 'Sync'),
+  P('pendulum-slow', 'Slow sync', 'math-pendulum', { n0: 60, amp: 22, tol: 0.04 }, 'Sync'),
+  P('pendulum-dense', 'Dense', 'math-pendulum', { count: 144, n0: 40, bob: 0.12, rod: 0.55 }, 'Sync'),
 ]

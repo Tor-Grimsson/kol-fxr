@@ -20,6 +20,8 @@ const PARAMS          = [
   { key: 'pts', type: 'int', min: 20, max: 100, default: 48, step: 4, label: 'pts/fiber' },
   { key: 'cam', type: 'range', min: 2, max: 8, default: 4.0, step: 0.2, label: 'camera dist' },
   { key: 'alpha', type: 'range', min: 0.05, max: 0.8, default: 0.3, step: 0.05, label: 'base alpha' },
+  { key: 'yaw', type: 'range', min: -180, max: 180, default: 0, step: 1, label: 'view yaw' },
+  { key: 'pitch', type: 'range', min: -85, max: 85, default: 0, step: 1, label: 'view pitch' },
   { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]
 
@@ -56,6 +58,7 @@ export const r2_topo_02_hopf            = {
   summary: 'Pre-image fibers of the Hopf map h:S³→S², stereographically projected to R³ then perspective to 2D; animated by a 4D rotation applied each frame.',
   helps: 'Villarceau-circle fiber orbits create strong "depth through a porthole" — definitively 3D-feeling motion inside the glyph.',
   params: PARAMS,
+  cameraKeys: { yaw: 'yaw', pitch: 'pitch', dist: 'cam' }, /* VIEW (plan 51 3.4): yaw · pitch · distance as live params, so a drag turns the view (Orbit) and 3D zoom scales it */
   init({ ctx, sdf, W, H, params, clock, pointer }) {
     const SC = Math.min(W, H) * 0.22
     const OX = W * 0.5, OY = H * 0.5
@@ -78,6 +81,8 @@ export const r2_topo_02_hopf            = {
       const spin = num(params, 'spin', 0.3)
       const PTS = num(params, 'pts', 48)
       const cam = num(params, 'cam', 4.0)
+      const VYW = (num(params, 'yaw', 0) * Math.PI) / 180, VPT = (num(params, 'pitch', 0) * Math.PI) / 180
+      const VCY = Math.cos(VYW), VSY = Math.sin(VYW), VCP = Math.cos(VPT), VSP = Math.sin(VPT)
       const baseAlpha = num(params, 'alpha', 0.3)
 
       const interact = num(params, 'interact', 1)
@@ -156,6 +161,7 @@ export const r2_topo_02_hopf            = {
           const d = 1 - r3
           let rx = 0, ry = 0, rz = 0
           if (Math.abs(d) >= 1e-7) { rx = r0 / d; ry = r1 / d; rz = r2 / d }
+          { const vx = rx * VCY + rz * VSY, vz0 = -rx * VSY + rz * VCY; rx = vx; const vy = ry * VCP - vz0 * VSP; rz = ry * VSP + vz0 * VCP; ry = vy } /* the view (plan 51 3.4) */
           const den = cam - rz
           // advance incremental angles before any skip
           const nA = cA * cD - sA * sD; sA = sA * cD + cA * sD; cA = nA

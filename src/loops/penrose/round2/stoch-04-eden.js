@@ -12,7 +12,7 @@ import { clear, strokeOutline, wrapLoop, sampleInside, rampRGB, pc } from '../co
 
 const PARAMS          = [
   { key: 'stepsPerFrame', type: 'int',   min: 10,  max: 600, default: 150, step: 20, label: 'steps/frame' },
-  { key: 'lattice',       type: 'int',   min: 60,  max: 200, default: 120, step: 20, label: 'lattice size' },
+  { key: 'lattice',       type: 'int',   min: 60,  max: 400, default: 300, step: 20, label: 'lattice size' },
   { key: 'variantB',      type: 'range', min: 0.0, max: 1.0, default: 0.7, step: 0.05, label: 'aperture wt' },
   { key: 'seeds',         type: 'int',   min: 1,   max: 6,   default: 2,   step: 1,  label: 'seed count' },
   { key: 'interact',      type: 'range', min: 0,   max: 3,   default: 1,   step: 0.1, label: 'interaction' },
@@ -26,7 +26,7 @@ export const r2_stoch_04_eden            = {
   helps: 'Inverse of DLA — compact stain spreading to fill the mold, KPZ-rough surface, no branching. The spreading-ink aesthetic.',
   params: PARAMS,
   init({ ctx, sdf, W, H, rng, params, pointer }) {
-    let G   = num(params, 'lattice', 120)
+    let G   = num(params, 'lattice', 300)
     let spf = num(params, 'stepsPerFrame', 150)
     let wB  = num(params, 'variantB', 0.7)
     let nS  = num(params, 'seeds', 2)

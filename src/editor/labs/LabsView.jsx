@@ -15,7 +15,8 @@ import { useMorph, setMorph } from '../morph/morphStore'
 import { urlIntent } from '../library/UrlIntents'
 import FilesDialogHost from '../library/FilesDialogHost'
 import TimelineDock from '../params/TimelineDock'
-import { PhoneNav, TransportPill } from '@kolkrabbi/kol-shell'
+import { createPortal } from 'react-dom'
+import { setPhoneFloats, useRailHost } from '../../phoneFloats'
 import { useTransport } from '../params/transport'
 import { openTab } from '../shell/openTab'
 import { consumeMediaPicks } from '../library/mediaPick'
@@ -25,9 +26,10 @@ import LabsNav from './LabsNav'
 import LabsParams from './LabsParams'
 import { LabsSourceCard } from './LabsSourcePicker'
 import { transport } from '../params/transport'
-import { getAppSettings } from '../lib/appSettings'
+import { getAppSettings, setAppSetting, useAppSettings } from '../lib/appSettings'
 import { groupOfPreset, loopById, presetById, presetLayerPatch } from '../../loops/registry'
 import { SheetGrab, SHEET_H, SHEET_MIN } from '../components/PanelHeader'
+import { stepPreset, STEP_KEYS } from './presetStep'
 import LabsCatalogCard from './LabsCatalogCard'
 import { useLabsLayer } from './useLabsLayer'
 import { setMountedView, navigateTo } from '../mode'
@@ -121,6 +123,7 @@ function LabsStage() {
     const onWheel = (e) => {
       if (orbitRef.current) return
       e.preventDefault()
+      if (getAppSettings().zoomLock) return /* Zoom lock (plan 49 3.2) */
       setZoom((z) => clampZoom(z * (e.deltaY > 0 ? 0.94 : 1.06)))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
@@ -134,6 +137,7 @@ function LabsStage() {
       if (e.key === 'f' || e.key === 'F') { setShowFps((v) => !v); return }
       /* the zoom chips left the stage (2026-10-06, the user: "fold the zoom into a shortcut"):
          − and + (= without shift) step, 0 fits — listed in the shortcuts sheet (keymap.js) */
+      if (getAppSettings().zoomLock && (e.key === '-' || e.key === '_' || e.key === '+' || e.key === '=' || ZOOM_KEYS[e.key] !== undefined)) return
       if (e.key === '-' || e.key === '_') { step(-1); return }
       if (e.key === '+' || e.key === '=') { step(1); return }
       if (ZOOM_KEYS[e.key] !== undefined) setZoom(ZOOM_KEYS[e.key])
@@ -173,7 +177,7 @@ function LabsStage() {
     if (t.pts.size >= 2 && t.start) {
       e.stopPropagation()
       const [a, b] = [...t.pts.values()], st = t.start
-      const z = clampZoom(st.z0 * (Math.hypot(a.x - b.x, a.y - b.y) / st.d))
+      const z = getAppSettings().zoomLock ? st.z0 : clampZoom(st.z0 * (Math.hypot(a.x - b.x, a.y - b.y) / st.d)) /* Zoom lock holds the pinch's scale */
       const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
       setZoom(z)
       setPan({ x: mx - st.cx - z * st.qx, y: my - st.cy - z * st.qy })
@@ -364,12 +368,13 @@ function LabsSheetGrab() {
   )
 }
 
-/* THE PHONE CHROME (plan 41 W4, frame E approved 2026-10-27): kol-shell's PhoneNav at the TOP picks
- * the panel — Home leaves Labs (the way out the phone never had), Catalog, Params and Transport toggle,
- * More lists Output and File without closing anything — and the transport is kol-shell's TransportPill
- * floating at the bottom over the panel, its own toggle. Both fold sideways to an edge tab. */
+/* THE PHONE CHROME (plan 41 W4, frame E approved 2026-10-27; on KOL's `touch="floats"` since plan 46 W1): the top
+ * float picks the panel — Home leaves Labs, Catalog, Params and Transport toggle, More lists Output and File (and the
+ * app's nav) — and the transport float sits over the foot, its own toggle. AppShell is the app's, so this draws
+ * nothing: it publishes the floats to `phoneFloats` and AppLayout passes them as `shell.floats`. The params rail rides
+ * AppShell's bottom Rail through a portal (EditorShell `rightIn`). The hand-drawn pair is in `_tmp/2026-10-31-labs-phone-chrome/`. */
 const LOOP_LENGTHS = [2, 4, 8, 12, 16]
-function LabsPhoneChrome({ paramsOpen, setParamsOpen, catalog, toggleCatalog }) {
+function LabsPhoneFloats({ paramsOpen, setParamsOpen, catalog, toggleCatalog, railHeight }) {
   const { playing, loopSeconds, play, pause, stop, rewind, setLoopSeconds } = useTransport()
   const [transportOn, setTransportOn] = useState(true)
   const items = [
@@ -383,24 +388,24 @@ function LabsPhoneChrome({ paramsOpen, setParamsOpen, catalog, toggleCatalog }) 
     { icon: 'download', label: 'Output', onPress: () => { setParamsOpen(true); openTab('Output') } },
     { icon: 'file', label: 'File', onPress: () => { setParamsOpen(true); openTab('File') } },
   ]
-  return (
-    <>
-      <PhoneNav shape="pill" variant="panel" items={items} actions={actions} currentPath="#none" />
-      {transportOn && (
-        <TransportPill
-          foldable
-          items={[
-            { id: 'play', icon: 'play', label: 'Play', onPress: play, selected: playing },
-            { id: 'pause', icon: 'pause', label: 'Pause', onPress: pause, selected: !playing },
-            { id: 'loop', icon: 'stopwatch-solid', label: 'Loop length' },
-            { id: 'stop', icon: 'stop', label: 'Stop', onPress: stop },
-            { id: 'rewind', icon: 'rewind', label: 'Rewind', onPress: rewind },
-          ]}
-          sheetFor={{ loop: LOOP_LENGTHS.map((n) => ({ label: `${n} s`, checked: loopSeconds === n, onPress: () => setLoopSeconds(n) })) }}
-        />
-      )}
-    </>
-  )
+  const transportFloat = transportOn ? {
+    items: [
+      { id: 'play', icon: 'play', label: 'Play', onPress: play, selected: playing },
+      { id: 'pause', icon: 'pause', label: 'Pause', onPress: pause, selected: !playing },
+      { id: 'loop', icon: 'stopwatch-solid', label: 'Loop length' },
+      { id: 'stop', icon: 'stop', label: 'Stop', onPress: stop },
+      { id: 'rewind', icon: 'rewind', label: 'Rewind', onPress: rewind },
+    ],
+    sheetFor: { loop: LOOP_LENGTHS.map((n) => ({ label: `${n} s`, checked: loopSeconds === n, onPress: () => setLoopSeconds(n) })) },
+  } : undefined
+  /* published when what the floats show changes — not every render: AppLayout re-renders on a publish and that
+     re-renders this view, so an every-render publish loops. The handlers only call setters (state updaters,
+     the transport's methods), so rows built on an older render still act on live state. */
+  useEffect(() => {
+    setPhoneFloats({ items, actions, transport: transportFloat, railOpen: paramsOpen, railHeight })
+  }, [paramsOpen, catalog, transportOn, playing, loopSeconds, railHeight]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => setPhoneFloats(null), [])
+  return null
 }
 
 /* The desktop rail minus its grab: no `useDragResize`, so nothing stamps a
@@ -443,7 +448,7 @@ const LABS_REGISTRY_TOUCH = {
   panels: [
     { slot: 'right.header', order: 0, Component: LabsSheetGrab },
     /* the sheet's title row and the floating play button are gone (plan 41 W4): Catalog and the
-       collapse ride the top PhoneNav, the transport is its own pill (LabsPhoneChrome below) */
+       collapse ride the top float, the transport is its own float (LabsPhoneFloats above) */
     ...LABS_REGISTRY.panels.map((p) => (p.Component === LabsRail ? { ...p, Component: LabsTouchRail } : p)),
   ],
 }
@@ -472,6 +477,11 @@ function LabsBody() {
   const [tall, setTall] = useState(false)
   /* …or any height the grab was dragged to (plan 15 § 1); null = the detent */
   const [sheetPx, setSheetPx] = useState(null)
+  /* the sheet's height: the dragged one, else the detent — AppShell's `floats.railHeight` on a phone, and
+     `--kol-sheet-h` for the footer's cap inside it */
+  const sheetH = sheetPx ? `${sheetPx}px` : tall ? SHEET_H.tall : SHEET_H.half
+  const sheetVar = { '--kol-sheet-h': sheetH }
+  const railHost = useRailHost()
   /* THE ENTRY CARD (LabsCatalogCard), both frames: open while the stage is empty, gone on a pick,
      back when the layer goes; the sheet's `Catalog` and the rail's rows reopen it */
   const morph = useMorph()
@@ -564,6 +574,12 @@ function LabsBody() {
     if (group) setOnly('loop', presetLayerPatch(presetById(deepLink), group))
   }, [setOnly])
 
+  /* THE LOADED PATCH IS THE FLOOR OF UNDO (plan 49 3.4): the seed above, a file opened by URL and the frame's fit to the
+     aspect all write tracked history on mount; clear it once they have landed, so ⌘Z never walks below what was opened.
+     ponytail: a settle delay, not a "boot done" signal — 800 ms covers the deep link, UrlIntents' tick and the fit. */
+  const { clearHistory } = useComposeState()
+  useEffect(() => { const t = setTimeout(clearHistory, 800); return () => clearTimeout(t) }, [clearHistory])
+
   /* Space = play/pause. The editor gets this from PanZoomViewport (see
    * Canvas.jsx), which only mounts on the pan/zoom canvas — labs renders the
    * plain letterbox, so it binds its own. Same typing guard: a space typed
@@ -576,9 +592,22 @@ function LabsBody() {
   const { tool, setTool } = useTool()
   const toolRef = useRef(tool)
   toolRef.current = tool
+  const { updateLayer, undo, redo } = useComposeState()
+  const historyRef = useRef({ undo, redo }); historyRef.current = { undo, redo }
+  /* the tool follows Settings' Grab (plan 49 3.2) */
+  const grabOn = !!useAppSettings().grab
+  useEffect(() => { setTool(grabOn ? 'orbit' : 'select') }, [grabOn, setTool])
+  const layerRef = useRef(layer); layerRef.current = layer
+  const updateLayerRef = useRef(updateLayer); updateLayerRef.current = updateLayer
   useEffect(() => {
     const onKey = (e) => {
       if (isTyping(e)) return
+      /* ⌘Z / ⇧⌘Z — the compose history, in Labs too (plan 49 3.4) */
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault()
+        if (e.shiftKey) historyRef.current.redo(); else historyRef.current.undo()
+        return
+      }
       if (e.code === 'Space') {
         e.preventDefault()
         transport.toggle()
@@ -592,7 +621,19 @@ function LabsBody() {
         return
       }
       if ((e.key === 'c' || e.key === 'C') && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        setTool(toolRef.current === 'orbit' ? 'select' : 'orbit')
+        /* C flips Settings' Grab, and the tool follows the setting (plan 49 3.2) — one state, two ways in */
+        setAppSetting('grab', !getAppSettings().grab)
+        return
+      }
+      if ((e.key === 'z' || e.key === 'Z') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        setAppSetting('zoomLock', !getAppSettings().zoomLock)
+        return
+      }
+      /* h · l / ← → previous/next preset, k · j / ↑ ↓ previous/next category (plan 49 2.3) — any tab, never while typing */
+      const stepKey = !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && STEP_KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key]
+      if (stepKey && layerRef.current) {
+        const patch = stepPreset(layerRef.current, stepKey[1], stepKey[0])
+        if (patch) { e.preventDefault(); updateLayerRef.current(layerRef.current.id, patch) }
       }
     }
     window.addEventListener('keydown', onKey)
@@ -625,7 +666,7 @@ function LabsBody() {
   /* `.kol-editor-labs` scopes kol-labs.css to this chrome; `contents` keeps the
    * wrapper out of layout so the shell's grid is untouched. */
   return (
-    <div className="kol-editor-labs contents" data-touch={touch || undefined} data-params={paramsOpen ? 'open' : undefined} data-empty={layer || morph.active ? undefined : ''} style={sheetPx ? { '--kol-sheet-h': `${sheetPx}px` } : tall ? { '--kol-sheet-h': SHEET_H.tall } : undefined}>
+    <div className="kol-editor-labs contents" data-touch={touch || undefined} data-params={paramsOpen ? 'open' : undefined} data-empty={layer || morph.active ? undefined : ''} style={sheetVar}>
       {/* draws nothing — hands labs' categories to the shell rail */}
       <LabsNav />
       {touch ? (
@@ -633,9 +674,11 @@ function LabsBody() {
           {/* ONE SIZE GROUP IN THE SHEET — 'md', the rung where the DS's
               ladders agree (see controlSize.js). */}
           <ControlSizeContext.Provider value="md">
-            <EditorShell registry={LABS_REGISTRY_TOUCH} />
+            {/* the params rail renders in AppShell's bottom Rail (`floats.rail`), portalled so it keeps every provider;
+                the wrapper carries this chrome's scope, so kol-labs.css still reaches the rail's contents */}
+            <EditorShell registry={LABS_REGISTRY_TOUCH} rightIn={(rail) => (railHost ? createPortal(<div className="kol-editor-labs flex flex-col h-full" data-touch="" data-params="open" style={sheetVar}>{rail}</div>, railHost) : null)} />
           </ControlSizeContext.Provider>
-          <LabsPhoneChrome paramsOpen={paramsOpen} setParamsOpen={setParamsOpen} catalog={catalog} toggleCatalog={() => setCatalog((v) => !v)} />
+          <LabsPhoneFloats paramsOpen={paramsOpen} setParamsOpen={setParamsOpen} catalog={catalog} toggleCatalog={() => setCatalog((v) => !v)} railHeight={sheetH} />
         </TouchRails.Provider>
       ) : (
         <EditorShell registry={LABS_REGISTRY} />

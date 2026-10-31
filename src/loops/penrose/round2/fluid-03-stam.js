@@ -6,7 +6,7 @@ import { clear, strokeOutline, wrapLoop, rampRGB } from '../common.js'
 const PARAMS          = [
   { key: 'visc', type: 'range', min: 0, max: 0.0004, default: 0.00005, step: 0.00001, label: 'viscosity' },
   { key: 'conf', type: 'range', min: 0, max: 8, default: 2.5, step: 0.25, label: 'vort confinement ε' },
-  { key: 'res', type: 'int', min: 48, max: 128, default: 80, step: 8, label: 'grid res' },
+  { key: 'res', type: 'int', min: 48, max: 256, default: 112, step: 8, label: 'grid res' },
   { key: 'splat', type: 'range', min: 0.1, max: 1.5, default: 0.6, step: 0.05, label: 'splat strength' },
   { key: 'dyefade', type: 'boolean', default: true, label: 'dye fade' },
   { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
@@ -24,7 +24,7 @@ export const r2_fluid_03_stam            = {
   init({ ctx, sdf, W, H, rng, params, clock, pointer }) {
     const visc = num(params, 'visc', 0.00005)
     const confEps = num(params, 'conf', 2.5)
-    const N = num(params, 'res', 80)
+    const N = num(params, 'res', 112)
     const splatStr = num(params, 'splat', 0.6)
     const dyeFade = bool(params, 'dyefade', true)
 
@@ -47,77 +47,98 @@ export const r2_fluid_03_stam            = {
       }
     }
 
-    const setBnd = (b        , x              ) => {
-      for (let i = 0; i < N; i++) {
-        x[IX(-1, i)] = b === 1 ? -x[IX(0, i)] : x[IX(0, i)]
-        x[IX(N, i)] = b === 1 ? -x[IX(N - 1, i)] : x[IX(N - 1, i)]
-        x[IX(i, -1)] = b === 2 ? -x[IX(i, 0)] : x[IX(i, 0)]
-        x[IX(i, NY)] = b === 2 ? -x[IX(i, NY - 1)] : x[IX(i, NY - 1)]
-      }
-      // Apply solid mask — zero velocity at solid cells
-      for (let j = 0; j < NY; j++) {
-        for (let i = 0; i < N; i++) {
-          if (solid[IX(i, j)]) { x[IX(i, j)] = 0 }
-        }
-      }
-    }
+    /* THE SOLVER ON ONE GRID (plan 50 1.1). It treated a cell as 1/N wide but 1/NY tall while the pressure solve weighted
+       all four neighbours alike, so on any non-square frame the projection left divergence behind; vorticity confinement
+       fed on it and the field ran to 1e38. setBnd also walked the side walls with the column count. Now: square cells,
+       h = 1/N on both axes (the domain is 1 wide, NY/N tall), and walls — the frame edge and the glyph's solid cells —
+       handled inside every stencil (no-slip for velocity, zero-flux for pressure and dye) instead of patched after. */
+    const h = 1 / N
+    const fluid = new Uint8Array(sz) // 1 inside the grid and outside the glyph's solid
+    for (let j = 0; j < NY; j++) for (let i = 0; i < N; i++) fluid[IX(i, j)] = solid[IX(i, j)] ? 0 : 1
+    const zeroWalls = (x) => { for (let n = 0; n < sz; n++) if (!fluid[n]) x[n] = 0 }
 
-    const linSolve = (b        , x              , x0              , a        , c        , iter = 20) => {
-      const ic = 1 / c
+    /* Gauss-Seidel over fluid cells. Pressure and dye: a wall neighbour mirrors the cell — no flux. Velocity: a wall
+       neighbour is 0 — no slip. */
+    const linSolve = (x, x0, a, mode, iter) => { /* mode: 'p' pressure · 'n' zero-flux scalar · 'v' no-slip velocity */
+      const W1 = N + 2
       for (let k = 0; k < iter; k++) {
         for (let j = 0; j < NY; j++) {
           for (let i = 0; i < N; i++) {
-            if (solid[IX(i, j)]) continue
-            x[IX(i, j)] = (x0[IX(i, j)] + a * (x[IX(i - 1, j)] + x[IX(i + 1, j)] + x[IX(i, j - 1)] + x[IX(i, j + 1)])) * ic
+            const n = IX(i, j)
+            if (!fluid[n]) continue
+            let sum = 0, cnt = 0
+            if (fluid[n - 1]) { sum += x[n - 1]; cnt++ }
+            if (fluid[n + 1]) { sum += x[n + 1]; cnt++ }
+            if (fluid[n - W1]) { sum += x[n - W1]; cnt++ }
+            if (fluid[n + W1]) { sum += x[n + W1]; cnt++ }
+            x[n] = mode === 'p' ? (x0[n] + sum) / (cnt || 1) : mode === 'n' ? (x0[n] + a * sum) / (1 + a * cnt) : (x0[n] + a * sum) / (1 + 4 * a)
           }
         }
-        setBnd(b, x)
       }
     }
-
-    const diffuse = (b        , x              , x0              , diff        , dt        ) => {
-      const a = dt * diff * N * NY
-      linSolve(b, x, x0, a, 1 + 4 * a)
+    const diffuse = (x, x0, diff, dt, neumann) => {
+      const a = dt * diff * N * N
+      if (a <= 0) { x.set(x0); return } /* Viscosity 0: the step still hands its buffer on (the dye-sat-still bug) */
+      linSolve(x, x0, a, neumann ? 'n' : 'v', 20)
+      zeroWalls(x)
     }
-
-    const advect = (b        , d              , d0              , uu              , vv              , dt        ) => {
-      const dt0x = dt * N, dt0y = dt * NY
+    const advect = (d, d0, uu, vv, dt) => {
+      const dt0 = dt * N
       for (let j = 0; j < NY; j++) {
         for (let i = 0; i < N; i++) {
-          if (solid[IX(i, j)]) continue
-          let x = i - dt0x * uu[IX(i, j)]
-          let y = j - dt0y * vv[IX(i, j)]
-          x = Math.max(0.5, Math.min(N - 0.5, x))
-          y = Math.max(0.5, Math.min(NY - 0.5, y))
-          const i0 = Math.floor(x), i1 = i0 + 1
-          const j0 = Math.floor(y), j1 = j0 + 1
-          const s1 = x - i0, s0 = 1 - s1
-          const t1 = y - j0, t0 = 1 - t1
-          d[IX(i, j)] = s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) + s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)])
+          const n = IX(i, j)
+          if (!fluid[n]) { d[n] = 0; continue }
+          const x = Math.max(0, Math.min(N - 1, i - dt0 * uu[n]))
+          const y = Math.max(0, Math.min(NY - 1, j - dt0 * vv[n]))
+          const i0 = Math.floor(x), j0 = Math.floor(y)
+          const i1 = Math.min(N - 1, i0 + 1), j1 = Math.min(NY - 1, j0 + 1)
+          const s1 = x - i0, s0 = 1 - s1, t1 = y - j0, t0 = 1 - t1
+          d[n] = s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) + s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)])
         }
       }
-      setBnd(b, d)
     }
-
-    const project = (uu              , vv              , p              , div              ) => {
-      const hx = 1 / N, hy = 1 / NY
+    const project = (uu, vv) => {
+      const W1 = N + 2
       for (let j = 0; j < NY; j++) {
         for (let i = 0; i < N; i++) {
-          if (solid[IX(i, j)]) continue
-          div[IX(i, j)] = -0.5 * (hx * (uu[IX(i + 1, j)] - uu[IX(i - 1, j)]) + hy * (vv[IX(i, j + 1)] - vv[IX(i, j - 1)]))
-          p[IX(i, j)] = 0
+          const n = IX(i, j)
+          if (!fluid[n]) { div[n] = 0; p[n] = 0; continue }
+          div[n] = -0.5 * h * (uu[n + 1] - uu[n - 1] + vv[n + W1] - vv[n - W1])
+          p[n] = 0
         }
       }
-      setBnd(0, div); setBnd(0, p)
-      linSolve(0, p, div, 1, 4, 40)
+      linSolve(p, div, 1, 'p', 40)
       for (let j = 0; j < NY; j++) {
         for (let i = 0; i < N; i++) {
-          if (solid[IX(i, j)]) continue
-          uu[IX(i, j)] -= 0.5 * (p[IX(i + 1, j)] - p[IX(i - 1, j)]) * N
-          vv[IX(i, j)] -= 0.5 * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) * NY
+          const n = IX(i, j)
+          if (!fluid[n]) continue
+          const pc = p[n]
+          const pl = fluid[n - 1] ? p[n - 1] : pc, pr = fluid[n + 1] ? p[n + 1] : pc
+          const pb = fluid[n - W1] ? p[n - W1] : pc, pt = fluid[n + W1] ? p[n + W1] : pc
+          uu[n] -= 0.5 * (pr - pl) / h
+          vv[n] -= 0.5 * (pt - pb) / h
         }
       }
-      setBnd(1, uu); setBnd(2, vv)
+      zeroWalls(uu); zeroWalls(vv)
+    }
+    /* vorticity confinement (Fedkiw 2001): ω = curl, N = ∇|ω| / |∇|ω||, f = ε·h·(N × ω) */
+    const curlA = new Float32Array(sz)
+    const confine = (dt) => {
+      const W1 = N + 2
+      for (let j = 0; j < NY; j++) for (let i = 0; i < N; i++) {
+        const n = IX(i, j)
+        curlA[n] = fluid[n] ? ((v[n + 1] - v[n - 1]) - (u[n + W1] - u[n - W1])) / (2 * h) : 0
+      }
+      for (let j = 0; j < NY; j++) for (let i = 0; i < N; i++) {
+        const n = IX(i, j)
+        if (!fluid[n]) continue
+        const gx = (Math.abs(curlA[n + 1]) - Math.abs(curlA[n - 1])) / (2 * h)
+        const gy = (Math.abs(curlA[n + W1]) - Math.abs(curlA[n - W1])) / (2 * h)
+        const gm = Math.hypot(gx, gy) + 1e-5
+        const w = curlA[n]
+        u[n] += dt * confEps * h * (gy / gm) * w
+        v[n] -= dt * confEps * h * (gx / gm) * w
+      }
     }
 
     const p = new Float32Array(sz), div = new Float32Array(sz)
@@ -149,12 +170,26 @@ export const r2_fluid_03_stam            = {
       const dt = Math.max(0, Math.min(now - prevT, 0.05))
       prevT = now
 
-      // Inject dye + force at sources
-      for (const [si, sj] of sources) {
-        dens0[IX(si, sj)] += splatStr * 8
-        u0[IX(si, sj)] += (rng() - 0.5) * splatStr * 3
-        v0[IX(si, sj)] += (rng() - 0.5) * splatStr * 3
-      }
+      // Inject dye + force at sources — PLUMES, not pin-pricks (plan 49 5.4, the user: "these two are broken"): one cell
+      // of dye per source on a 112 grid faded to nothing before it spread, so the frame read blank. Each source now
+      // feeds a small disk and pushes it along its own slowly turning heading, so a plume streams out and curls.
+      const R = Math.max(2, Math.round(N / 40))
+      const FORCE = 4
+      sources.forEach(([si, sj], k) => {
+        const ang = k * 2.4 + now * 0.35
+        const fx = Math.cos(ang) * splatStr * 0.6, fy = Math.sin(ang) * splatStr * 0.6
+        for (let dj = -R; dj <= R; dj++) for (let di = -R; di <= R; di++) {
+          const r2 = di * di + dj * dj
+          if (r2 > R * R) continue
+          const ci = si + di, cj = sj + dj
+          if (ci < 0 || ci >= N || cj < 0 || cj >= NY || solid[IX(ci, cj)]) continue
+          /* a soft disc, scaled by the frame's dt — a force, not a per-frame velocity kick (plan 50 1.2) */
+          const wgt = 1 - Math.sqrt(r2) / (R + 1)
+          dens0[IX(ci, cj)] += splatStr * 9 * dt * wgt
+          u0[IX(ci, cj)] += fx * FORCE * dt * wgt
+          v0[IX(ci, cj)] += fy * FORCE * dt * wgt
+        }
+      })
 
       // Pointer splat: mirror the source injection at the cursor cell — dye
       // plus a velocity impulse from pointer motion (scaled by `interact`).
@@ -168,10 +203,11 @@ export const r2_fluid_03_stam            = {
         const gi = Math.floor(ptr.x / sdf.w * N)
         const gj = Math.floor(ptr.y / sdf.h * NY)
         if (gi >= 0 && gi < N && gj >= 0 && gj < NY && !solid[IX(gi, gj)]) {
-          dens0[IX(gi, gj)] += splatStr * 8 * params.interact * (ptr.down ? 2 : 1)
+          dens0[IX(gi, gj)] += splatStr * 0.8 * params.interact * (ptr.down ? 2 : 1)
           if (prevPtr) {
-            u0[IX(gi, gj)] += (ptr.x - prevPtr.x) / sdf.w * N * 1 * params.interact
-            v0[IX(gi, gj)] += (ptr.y - prevPtr.y) / sdf.h * NY * 1 * params.interact
+            /* the pointer's speed in domain units per second (plan 50 1.1: was cells, ~50× too strong) */
+            u0[IX(gi, gj)] += (ptr.x - prevPtr.x) / sdf.w * 30 * params.interact
+            v0[IX(gi, gj)] += (ptr.y - prevPtr.y) / sdf.w * 30 * params.interact
           }
         }
         if (edge && gi >= 0 && gi < N && gj >= 0 && gj < NY) {
@@ -184,9 +220,9 @@ export const r2_fluid_03_stam            = {
               const d = Math.hypot(di, dj)
               if (d > rad) continue
               const w = 1 - d / rad
-              dens0[IX(ci, cj)] += splatStr * 40 * w * params.interact
+              dens0[IX(ci, cj)] += splatStr * 4 * w * params.interact
               const inv = 1 / (d || 1)
-              const kick = splatStr * 12 * w * params.interact
+              const kick = splatStr * 1.2 * w * params.interact
               u0[IX(ci, cj)] += di * inv * kick
               v0[IX(ci, cj)] += dj * inv * kick
             }
@@ -197,42 +233,21 @@ export const r2_fluid_03_stam            = {
         prevPtr = null
       }
 
-      // Velocity step — ADD sources into the field (Stam add_source);
-      // `u.set(u0)` was wiping the velocity's memory every frame and the
-      // dye never entered `dens` at all → the empty view (2026-08-09).
+      /* Stam's order (plan 50 1.1): add sources → diffuse → project → advect → confine → project. Sources and pointer
+         impulses arrive in u0 / v0 / dens0 already scaled to this frame. */
       for (let n = 0; n < sz; n++) { u[n] += u0[n]; v[n] += v0[n] }
-      if (visc > 0) { diffuse(1, u0, u, visc, dt); diffuse(2, v0, v, visc, dt) }
-      project(u0, v0, p, div)
-      advect(1, u, u0, u0, v0, dt); advect(2, v, v0, u0, v0, dt)
-      project(u, v, p, div)
-
-      // Vorticity confinement
-      if (confEps > 0.01) {
-        for (let j = 1; j < NY - 1; j++) {
-          for (let i = 1; i < N - 1; i++) {
-            if (solid[IX(i, j)]) continue
-            const curl = (v[IX(i + 1, j)] - v[IX(i - 1, j)]) * 0.5 * N - (u[IX(i, j + 1)] - u[IX(i, j - 1)]) * 0.5 * NY
-            const lL = Math.abs((v[IX(i, j)] - v[IX(i - 1, j)]) * N - (u[IX(i, j)] - u[IX(i, j - 1)]) * NY)
-            const lR = Math.abs((v[IX(i + 1, j)] - v[IX(i, j)]) * N - (u[IX(i + 1, j)] - u[IX(i + 1, j - 1)]) * NY)
-            const lB = Math.abs((v[IX(i, j - 1)] - v[IX(i - 1, j - 1)]) * N - (u[IX(i, j)] - u[IX(i, j - 1)]) * NY)
-            const lT = Math.abs((v[IX(i, j + 1)] - v[IX(i - 1, j + 1)]) * N - (u[IX(i, j + 2)] - u[IX(i, j + 1)]) * NY)
-            const gx = (lR - lL) * 0.5
-            const gy = (lT - lB) * 0.5
-            const gm = Math.hypot(gx, gy) + 1e-6
-            u[IX(i, j)] += confEps * dt * (gy / gm) * curl
-            v[IX(i, j)] -= confEps * dt * (gx / gm) * curl
-          }
-        }
-        setBnd(1, u); setBnd(2, v)
-      }
+      diffuse(u0, u, visc, dt, false); diffuse(v0, v, visc, dt, false)
+      project(u0, v0)
+      advect(u, u0, u0, v0, dt); advect(v, v0, u0, v0, dt)
+      if (confEps > 0.01) confine(dt)
+      project(u, v)
       u0.fill(0); v0.fill(0)
 
-      // Density step — add the injected dye first (add_source), THEN
-      // diffuse into the scratch and advect back.
+      /* dye: add → diffuse → advect, then fade (plan 50 1.2 — the only way dye leaves the frame) */
       for (let n = 0; n < sz; n++) dens[n] += dens0[n]
-      diffuse(0, dens0, dens, visc * 0.1, dt)
-      advect(0, dens, dens0, u, v, dt)
-      if (dyeFade) for (let n = 0; n < sz; n++) dens[n] *= 0.993
+      diffuse(dens0, dens, visc * 0.1, dt, true)
+      advect(dens, dens0, u, v, dt)
+      if (dyeFade) { const k = Math.exp(-dt * 0.35); for (let n = 0; n < sz; n++) dens[n] *= k } /* per second, not per frame — the same at 30 and 60 fps */
       dens0.fill(0)
 
       // Render density to ImageData — theme ramp LUT, hot cells hit full white-warm
@@ -245,7 +260,7 @@ export const r2_fluid_03_stam            = {
         for (let i = 0; i < N; i++) {
           const pidx = (j * N + i) * 4
           if (solid[IX(i, j)]) { pixels[pidx + 3] = 0; continue }
-          const d = Math.min(1, dens[IX(i, j)] * 1.5)
+          const d = 1 - Math.exp(-dens[IX(i, j)] * 1.4) /* a soft shoulder — dense cores no longer clip to a flat blob (plan 50 1.2) */
           const ki = (d * 63) | 0
           pixels[pidx]     = rampLUT[ki * 3]
           pixels[pidx + 1] = rampLUT[ki * 3 + 1]
@@ -256,7 +271,7 @@ export const r2_fluid_03_stam            = {
 
       clear(ctx, W, H)
       tctx.putImageData(img, 0, 0)
-      ctx.imageSmoothingEnabled = false
+      ctx.imageSmoothingEnabled = true /* smooth field, not blocks — plan 49 5.3 */
       ctx.drawImage(tmpC, 0, 0, W, H)
       ctx.imageSmoothingEnabled = true
       strokeOutline(ctx, sdf, W, H, 'rgba(240, 230, 210, 0.35)', 2)

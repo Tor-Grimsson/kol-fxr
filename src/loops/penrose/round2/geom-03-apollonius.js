@@ -40,7 +40,7 @@ export const r2_geom_03_apollonius            = {
     // Render at reduced resolution for performance — SCALE grows on big
     // buffers so the raster stays ≤ ~256² (bounded per-frame cost), and the
     // upscale is a native drawImage blit instead of a per-canvas-pixel JS loop.
-    const SCALE = Math.max(4, Math.ceil(Math.max(sdf.w, sdf.h) / 256))
+    const SCALE = Math.max(4, Math.ceil(Math.max(sdf.w, sdf.h) / 640)) /* was /256 — plan 49 5.3 */
     const rw = Math.ceil(sdf.w / SCALE)
     const rh = Math.ceil(sdf.h / SCALE)
     const imgData = ctx.createImageData(rw, rh) // allocated ONCE, reused each frame

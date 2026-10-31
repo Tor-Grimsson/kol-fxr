@@ -102,7 +102,7 @@ export function PaletteBody() {
             <span className="kol-helper-10 uppercase text-meta flex-1 truncate">{rolesOf(x.hex)}</span>
             <span className="kol-mono-10 text-meta">{x.hex.toUpperCase()}</span>
             <Button tone="ghost" quiet size="sm" iconOnly={x.locked ? 'lock' : 'unlock'} aria-label={`${x.locked ? 'Unlock' : 'Lock'} color ${i + 1}`} pressed={x.locked} onClick={() => toggleLock(i)} />
-            <Button tone="ghost" quiet size="sm" iconOnly="trash" aria-label={`Delete color ${i + 1}`} disabled={items.length <= 2} onClick={() => remove(i)} />
+            <span className={items.length <= 2 ? 'invisible pointer-events-none' : 'contents'} aria-hidden={items.length <= 2 || undefined}><Button tone="ghost" quiet size="sm" iconOnly="trash" aria-label={`Delete color ${i + 1}`} tabIndex={items.length <= 2 ? -1 : undefined} onClick={() => remove(i)} /></span>
           </div>
         ))}
       </div>
@@ -115,7 +115,8 @@ export function PaletteBody() {
 
       <Button tone="grey" size={cs} onClick={() => addItem('palette', { name: palette.name, colors })}>Save</Button>
       <div className="flex gap-2">
-        <Button tone="grey" size={cs} className="flex-1" disabled={!schema} onClick={apply}>Apply to layer</Button>
+        {/* no layer to apply to → not drawn (plan 51 3.1) */}
+        {schema && <Button tone="grey" size={cs} className="flex-1" onClick={apply}>Apply to layer</Button>}
         <Button tone="grey" size={cs} className="flex-1" onClick={applyDocument}>Apply to document</Button>
       </div>
     </div>

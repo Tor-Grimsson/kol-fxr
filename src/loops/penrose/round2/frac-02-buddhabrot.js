@@ -10,7 +10,7 @@ const PARAMS          = [
   { key: 'nebula', type: 'boolean', default: true, label: 'nebulabrot (RGB)' },
 ]
 
-const RES = 150
+const RES = 400 /* was 150 — plan 49 5.3 */
 
 function runBuddha(
   rng              ,

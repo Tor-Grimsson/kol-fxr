@@ -1,6 +1,5 @@
-import { Icon } from '@kolkrabbi/kol-icons'
 import { useEffect, useState } from 'react'
-import { Button, FullscreenOverlay } from '@kolkrabbi/kol-component'
+import { Button, FullscreenOverlay, ToggleCheckbox } from '@kolkrabbi/kol-component'
 import { ASPECTS, PRESET_SIZES } from '../aspects'
 
 /**
@@ -81,13 +80,13 @@ export default function BatchExportModal({ open, onClose, runBatchExport, baseAs
             <span className="kol-helper-10 text-meta">Aspects</span>
             <div className="grid grid-cols-2 gap-1.5">
               {PRESETS.map((a) => (
-                <CheckRow
+                <ToggleCheckbox
                   key={a.id}
                   checked={aspects.has(a.id)}
-                  disabled={running}
-                  onToggle={() => toggleAspect(a.id)}
+                  className={running ? 'opacity-50 pointer-events-none' : ''}
+                  onChange={() => toggleAspect(a.id)}
                   label={a.label}
-                  meta={`${PRESET_SIZES[a.id].w}×${PRESET_SIZES[a.id].h}`}
+                  hint={`${PRESET_SIZES[a.id].w}×${PRESET_SIZES[a.id].h}`}
                 />
               ))}
             </div>
@@ -96,11 +95,11 @@ export default function BatchExportModal({ open, onClose, runBatchExport, baseAs
             <span className="kol-helper-10 text-meta">Scale</span>
             <div className="grid grid-cols-3 gap-1.5">
               {SCALES.map((s) => (
-                <CheckRow
+                <ToggleCheckbox
                   key={s}
                   checked={scales.has(s)}
-                  disabled={running}
-                  onToggle={() => toggleScale(s)}
+                  className={running ? 'opacity-50 pointer-events-none' : ''}
+                  onChange={() => toggleScale(s)}
                   label={`@${s}x`}
                 />
               ))}
@@ -132,19 +131,3 @@ export default function BatchExportModal({ open, onClose, runBatchExport, baseAs
 
 /* A togglable pick cell — the box shows the editor's own `check` icon when
  * selected; the whole row is the hit target. */
-function CheckRow({ checked, disabled, onToggle, label, meta }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onToggle}
-      className={`flex items-center gap-2 px-2 py-1.5 rounded border text-left ${checked ? 'border-oq-16 bg-oq-04' : 'border-oq-08'} ${disabled ? 'opacity-50' : ''}`}
-    >
-      <span className={`inline-flex items-center justify-center w-4 h-4 rounded-sm border ${checked ? 'border-oq-16' : 'border-oq-08'}`}>
-        {checked && <Icon name="check" size={12} />}
-      </span>
-      <span className="kol-helper-12 text-emphasis flex-1 whitespace-nowrap">{label}</span>
-      {meta && <span className="kol-helper-10 text-meta">{meta}</span>}
-    </button>
-  )
-}

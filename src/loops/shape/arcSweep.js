@@ -16,7 +16,7 @@ export default {
     { key: 'sweep', label: 'Sweep', type: 'color', role: 'fg', default: '#7fd1ff' },
     ...FILL_PARAMS,
     { key: 'ringFill', label: 'Fill rings', type: 'toggle', default: false, tab: 'color' },
-    { key: 'ringAlpha', label: 'Fill opacity', type: 'range', min: 0.05, max: 1, step: 0.05, default: 0.5, tab: 'color', noRandom: true },
+    { key: 'ringAlpha', label: 'Fill opacity', type: 'range', min: 0.05, max: 1, step: 0.05, default: 0.5, tab: 'color', noRandom: true, when: (l) => !!l.ringFill },
     { key: 'turns', label: 'Turns', type: 'range', min: 1, max: 8, rMin: 1, rMax: 4, step: 1, default: 1 },
     { key: 'trail', label: 'Trail', type: 'range', min: 1, max: 9, step: 1, default: 5 },
     { key: 'rings', label: 'Rings', type: 'range', min: 0, max: 6, step: 1, default: 3, noRandom: true },

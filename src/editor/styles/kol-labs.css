@@ -168,40 +168,24 @@
 }
 
 /* ───── TOUCH — the params rail is a SHEET along the bottom (2026-10-05) ─────
- * It was a drawer from the right under a top bar (2026-09-01): open, it left 126px of a 390px
- * stage. Now it is the generator's frame — `LabsView` stamps `data-touch` on the wrapper, and the
- * right rail becomes the grid's second ROW: the stage refits in the row above it, the rail's
- * header is the collapse control, and collapsed (`data-params` unset) the rail is gone and a pill
- * stands in for it. The nav is still the shell's drawer. Same rail, same footer. */
+ * On KOL's two floats since plan 46 W1 (kol-shell 0.98.0 `touch="floats"`): AppShell owns the layout — the top
+ * float, the stage under it (inset 98 + safe area), the bottom Rail (`floats.railHeight`, `--kol-shadow-rail-up`,
+ * no rule) and the transport float over it. The params rail is portalled into that Rail (LabsView `rightIn`), so
+ * what is left here is the editor's own frame filling AppShell's stage, and the rail's contents. fxr's hand-rolled
+ * layout (grid rows, the 98 insets, the sheet's cap, shadow and hide) is in `_tmp/2026-10-31-labs-phone-layout/`. */
+.kol-editor-labs[data-touch] .kol-editor-shell {
+  height: 100%;
+}
 .kol-editor-labs[data-touch] .kol-editor-grid {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto;
-  grid-template-areas: "canvas" "right";
+  grid-template-areas: "canvas";
 }
 .kol-editor-labs[data-touch] .kol-editor-left {
   display: none;
 }
 .kol-editor-labs[data-touch] .kol-editor-right {
-  /* half the display at most — the other half is the picture the controls change; tall on the
-     grabber (`--kol-sheet-h`, PanelHeader.jsx `SHEET_H`) */
-  max-height: var(--kol-sheet-h, 50dvh);
   border-left: 0;
-  overflow: hidden;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-.kol-editor-labs[data-touch]:not([data-params="open"]) .kol-editor-right {
-  display: none;
-}
-/* THE PHONE CHROME (plan 41 W4, frame E): the PhoneNav pill floats at the top (16 + 56 + 16), so the
-   stage starts under it; the TransportPill floats over the sheet's foot, so the sheet's rows scroll
-   clear of it; the sheet lifts off the stage with frame E's shadow, not a rule. */
-.kol-editor-labs[data-touch] .kol-editor-canvas {
-  padding-top: 88px;
-}
-.kol-editor-labs[data-touch] .kol-editor-right {
   border-top: 0;
-  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.45);
-  padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 /* the sheet's header is the generator's: no rule under it, the body starting straight below */
 .kol-editor-labs[data-touch] .kol-editor-rail-header {

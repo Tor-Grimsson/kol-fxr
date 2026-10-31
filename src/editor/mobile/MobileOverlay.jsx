@@ -372,7 +372,7 @@ export default function MobileOverlay({ layer, onSwitchCategory, onInsert, onRes
                   behind them and the Randomize they belong to was last. */}
               <div className="grid grid-cols-2 gap-2">
                 <Button tone="primary" size={cs} onClick={() => setShowFx(true)}>Add effect</Button>
-                <Button tone="primary" size={cs} disabled={!chain.length} onClick={rollFilters}>Randomize</Button>
+                {chain.length > 0 && <Button tone="primary" size={cs} onClick={rollFilters}>Randomize</Button>} {/* nothing to roll → not drawn (plan 51 3.1) */}
               </div>
               {/* THE CHAIN, IN RENDER ORDER. The array is already tier-sorted
                   by addFilter (canvas → pixi GPU → the single terminal GL

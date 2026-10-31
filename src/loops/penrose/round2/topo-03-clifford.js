@@ -14,6 +14,8 @@ const PARAMS          = [
   { key: 'spin2', type: 'range', min: 0, max: 1.5, default: 0.25, step: 0.05, label: 'spin yz' },
   { key: 'cam', type: 'range', min: 1.5, max: 6, default: 3.0, step: 0.1, label: 'camera dist' },
   { key: 'alpha', type: 'range', min: 0.1, max: 0.9, default: 0.45, step: 0.05, label: 'base alpha' },
+  { key: 'yaw', type: 'range', min: -180, max: 180, default: 0, step: 1, label: 'view yaw' },
+  { key: 'pitch', type: 'range', min: -85, max: 85, default: 0, step: 1, label: 'view pitch' },
   { key: 'interact', type: 'range', min: 0, max: 3, step: 0.1, default: 1, label: 'interaction' },
 ]
 
@@ -53,6 +55,7 @@ export const r2_topo_03_clifford            = {
   summary: 'Flat torus on S³ as (cosθ, sinθ, cosφ, sinφ)/√2; two independent 4D plane rotations projected stereographically then perspective to 2D wireframe.',
   helps: 'Inside-out folding motion is unlike anything else — the torus continuously inverts through itself, strong depth-cued warping.',
   params: PARAMS,
+  cameraKeys: { yaw: 'yaw', pitch: 'pitch', dist: 'cam' }, /* VIEW (plan 51 3.4): yaw · pitch · distance as live params, so a drag turns the view (Orbit) and 3D zoom scales it */
   init({ ctx, sdf, W, H, params, clock, pointer }) {
     const SC = Math.min(W, H) * 0.24
     const OX = W * 0.5, OY = H * 0.5
@@ -80,6 +83,8 @@ export const r2_topo_03_clifford            = {
       const s1 = num(params, 'spin1', 0.4)
       const s2 = num(params, 'spin2', 0.25)
       const cam = num(params, 'cam', 3.0)
+      const VYW = (num(params, 'yaw', 0) * Math.PI) / 180, VPT = (num(params, 'pitch', 0) * Math.PI) / 180
+      const VCY = Math.cos(VYW), VSY = Math.sin(VYW), VCP = Math.cos(VPT), VSP = Math.sin(VPT)
       const baseAlpha = num(params, 'alpha', 0.45)
 
       const interact = num(params, 'interact', 1)
@@ -127,6 +132,7 @@ export const r2_topo_03_clifford            = {
         const d = 1 - w4
         let rx = 0, ry = 0, rz = 0
         if (Math.abs(d) >= 1e-7) { rx = x / d; ry = y / d; rz = z / d }
+          { const vx = rx * VCY + rz * VSY, vz0 = -rx * VSY + rz * VCY; rx = vx; const vy = ry * VCP - vz0 * VSP; rz = ry * VSP + vz0 * VCP; ry = vy } /* the view (plan 51 3.4) */
         let den = cam - rz
         if (den >= 0 && den < 1e-3) den = 1e-3 // spike/NaN floor on the perspective divide
         else if (den < 0 && den > -1e-3) den = -1e-3

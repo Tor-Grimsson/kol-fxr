@@ -533,7 +533,7 @@ function EngineLoopLayer({ layer, def, layerStyle, stages = [], pxStages = [] })
     const h = Math.max(1, Math.round(layer.h ?? 1))
     if (w !== r.w || h !== r.h || dpr !== r.dpr) { r.engine.resize(w, h); r.w = w; r.h = h; r.dpr = dpr }   /* dpr: Preview resolution — engines re-read it in resize */
     r.host.applyParams(def, r.engine, layer)
-    r.host.setCameraDrag?.(def, r.engine, def.orbit && orbitMode)
+    r.host.setCameraDrag?.(def, r.engine, def.orbit && orbitMode && layer.orbit !== false)
     const now = performance.now()
     const dt = transport.isPlaying() && lastTs.current != null ? (now - lastTs.current) / 1000 : 0
     lastTs.current = now
@@ -1396,7 +1396,7 @@ function EngineFilterLayer({ layer, engine, preStages, pxStages = [], layerStyle
       r.host.touchSource?.(filter, r.engine)
     }
     r.host.applyParams(filter, r.engine, { ...engine.params, id: `${layer.id}:${engine.key}` })
-    r.host.setCameraDrag?.(filter, r.engine, filter.orbit && orbitMode)
+    r.host.setCameraDrag?.(filter, r.engine, filter.orbit && orbitMode && engine.params?.orbit !== false)
     const now = performance.now()
     const dt = transport.isPlaying() && lastTs.current != null ? (now - lastTs.current) / 1000 : 0
     lastTs.current = now
@@ -1489,7 +1489,7 @@ function EngineLoopFilterLayer({ layer, loop, engine, preStages, pxStages = [], 
       r.host.touchSource?.(filter, r.engine)
     }
     r.host.applyParams(filter, r.engine, { ...engine.params, id: `${layer.id}:${engine.key}` })
-    r.host.setCameraDrag?.(filter, r.engine, filter.orbit && orbitMode)
+    r.host.setCameraDrag?.(filter, r.engine, filter.orbit && orbitMode && engine.params?.orbit !== false)
     const now = performance.now()
     const dt = transport.isPlaying() && lastTs.current != null ? (now - lastTs.current) / 1000 : 0
     lastTs.current = now
@@ -1543,7 +1543,8 @@ function useCameraKeysDrag(def, layer, canvasRef) {
   const keys = useMemo(() => resolveCameraKeys(def), [def])
   /* Orbit MODE (the C tool) drives the camera — not a per-layer toggle, so
    * it can't fight layer-move (the stage does nothing in orbit mode). */
-  const enabled = !!(keys && tool === 'orbit')
+  /* …and the patch's own Orbit (plan 51 3.4): Grab is the master, each patch can opt out */
+  const enabled = !!(keys && tool === 'orbit' && layer.orbit !== false)
   const layerId = layer.id
 
   useEffect(() => {

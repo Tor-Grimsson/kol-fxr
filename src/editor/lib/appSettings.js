@@ -34,6 +34,12 @@ const DEFAULTS = {
    * here would be two sources of truth for one switch. */
   defaultLoopSeconds: 4,  // transport loop length seeded at labs boot
   previewRes: 'full',     // 'full' | 'half' — live canvas backing ratio (lib/previewScale.js); exports stay full
+  /* THE CANVAS'S INPUTS AS SWITCHES (plan 49 3.2, user 2026-10-31): Grab is C's state ("make a grab toggle in settings
+     that turns of and on with C"); Interactions off means the pointer reaches no generator ("Mouse interacts with canvas
+     even if C is on or off"); Zoom lock freezes the stage zoom ("LOCK CANVAS ZOOM on toggle and keycommand", Z in Labs). */
+  grab: false,
+  interactions: true,
+  zoomLock: false,
 }
 
 function load() {

@@ -193,14 +193,16 @@ function RangeField({ param: p, layer, setProp, chars: sectionChars }) {
     <div className="flex items-center gap-3">
       {/* the DS slider, readout off — the value field beside it is the readout (audit E1; this was
           the one native range input left in src/) */}
-      <Slider
-        min={p.min} max={p.max} step={p.step ?? 1}
-        value={numVal}
-        disabled={bound}
-        onChange={(v) => setProp(p.key, Number(v))}
-        readout="none"
-        className="flex-1"
-      />
+      {/* bound: the modulation drives the value, so no disabled slider — the field beside it edits the expression (plan 51 3.1) */}
+      {!bound && (
+        <Slider
+          min={p.min} max={p.max} step={p.step ?? 1}
+          value={numVal}
+          onChange={(v) => setProp(p.key, Number(v))}
+          readout="none"
+          className="flex-1"
+        />
+      )}
       <Input
         /* 5 chars holds "0.025" and a 4-digit value; 6 was a third of a touch
            row (user, 2026-09-01: "unnecessarily wide"). An expression still

@@ -226,6 +226,7 @@ const PROFILE_OPTIONS = [
 const isTiles = (l) => (l.render || 'tiles') === 'tiles'
 const isField = (l) => l.render === 'field'
 const isBands = (l) => isField(l) && (l.field || 'stripes') !== 'tartan' // stripes + organic
+const wavy = (l) => isBands(l) && Number(l.waveAmp ?? 0.4) > 0
 const isStripes = (l) => isField(l) && (l.field || 'stripes') === 'stripes'
 const isOrganic = (l) => isField(l) && l.field === 'organic'
 const isTartan = (l) => isField(l) && l.field === 'tartan'
@@ -266,7 +267,8 @@ export default {
     { key: 'rows', label: 'Rows', type: 'range', min: 1, max: 32, step: 1, default: 4, noRandom: true, animatable: false, when: (l) => !isField(l), section: 'Grid' },
     { key: 'cell', label: 'Cell', type: 'range', min: 40, max: 280, step: 1, default: 120, noRandom: true, when: (l) => !isField(l), section: 'Grid' },
     { key: 'gap', label: 'Gap', type: 'range', min: -40, max: 80, step: 1, default: 8, when: (l) => !isField(l), section: 'Grid' },
-    { key: 'stretch', label: 'Stretch', type: 'toggle', default: false, when: isTiles, section: 'Grid' },
+    /* Stretch fits a tile's viewBox to its (square) cell — a square tile looks the same either way (plan 49 10.2) */
+    { key: 'stretch', label: 'Stretch', type: 'toggle', default: false, when: (l) => isTiles(l) && (([, , vw, vh]) => vw !== vh)(shapeFor(l.shape, l.customSvg, l).viewBox), section: 'Grid' },
     { key: 'showGrid', noRandom: true, label: 'Grid overlay', type: 'toggle', default: false, when: isTiles, section: 'Grid' },
     { key: 'colorRule', label: 'Color rule', type: 'select', options: COLOR_RULE_OPTIONS, default: 'none', when: isTiles, section: 'Color', collapsed: true },
     // Weave — the interlacing (structure scope, shared with the grid)
@@ -278,12 +280,13 @@ export default {
     // Static position within the field (labs PatternControls Offset X/Y —
     // defaults already ride in `defaults` below; read by stripe + organic)
     { key: 'offsetX', noRandom: true, label: 'Offset X', type: 'range', min: 0, max: 1, step: 0.05, default: 0, when: isBands, section: 'Field' },
-    { key: 'offsetY', noRandom: true, label: 'Offset Y', type: 'range', min: 0, max: 1, step: 0.05, default: 0, when: isBands, section: 'Field' },
+    /* along straight bands there is nothing to shift — Offset Y and Wave frequency act only with Wave depth (plan 49 10.2) */
+    { key: 'offsetY', noRandom: true, label: 'Offset Y', type: 'range', min: 0, max: 1, step: 0.05, default: 0, when: wavy, section: 'Field' },
     { key: 'bandCount', noRandom: true, label: 'Bands', type: 'range', min: 1, max: 3, step: 1, default: 2, when: isBands, section: 'Field' },
     { key: 'duty', label: 'Duty', type: 'range', min: 0.05, max: 1, step: 0.01, default: 1, when: isStripes, section: 'Field' },
     { key: 'edgeSoftness', label: 'Softness', type: 'range', min: 0, max: 1, step: 0.05, default: 0, when: isStripes, section: 'Field' },
     { key: 'waveAmp', label: 'Wave depth', type: 'range', min: 0, max: 1, step: 0.05, default: 0.4, when: isBands, section: 'Field' },
-    { key: 'waveFreq', label: 'Wave frequency', type: 'range', min: 0.2, max: 4, step: 0.1, default: 1.5, when: isBands, section: 'Field' },
+    { key: 'waveFreq', label: 'Wave frequency', type: 'range', min: 0.2, max: 4, step: 0.1, default: 1.5, when: wavy, section: 'Field' },
     { key: 'waveProfile', label: 'Edge profile', type: 'select', options: PROFILE_OPTIONS, default: 'sine', when: isOrganic, section: 'Field' },
     // Field — tartan sett
     { key: 'sett', label: 'Sett', type: 'select', options: SETT_OPTIONS, default: 'black-watch', when: isTartan, section: 'Field' },

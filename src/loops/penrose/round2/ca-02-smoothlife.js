@@ -9,7 +9,7 @@ import { num } from '../knobs.js'
 import { clear, strokeOutline, wrapLoop, rampRGB, roleRGB, stampGrid } from '../common.js'
 
 const PARAMS          = [
-  { key: 'res',  type: 'int',   min: 80,  max: 200, default: 128, step: 16, label: 'grid res' },
+  { key: 'res',  type: 'int',   min: 80,  max: 320, default: 160, step: 16, label: 'grid res' },
   { key: 'ri',   type: 'int',   min: 2,   max: 8,   default: 4,             label: 'inner radius' },
   { key: 'ro',   type: 'int',   min: 5,   max: 18,  default: 12,            label: 'outer radius' },
   { key: 'b1',   type: 'range', min: 0.2, max: 0.4, default: 0.278, step: 0.002, label: 'birth low' },
@@ -42,7 +42,7 @@ export const r2_ca_02_smoothlife            = {
   helps: 'Smooth translating gliders treat the glyph boundary as a wall — clean orbiting blobs inside letterforms.',
   params: PARAMS,
   init({ ctx, sdf, W, H, rng, params, pointer }) {
-    const G  = num(params, 'res', 128)
+    const G  = num(params, 'res', 160)
     const ri = num(params, 'ri', 4)
     const ro = num(params, 'ro', 12)
     const b1 = num(params, 'b1', 0.278)
@@ -202,7 +202,7 @@ export const r2_ca_02_smoothlife            = {
       }
       clear(ctx, W, H)
       offCtx.putImageData(img, 0, 0)
-      ctx.imageSmoothingEnabled = false
+      ctx.imageSmoothingEnabled = true /* smooth field, not blocks — plan 49 5.3 */
       ctx.drawImage(offCanvas, 0, 0, W, H)
       ctx.imageSmoothingEnabled = true
       strokeOutline(ctx, sdf, W, H, 'rgba(240, 230, 210, 0.35)', 2)

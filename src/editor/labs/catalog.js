@@ -4,6 +4,8 @@ import { KINETIC_TREE, KINETIC_PRESETS, presetComp } from '../../kinetic/presets
 import { FILTERS } from '../../filters'
 import { effectCategories, FX_RACK_GROUPS } from '../compose/inspectors/effectCategories'
 import { openColorModes } from '../color/ColorModesWindow'
+import { MORPH_TYPES, morphPresets, firstMorphPreset, loadMorphPreset } from '../morph/presets'
+import { getMorph } from '../morph/morphStore'
 
 /**
  * The labs CATALOG — the section/group/category tree and its pick semantics,
@@ -60,6 +62,7 @@ export const SECTION_ICONS = {
   generative: 'layers',
   vector: 'pen-nib',
   composition: 'type',
+  morph: 'swap',
   mode: 'mode-toggle-01',
 }
 
@@ -234,6 +237,20 @@ export function buildLabsCatalog({ layer, setOnly, addFilter, patchFilter, carri
       label: entry.label,
       icon: GROUP_ICONS[`gen:${entry.label}`] ?? 'square',
       pages: generativeRows(entry),
+    })),
+
+    /* MORPH (plan 47 W2) — a METHOD with the full ladder: its TYPES are the modes, a type's CATEGORIES the generators
+       its runs start from; a category row lands on its first run, the Preset dropdown (Morph's header) walks the rest */
+    { id: 'sec:morph', label: 'Morph' },
+    ...MORPH_TYPES.map((t) => ({
+      id: `morph:${t.id}`,
+      label: t.label,
+      icon: t.icon,
+      pages: [...new Set(morphPresets().filter((p) => p.type === t.id).map((p) => p.category))].map((category) => ({
+        label: category,
+        onSelect: () => loadMorphPreset(firstMorphPreset(t.id, category)),
+        active: (() => { const p = morphPresets().find((x) => x.id === getMorph().presetId); return p?.type === t.id && p.category === category })(),
+      })),
     })),
 
     /* VECTOR — the ported kol-apps instruments (plan 02 step 4): tools that

@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <!-- kol-theme-boot: THEME_BOOT_SCRIPT from kol-framework, injected by vite.config.js -->
+    <!-- THE BOOT INTRO (plan 45 W4, user 2026-10-31: "just make it happen on every reload"): every load of `/` stamps
+         `fxr-intro` before paint and the static loader shows its ground alone; signed-out Home's stage
+         (src/components/HomeStage.jsx) grows the mark over it. Reduced motion keeps the plain loader. In dev,
+         only a hard refresh plays it (`__fxrNoIntro`, vite.config.js). -->
+    <script>try{if(location.pathname==='/'&&!window.__fxrNoIntro&&!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('fxr-intro')}catch(e){}</script>
+    <style>.fxr-intro #kol-loader-app svg{display:none}</style>
     <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
     <!-- ADD TO HOME SCREEN (plan 11, apps/media's shape): saved to the home screen this runs
          without Safari's chrome; `black-translucent` puts the page under the status bar, which

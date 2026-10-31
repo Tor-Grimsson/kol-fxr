@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, SegmentedToggle, ToggleSwitch, Divider, Dropdown, LabeledControlSection, Tag, Tooltip } from '@kolkrabbi/kol-component'
+import { Button, SegmentedToggle, ToggleSwitch, Divider, Dropdown, LabeledControlSection, SettingsRow, Tag, Tooltip } from '@kolkrabbi/kol-component'
 import { useComposeState } from '../compose/state'
 import { useLayerEdit } from '../compose/useLayerEdit'
 import AutoControls from '../params/AutoControls'
@@ -8,6 +8,7 @@ import { paramTab } from '../params/schema'
 import { PHOTO_SCHEMA } from '../params/schemas/photo'
 import { mulberry32, randomSeed, randomizeSchema, mergeRoll } from '../lib/rng'
 import { FILTERS } from '../../filters'
+import AboutLine from '../compose/inspectors/AboutLine'
 import { resolvedChain, MAX_FILTERS } from '../compose/filterChain'
 import { effectCategories, categoryOf, presetParamOf, FX_RACK_GROUPS, rackGroupFilters, postProcessingFilters } from '../compose/inspectors/effectCategories'
 import { SweepStack, StageRolls } from '../compose/inspectors/EffectsPanel'
@@ -18,14 +19,18 @@ import { randomiseComp } from '../../kinetic/knobs'
 import { GENERATIVE_TREE, MISC_TREE } from '../../loops/taxonomy'
 import { groupById, loopById, presetsInGroup, presetsInSub, presetLayerPatch } from '../../loops/registry'
 import { computeRoll, allScopeParams } from '../params/rolls'
+import { randomEffectId, randomEffectPreset, canEffectLevel, nudgeSettings } from './presetStep'
+import { presetPatchFor } from '../compose/inspectors/effectCategories'
 import { useBindDots, toggleDots } from '../params/dotVisibility'
 import { useLabsLayer } from './useLabsLayer'
 import MorphTab from '../morph/MorphTab'
 import QuickMotion from '../params/QuickMotion'
+import InputRows from '../params/InputRows'
 import ModelSource from './ModelSource'
 import { useMorph } from '../morph/morphStore'
 import Hint from '../components/Hint'
-import { useControlSize, stripClamp } from '../params/controlSize'
+import { useControlSize, stripClamp, RAIL_LABEL_W } from '../params/controlSize'
+import { useAppSettings, setAppSetting } from '../lib/appSettings'
 import { isTyping } from '../state/keymap'
 import { useLabsKeys } from './useLabsKeys'
 
@@ -103,19 +108,47 @@ function ChipsRow({ options, active, onPick, spread = false, pills = false }) {
  * links, or pills) over the page's tab strip over the body. Body gap = 20px
  * (labs' rail gap-5); the tab strip is the caller's (Effect·Motion on
  * effect pages, Generate·Style·Animation on generative ones). */
-function Surface({ chips, active, onPick, spread, pills, title, tabStrip, preStrip, fx = false, children }) {
+function HistoryButtons() {
+  const { undo, redo, canUndo, canRedo } = useComposeState()
+  const cs = useControlSize()
+  /* NO DISABLED BUTTON IN VIEW (plan 51 3.1, the user: "did you make sure no disabled buttons were in view?"): a button
+     that cannot act keeps its slot, so nothing shifts when it appears, but is not drawn */
+  const slot = (on, node) => (on ? node : <span aria-hidden="true" className="invisible pointer-events-none">{node}</span>)
+  return (
+    <>
+      {slot(canUndo, <Tooltip label="Undo" shortcut="⌘Z"><Button size={cs} iconOnly="arrow-left" aria-label="Undo" tabIndex={canUndo ? undefined : -1} onClick={undo} /></Tooltip>)}
+      {slot(canRedo, <Tooltip label="Redo" shortcut="⇧⌘Z"><Button size={cs} iconOnly="arrow-right" aria-label="Redo" tabIndex={canRedo ? undefined : -1} onClick={redo} /></Tooltip>)}
+    </>
+  )
+}
+
+function Surface({ chips, active, onPick, spread, pills, title, tabStrip, preStrip, fx = false, scope, ghostLabels, children }) {
   /* on touch the rail is a sheet whose header already reads the title (LabsView) */
   const titled = useControlSize() === 'sm'
   return (
-    <div className={`flex flex-col gap-5${fx ? ' kol-labs-fx' : ''}`}>
+    <div className={`flex flex-col gap-5${fx ? ' kol-labs-fx' : ''}`} data-label-scope={scope}>
       {/* The surface title wears the SAME eyebrow as the sections under it
           (user ruling 2026-08-27) — it was `kol-helper-12 text-emphasis`,
           sentence case, the one label in the rail on its own type role. */}
-      {title && titled && <p className="kol-eyebrow text-fg-96">{title}</p>}
+      {/* UNDO / REDO beside the title (plan 49 3.4, user 2026-10-31: "one wrong click and your entire patch is gone") —
+          the compose history the editor already keeps; ⌘Z / ⇧⌘Z do the same (LabsView) */}
+      {title && titled && (
+        <div className="flex items-center gap-1">
+          <p className="kol-eyebrow text-fg-96 flex-1 min-w-0">{title}</p>
+          <HistoryButtons />
+        </div>
+      )}
       {chips && <ChipsRow options={chips} active={active} onPick={onPick} spread={spread} pills={pills} />}
       {preStrip}
       {tabStrip}
       {children}
+      {/* every tab's labels, measured but unseen (plan 49 9.1) — the label column is the widest of ALL tabs from the first
+          frame, so switching tabs never moves it (controlSize measureLabelColumns) */}
+      {ghostLabels?.length > 0 && (
+        <div aria-hidden="true" className="invisible h-0 overflow-hidden flex flex-col">
+          {ghostLabels.map((l, i) => <span key={i} className="kol-helper-10 tracking-widest whitespace-nowrap" style={{ width: RAIL_LABEL_W }}>{String(l).toUpperCase()}</span>)}
+        </div>
+      )}
     </div>
   )
 }
@@ -126,6 +159,7 @@ function Surface({ chips, active, onPick, spread, pills, title, tabStrip, preStr
  * EffectsPanel: stage params spread over a layer-shaped bag, writes rebuild
  * `filters` through coalesced history. Labs is one-effect, so stage 0. */
 function EffectSurface({ layer, showMod }) {
+  const appSettings = useAppSettings()
   const cs = useControlSize()
   const [tab, setTab] = useState('effect')
   /* The nav's effect pick flips back to the Effect tab. */
@@ -204,15 +238,16 @@ function EffectSurface({ layer, showMod }) {
               <StackCards {...stackProps} from={0} />
             </LabeledControlSection>
             <Divider />
-            <LabeledControlSection label={rackGroup.label} divided>
-              <Dropdown
-                variant="subtle" size={cs} className="w-full"
-                options={rackOptions}
-                value=""
-                disabled={chain.length >= MAX_FILTERS}
-                onChange={(id) => { if (id) addFilter(layer.id, id) }}
-              />
-            </LabeledControlSection>
+            {chain.length < MAX_FILTERS && ( /* not drawn when it cannot act (plan 51 3.1) */
+              <LabeledControlSection label={rackGroup.label} divided>
+                <Dropdown
+                  variant="subtle" size={cs} className="w-full"
+                  options={rackOptions}
+                  value=""
+                  onChange={(id) => { if (id) addFilter(layer.id, id) }}
+                />
+              </LabeledControlSection>
+            )}
           </>
         )}
         {tab === 'anim' && stage?.def?.sweeps && (
@@ -257,7 +292,7 @@ function EffectSurface({ layer, showMod }) {
 
   const auto = { layer: paramsView, setProp: setStageProp, palette, renderAnimate, inline: true }
   return (
-    <Surface chips={chips} active={stage.id} onPick={onChip} spread={isTrio} title={title} fx
+    <Surface chips={chips} active={stage.id} onPick={onChip} spread={isTrio} title={title} fx scope={stage.id} ghostLabels={stage.def.params.map((p) => p.label).filter(Boolean)}
       tabStrip={<SegmentedToggle tone="sunken" value={tab} onChange={setTab} options={LABS_TABS} size={cs} className={stripClamp(cs)} />}>
       {tab === 'effect' && (
         <>
@@ -267,7 +302,25 @@ function EffectSurface({ layer, showMod }) {
               internal gap stays the tight one. */}
           <LabeledControlSection divided>
             <AutoControls schema={cluster} {...auto} />
-            <StageRolls inline def={stage.def} view={paramsView} tab="effect" onPatch={patchStageParams} />
+            <StageRolls inline def={stage.def} view={paramsView} tab="effect" onPatch={patchStageParams} levels={(
+              /* TYPE · CATEGORY · PRESET · SETTINGS, the generator rail's row (plan 51 3.2); a level this effect cannot
+                 take is not drawn (3.1) */
+              <>
+                {[['type', 'Type'], ['category', 'Category'], ['preset', 'Preset']].filter(([lvl]) => canEffectLevel(stage.def, lvl)).map(([lvl, label]) => (
+                  <Button key={lvl} tone="primary" size={cs} className="flex-1 min-w-0" aria-label={`Randomize ${label.toLowerCase()}`} onClick={() => {
+                    const rand = mulberry32(randomSeed() >>> 0)
+                    if (lvl === 'preset') { const v = randomEffectPreset(stage.def, paramsView, rand); if (v != null) patchStageParams(presetPatchFor(stage.def, v)); return }
+                    const id = randomEffectId(stage.id, lvl, rand)
+                    if (id) replaceFilter(layer.id, at, id)
+                  }}>{label}</Button>
+                ))}
+                <Button tone="primary" size={cs} className="flex-1 min-w-0" aria-label="Randomize settings" onClick={() => {
+                  const params = stage.def.params.filter((p) => paramTab(p) !== 'anim')
+                  patchStageParams(nudgeSettings(paramsView, allScopeParams(params, paramsView), mulberry32(randomSeed() >>> 0)))
+                }}>Settings</Button>
+              </>
+            )} />
+            <AboutLine def={stage.def} isFilter />
           </LabeledControlSection>
           <Divider />
           {cut < params.length && (
@@ -285,7 +338,20 @@ function EffectSurface({ layer, showMod }) {
       )}
       {tab === 'anim' && (
         <>
+          {/* INPUTS (plan 48) — an input wired to the effect's best params, first in the tab */}
+          <InputRows schema={stage.def.params} layer={paramsView} setProp={setStageProp} inputs={stage.def.inputs} />
           <AutoControls schema={stage.def.params} {...auto} tab="anim" />
+          {/* ORBIT PER PATCH on an effect with a camera (Rutt-Etra, plan 51 3.3 · 3.4) — on only while Grab (C) is on; switching
+              it on switches Grab on, so it never does nothing */}
+          {stage.def.orbit && (
+            <LabeledControlSection label="Interaction" divided>
+              <SettingsRow label="ORBIT (C)" align="fill" labelWidth={RAIL_LABEL_W}>
+                <SegmentedToggle tone="sunken" size={cs} className="w-full" value={appSettings.grab && paramsView.orbit !== false ? 'on' : 'off'}
+                  options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]}
+                  onChange={(v) => { setStageProp('orbit', v === 'on'); if (v === 'on' && !appSettings.grab) setAppSetting('grab', true) }} />
+              </SettingsRow>
+            </LabeledControlSection>
+          )}
           {/* the roll block is its own section — the Effect tab's hairline, here too (plan 26 § 8) */}
           <LabeledControlSection divided>
             <StageRolls inline def={stage.def} view={paramsView} tab="anim" onPatch={patchStageParams} />
@@ -346,9 +412,11 @@ function MediaMotion({ chain, layer, hostView, addFilter, removeFilter, setStage
           </Button>
         </>
       ) : (
-        <Button tone="primary" size={cs} className="w-full" iconLeft="plus" iconSize={12} disabled={chain.length >= MAX_FILTERS} onClick={() => addFilter(layer.id, 'fx-media')}>
-          Add media motion
-        </Button>
+        chain.length < MAX_FILTERS && ( /* not drawn when it cannot act (plan 51 3.1) */
+          <Button tone="primary" size={cs} className="w-full" iconLeft="plus" iconSize={12} onClick={() => addFilter(layer.id, 'fx-media')}>
+            Add media motion
+          </Button>
+        )
       )}
     </LabeledControlSection>
   )
@@ -405,13 +473,14 @@ function PostProcessing({ chain, from = 1, filters = null, layer, hostView, addF
         toggleFilter={toggleFilter} removeFilter={removeFilter}
         setStagePropAt={setStagePropAt} palette={palette} showMod={showMod}
       />
-      <Dropdown
-        variant="subtle" size={cs} className="w-full"
-        options={options}
-        value=""
-        disabled={chain.length >= MAX_FILTERS}
-        onChange={(id) => { if (id) addFilter(layer.id, id) }}
-      />
+      {chain.length < MAX_FILTERS && ( /* not drawn when it cannot act (plan 51 3.1) */
+        <Dropdown
+          variant="subtle" size={cs} className="w-full"
+          options={options}
+          value=""
+          onChange={(id) => { if (id) addFilter(layer.id, id) }}
+        />
+      )}
     </LabeledControlSection>
   )
 }
@@ -456,9 +525,12 @@ function GenerativeSurface({ layer, showMod, tree }) {
 
   return (
     <Surface
-      title={groupLabel} chips={chips} active={layer.presetId} onPick={onChip} pills
+      title={groupLabel} chips={chips} active={layer.presetId} onPick={onChip} pills scope={layer.loopId}
+      ghostLabels={(loopById(layer.loopId)?.params ?? []).filter((p) => p.type !== 'color' && p.label).map((p) => p.label)}
       tabStrip={<SegmentedToggle tone="sunken" value={tab} onChange={setTab} options={cs === 'sm' ? GEN_TABS : GEN_TABS_TOUCH} size={cs} className={stripClamp(cs)} />}
     >
+      {/* INPUTS (plan 48) — an input wired to the generator's best params, first in the Animation tab */}
+      {tab === 'anim' && <InputRows schema={loopById(layer.loopId)?.params ?? []} layer={layer} setProp={edit.setProp} inputs={loopById(layer.loopId)?.inputs} />}
       <LoopFields
         layer={layer} setProp={edit.setProp} patch={edit.patch} updateLayer={updateLayer}
         palette={palette} renderAnimate={showMod ? (p) => <BindDot layer={layer} param={p} setProp={edit.setProp} /> : undefined}

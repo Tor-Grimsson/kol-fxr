@@ -218,7 +218,7 @@ function MobileBody() {
     if (!patch) return
     const id = addLayer('loop', patch)
     setActiveId(id)
-    transport.play()
+    /* NOTHING AUTO-STARTS (plan 49 10.1, user 2026-10-31: "NEVER AUTO START, just start on play") */
     setScreen('live')
   }
 
@@ -237,7 +237,7 @@ function MobileBody() {
     const virtualH = Math.round(CANVAS_W * canvasH / canvasW)
     const id = addLayer('photo', { fit: 'cover', x: 0, y: 0, w: CANVAS_W, h: virtualH })
     setActiveId(id)
-    transport.play()
+    /* NOTHING AUTO-STARTS (plan 49 10.1, user 2026-10-31: "NEVER AUTO START, just start on play") */
     setScreen('live')
   }
   /* the door's param is read once, then dropped — Start over lands on the chooser, not the door again */
