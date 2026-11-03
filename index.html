@@ -11,8 +11,11 @@
     <style>.fxr-intro #kol-loader-app svg{display:none}</style>
     <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
     <!-- ADD TO HOME SCREEN (plan 11, apps/media's shape): saved to the home screen this runs
-         without Safari's chrome; `black-translucent` puts the page under the status bar, which
-         is what `viewport-fit=cover` below is for. Icons are FXR's own (2026-10-09): the glitch-split
+         without Safari's chrome. THE STATUS BAR IS OPAQUE (`default`, painted by theme-color) since
+         2026-11-03: `black-translucent` + `viewport-fit=cover` gives an iOS 26 home-screen app a viewport
+         one status bar short (WebKit 301108, open, no workaround from Apple), so Home scrolled and fixed
+         layers stopped above the bottom edge. Re-add the app to the home screen to pick it up. `cover`
+         stays for the bottom edge. Icons are FXR's own (2026-10-09): the glitch-split
          lettering, the favicon ink-only like KDS's, the touch icons on dark and light grounds. -->
     <!-- DARK, not light (plan 25 § 1): iOS's dark home-screen appearance darkens a web clip's light
          ground, so the light icon landed grey-on-grey; ink on #121215 survives both appearances -->
@@ -20,7 +23,7 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="FXR" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAFAFA" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121215" />
     <!-- maximum-scale=1 stops iOS Safari's zoom-on-focus for fields under 16px
