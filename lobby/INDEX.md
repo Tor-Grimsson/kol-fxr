@@ -65,6 +65,8 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [FloatsOverlayNoBands](outbox/FloatsOverlayNoBands.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-11-03 — kol-shell 0.99.3 | none — bumped; Labs at 390: stage top 0, floats over it. Phone check is the user's |
+| 🟢 | [HubHomeSignedOutPinned](outbox/HubHomeSignedOutPinned.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-11-03 — kol-shell 0.99.2 | none — bumped (now 0.99.3); Home at 390: box fixed, 844, no scroll. Home-screen check is the user's |
 | 🟢 | [LoaderIsTheLine](outbox/LoaderIsTheLine.md) | **kol-atlas** — `~/dev/projects/kol-atlas/lobby/INDEX.md` | 🟢 `closed` 2026-11-02 | none |
 | 🟢 | [LoaderAppIntro](outbox/LoaderAppIntro.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-11-01 — kol-component 0.331.0 · kol-framework 0.69.0 · kol-shell 0.99.0 | none — Atlas's swap filed as LoaderIsTheLine |
 | 🟢 | [RailDragHoldsWidth](outbox/RailDragHoldsWidth.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-component 0.327.0 | none — adopted and walked |
@@ -177,6 +179,9 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-11-03 | **`HubHomeSignedOutPinned` · `FloatsOverlayNoBands` adopted** — kol-shell 0.99.3 · kol-component 0.332.0; checked at 390×844 |
+| 2026-11-03 | **`FloatsOverlayNoBands` filed to kol-ds-ui** — Labs floats overlay the content; reverses the PhoneTwoFloatLayout insets |
+| 2026-11-03 | **`HubHomeSignedOutPinned` filed to kol-ds-ui** — signed-out Home box pinned to the screen; the home-screen app scrolled |
 | 2026-11-02 | **`LoaderIsTheLine` returned closed** from kol-atlas — remainder none |
 | 2026-11-01 | **`LoaderIsTheLine` filed to kol-atlas** — Atlas swaps its boot curtain for the intro loader |
 | 2026-11-01 | **`LoaderAppIntro` returned** — kol-component 0.331.0 · kol-framework 0.69.0 · kol-shell 0.99.0 |

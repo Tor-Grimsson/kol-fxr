@@ -318,9 +318,9 @@ function EffectSurface({ layer, showMod }) {
                   const params = stage.def.params.filter((p) => paramTab(p) !== 'anim')
                   patchStageParams(nudgeSettings(paramsView, allScopeParams(params, paramsView), mulberry32(randomSeed() >>> 0)))
                 }}>Settings</Button>
+                <AboutLine def={stage.def} isFilter />
               </>
             )} />
-            <AboutLine def={stage.def} isFilter />
           </LabeledControlSection>
           <Divider />
           {cut < params.length && (

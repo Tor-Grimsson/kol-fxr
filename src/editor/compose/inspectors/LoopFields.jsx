@@ -215,8 +215,8 @@ export function LoopFields({ layer, setProp, patch, updateLayer, palette, render
       {tabStrip}
 
       {picker && (inline
-        ? (tab === 'generate' && <LabeledControlSection divided><LoopPicker layer={layer} tree={tree} inline /><AboutLine def={loop} /></LabeledControlSection>)
-        : <><LoopPicker layer={layer} tree={tree} /><AboutLine def={loop} /></>)}
+        ? (tab === 'generate' && <LabeledControlSection divided><LoopPicker layer={layer} tree={tree} inline about={<AboutLine def={loop} />} /></LabeledControlSection>)
+        : <LoopPicker layer={layer} tree={tree} about={<AboutLine def={loop} />} />)}
 
       {(tab === 'generate' || tab === 'labs-effect') && (
         <>

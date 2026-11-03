@@ -27,7 +27,7 @@ import { stepPreset } from '../../labs/presetStep'
  * layers) shows its identity read-only instead — those groups are not
  * pickable generative types (optic → EFFECTS > Pattern, paratype → misc).
  */
-export function LoopPicker({ layer, tree = PICKER_TREE, inline = true }) {
+export function LoopPicker({ layer, tree = PICKER_TREE, inline = true, about = null }) {
   const { updateLayer } = useComposeState()
   const cs = useControlSize()
   const group = layer.loopGroup ?? 'shape'
@@ -109,6 +109,7 @@ export function LoopPicker({ layer, tree = PICKER_TREE, inline = true }) {
             onChange={(id) => applyPreset(presets.find((p) => p.id === id))}
           />
           {subPresets.length > 1 && <Button size={cs} iconOnly="chevron-right" aria-label="Next preset (L)" onClick={() => { const pt = stepPreset(layer, 1); if (pt) updateLayer(layer.id, pt) }} />}
+          {about}
         </div>
       </PickerRow>
     </>
