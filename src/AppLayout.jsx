@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState, useSyncExternalSt
 import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { AppStudio, useNavHidden } from '@kolkrabbi/kol-shell'
 import { usePhoneFloats, setRailHost } from './phoneFloats'
-import { ModalProvider, useModal } from '@kolkrabbi/kol-component'
+import { ModalProvider, useModal, TABBAR_PILL_H, TABBAR_PILL_INSET } from '@kolkrabbi/kol-component'
 
 import NewFileDialog, { openNewFile } from './components/NewFileDialog'
 import { CHROMES, chromeOf, bytesOf, downloadFile } from './components/FileCard'
@@ -286,6 +286,8 @@ export default function AppLayout() {
   /* LABS ON A PHONE (plan 46 W1): Labs publishes its floats; on its routes the shell runs KOL's two floats with them */
   const phoneFloats = usePhoneFloats()
   const labsFloats = phoneFloats && (location.pathname === '/labs' || location.pathname === '/morph')
+  /* the floats elevate off what they overlay — the hook kol-editor.css reads for their shadow */
+  useEffect(() => { document.documentElement.toggleAttribute('data-labs-floats', !!labsFloats) }, [labsFloats])
   const labsRows = useLabsRows()
   const morphRows = useMorphRows()
   const hubSettings = useHubSettings()
@@ -475,12 +477,22 @@ export default function AppLayout() {
             items: phoneFloats.items,
             actions: phoneFloats.actions,
             transport: phoneFloats.transport,
-            rail: phoneFloats.railOpen ? <div ref={setRailHost} className="h-full" /> : null,
-            railHeight: phoneFloats.railHeight,
+            /* the params Rail is fxr's overlay below, never the shell's slot: that slot sits in the stage's column and
+               resized the picture (user 2026-11-03: *"settings panel is not supposed to move the background … its
+               supposed to OVERLAY"*) */
+            rail: null,
           },
         }),
       }}
     />
+    {/* THE PARAMS RAIL OVERLAYS THE STAGE: pinned to the bottom, under both floats (they sit a z-step above), the
+        stage's box never changes. The rows run under the transport; a spacer past the last row lets it scroll clear. */}
+    {labsFloats && phoneFloats.railOpen && (
+      <div className="fixed inset-x-0 bottom-0 z-[var(--kol-z-sticky)] overflow-y-auto bg-surface-primary shadow-[var(--kol-shadow-rail-up)]" style={{ maxHeight: phoneFloats.railHeight ?? '50dvh' }}>
+        <div ref={setRailHost} />
+        <div aria-hidden style={{ height: `calc(${2 * TABBAR_PILL_INSET + TABBAR_PILL_H}px + env(safe-area-inset-bottom, 0px))` }} />
+      </div>
+    )}
     </ModalProvider>
   )
 }

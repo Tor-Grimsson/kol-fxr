@@ -65,6 +65,7 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| ⚫ | [FloatsRailOverlaysShadow](outbox/FloatsRailOverlaysShadow.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | ⚫ `withdrawn` 2026-11-03 — done in fxr | none |
 | 🟢 | [FloatsOverlayNoBands](outbox/FloatsOverlayNoBands.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-11-03 — kol-shell 0.99.3 | none — bumped; Labs at 390: stage top 0, floats over it. Phone check is the user's |
 | 🟢 | [HubHomeSignedOutPinned](outbox/HubHomeSignedOutPinned.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-11-03 — kol-shell 0.99.2 | none — bumped (now 0.99.3); Home at 390: box fixed, 844, no scroll. Home-screen check is the user's |
 | 🟢 | [LoaderIsTheLine](outbox/LoaderIsTheLine.md) | **kol-atlas** — `~/dev/projects/kol-atlas/lobby/INDEX.md` | 🟢 `closed` 2026-11-02 | none |
@@ -179,6 +180,8 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-11-03 | **`FloatsRailOverlaysShadow` withdrawn** — done in fxr (overlay Rail, float shadow); no round trips for editor work |
+| 2026-11-03 | **`FloatsRailOverlaysShadow` filed to kol-ds-ui** — Labs Rail overlays the stage; top float shadow |
 | 2026-11-03 | **`HubHomeSignedOutPinned` · `FloatsOverlayNoBands` adopted** — kol-shell 0.99.3 · kol-component 0.332.0; checked at 390×844 |
 | 2026-11-03 | **`FloatsOverlayNoBands` filed to kol-ds-ui** — Labs floats overlay the content; reverses the PhoneTwoFloatLayout insets |
 | 2026-11-03 | **`HubHomeSignedOutPinned` filed to kol-ds-ui** — signed-out Home box pinned to the screen; the home-screen app scrolled |

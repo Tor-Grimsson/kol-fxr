@@ -15,10 +15,26 @@
 
 /* THE HOME-SCREEN APP (plan 15 § 3). `apple-mobile-web-app-status-bar-style: black-translucent`
  * puts the page UNDER the status bar; standalone, the top safe-area inset is the page's to pad
- * (in a browser tab the chrome pads it). Unverified on a device — plan 15 § 5. */
+ * (in a browser tab the chrome pads it).
+ * iOS 26 (WebKit 301108): with black-translucent + viewport-fit=cover a home-screen app's viewport is
+ * one status bar SHORT while the page is no taller than it, so every fixed layer (Home's stage, the
+ * dock, Labs' floats) stops above the screen's bottom edge. Asking html for 100% + the inset hands it
+ * the whole screen; `min()` with 100lvh caps it there, so nothing scrolls (frappe-ui #1284/#1289).
+ * THE PAD IS THE SHELL'S, NOT THE BODY'S (2026-11-03): on the body it stacked on top of the shell's
+ * min-h-dvh, so every page scrolled by the inset. On the shell (border-box) it moves the content down
+ * and keeps the height. The full-screen chromes pad themselves instead: Labs' floats sit under the
+ * status bar by design (kol-shell 0.99.3), the editor pads its own box. Home's stage is fixed. */
 @media (display-mode: standalone) {
-  body { padding-top: env(safe-area-inset-top, 0px); }
+  html { min-height: min(100lvh, calc(100% + env(safe-area-inset-top, 0px))); }
+  .kol-app-shell:not(:has(.kol-editor-shell, .h-dvh)) { padding-top: env(safe-area-inset-top, 0px); }
+  .kol-editor-shell { padding-top: env(safe-area-inset-top, 0px); }
 }
+
+/* LABS' FLOATS ELEVATE (user 2026-11-03: *"missing shadow on the floating nav to elevate from the setting it
+ * OVERLAYS"*): the top pill and its ··· circle over the stage and the params Rail. KOL's `panel` preset has no shadow
+ * and the Hub owns `phoneNav`, so the float's own markup takes it here; `data-labs-floats` is AppLayout's. */
+[data-labs-floats] .kol-mobile-tabbar-pill,
+[data-labs-floats] .kol-mobile-tabbar-tab { box-shadow: var(--kol-shadow-float); }
 
 
 /* ───── 1. Shell layout ─────────────────────────────────────────────── */
