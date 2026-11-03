@@ -60,11 +60,13 @@ _(none yet — ownership, deferral and context notes land in `archive/`)_
 
 Tickets this ledger does **not** govern — each row names the destination ledger
 that does. The **Remainder** is this repo's to do; the state is theirs to report.
-Fifty-five went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
+Fifty-six went to **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md`; the
 last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/INDEX.md`).
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [LoaderIsTheLine](outbox/LoaderIsTheLine.md) | **kol-atlas** — `~/dev/projects/kol-atlas/lobby/INDEX.md` | 🟢 `closed` 2026-11-02 | none |
+| 🟢 | [LoaderAppIntro](outbox/LoaderAppIntro.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-11-01 — kol-component 0.331.0 · kol-framework 0.69.0 · kol-shell 0.99.0 | none — Atlas's swap filed as LoaderIsTheLine |
 | 🟢 | [RailDragHoldsWidth](outbox/RailDragHoldsWidth.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-component 0.327.0 | none — adopted and walked |
 | 🟢 | [OriginPicker](outbox/OriginPicker.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-component 0.329.0 | none — adopted and walked |
 | 🟢 | [BezierPathEditor](outbox/BezierPathEditor.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-10-31 — kol-component 0.330.0 | none — adopted and walked |
@@ -175,6 +177,10 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-11-02 | **`LoaderIsTheLine` returned closed** from kol-atlas — remainder none |
+| 2026-11-01 | **`LoaderIsTheLine` filed to kol-atlas** — Atlas swaps its boot curtain for the intro loader |
+| 2026-11-01 | **`LoaderAppIntro` returned** — kol-component 0.331.0 · kol-framework 0.69.0 · kol-shell 0.99.0 |
+| 2026-11-01 | **`LoaderAppIntro` filed to kol-ds-ui** — the app loader hands the load to GrowthLineStage intro; HubHome chrome fades on the breath; for Atlas |
 | 2026-10-31 | **`PhoneTwoFloatLayout` + `FloatsOwnItems` adopted** — Labs on a phone runs `touch="floats"` with its own rows; fxr's phone layout CSS to `_tmp/` (plan 46 W1) |
 | 2026-10-31 | **`BezierPathEditor` filed to kol-ds-ui** — plan 51 4.4 |
 | 2026-10-31 | **`ParamBindDot` filed to kol-ds-ui** — plan 51 4.4 |

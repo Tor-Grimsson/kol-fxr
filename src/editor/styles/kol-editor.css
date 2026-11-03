@@ -15,9 +15,10 @@
 
 /* THE HOME-SCREEN APP (plan 15 § 3). `apple-mobile-web-app-status-bar-style: black-translucent`
  * puts the page UNDER the status bar; standalone, the top safe-area inset is the page's to pad
- * (in a browser tab the chrome pads it). Unverified on a device — plan 15 § 5. */
+ * (in a browser tab the chrome pads it). THE EDITOR'S BOX, NOT THE BODY (2026-11-02): on the body it made
+ * full-bleed Home one status bar taller than the screen, so the page scrolled; Home and Labs pad their own floats. */
 @media (display-mode: standalone) {
-  body { padding-top: env(safe-area-inset-top, 0px); }
+  .kol-editor-shell { padding-top: env(safe-area-inset-top, 0px); }
 }
 
 
