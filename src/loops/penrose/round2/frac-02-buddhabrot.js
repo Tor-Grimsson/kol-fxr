@@ -66,7 +66,7 @@ function runBuddha(
 
 export const r2_frac_02_buddhabrot            = {
   id: 'r2-frac-02-buddhabrot',
-  name: 'BUDDHABROT',
+  name: 'Buddhabrot',
   repo: 'Melinda Green 1993 — superliminal.com/fractals/bbrot/',
   summary: 'Accumulates escaping Mandelbrot orbit density into a progressive histogram. Nebulabrot mode maps 3 iter-depth histograms to RGB for a cosmic nebula look. Samples drift their c-window over time.',
   helps: 'Progressive density painting coalesces live each frame. Glyph SDF biases c-sampling toward the letterform, concentrating orbit density inside the shape.',

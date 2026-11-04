@@ -53,7 +53,7 @@ function fibSphere(i, n) {
 
 export const r2_topo_02_hopf            = {
   id: 'r2-topo-02-hopf',
-  name: 'HOPF FIBRATION',
+  name: 'Hopf fibration',
   repo: 'Niles Johnson · nilesjohnson.net/hopf · arXiv 2212.01642',
   summary: 'Pre-image fibers of the Hopf map h:S³→S², stereographically projected to R³ then perspective to 2D; animated by a 4D rotation applied each frame.',
   helps: 'Villarceau-circle fiber orbits create strong "depth through a porthole" — definitively 3D-feeling motion inside the glyph.',

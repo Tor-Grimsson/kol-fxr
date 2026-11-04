@@ -59,7 +59,7 @@ function project(x        , y        , z        , angle        )                
 
 export const r2_attr_04_thomas            = {
   id: 'r2-attr-04-thomas',
-  name: 'THOMAS CYCLIC',
+  name: 'Thomas cyclic',
   repo: 'Thomas 1999 · dynamicmath.xyz/strange-attractors',
   summary: '3D Thomas cyclically symmetric attractor; RK4-integrated trails projected onto the [1,1,1] perpendicular plane with slow camera precession revealing 3-fold symmetry.',
   helps: 'The 3-lobe rotation is visually interpretable as a spinning object — clean rhythmic motion for the letterform.',

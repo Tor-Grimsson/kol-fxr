@@ -50,7 +50,7 @@ function stereo(v                                  )                           {
 
 export const r2_topo_03_clifford            = {
   id: 'r2-topo-03-clifford',
-  name: 'CLIFFORD TORUS 4D',
+  name: 'Clifford torus 4D',
   repo: 'Banchoff · Beyond 3D ch.6 · en.wikipedia.org/wiki/Clifford_torus',
   summary: 'Flat torus on S³ as (cosθ, sinθ, cosφ, sinφ)/√2; two independent 4D plane rotations projected stereographically then perspective to 2D wireframe.',
   helps: 'Inside-out folding motion is unlike anything else — the torus continuously inverts through itself, strong depth-cued warping.',

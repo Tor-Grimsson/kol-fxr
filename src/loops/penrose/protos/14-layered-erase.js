@@ -11,7 +11,7 @@ import { clear, strokeOutline, wrapLoop, sampleInside, pc } from '../common.js'
 // out. Classic Lotka–Volterra oscillation trapped inside the glyph.
 export const layeredErase            = {
   id: '14-layered-erase',
-  name: 'LAYERED · PREDATOR–PREY (A ↔ B)',
+  name: 'Layered · predator–prey (A ↔ B)',
   repo: 'composition · own code',
   summary:
     'Two-species ecosystem. A: cells — drifting discs that grow, SPLIT when they hit max radius (birth ring), and die of age. B: hunters — velocity darts that chase the nearest cell, eat it down (its radius visibly shrinks), reproduce when fed and starve when not. Hover drops food the cells swarm; press drops a fresh hunter into the pit. The populations oscillate — boom, feast, crash, regrow.',

@@ -8,7 +8,7 @@ import { clear, strokeOutline, wrapLoop, sampleInside, pc } from '../common.js'
 // Reference: algorithmicbotany.org (Prusinkiewicz canon) · Nature of Code ch. 8.
 export const lSystem            = {
   id: '12-l-system',
-  name: 'L-SYSTEM / FRACTAL BRANCH',
+  name: 'L-system / fractal branch',
   repo: 'algorithmicbotany.org · Shiffman Nature of Code Ch.8',
   summary:
     'Recursive branching with stochastic angle + length rules. Each tick: pick a live tip; if SDF permits growth, spawn one or two children at angle jitter. Produces classical tree / lightning / coral branching. Research flagged this as a deprioritized candidate for glyph fill because branches naturally escape domains — here they are SDF-clamped to demonstrate the limit.',

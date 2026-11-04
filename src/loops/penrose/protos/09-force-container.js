@@ -24,7 +24,7 @@ import { clear, strokeOutline, wrapLoop, sampleInside, sdfGrad, repelPoints } fr
 // Reference: d3/d3-force, 1wheel/d3-force-container (arbitrary-shape containment).
 export const forceContainer            = {
   id: '09-force-container',
-  name: 'D3-FORCE · SDF CONTAINER',
+  name: 'D3-force · SDF container',
   repo: 'd3/d3-force + 1wheel/d3-force-container',
   summary:
     'd3-force simulation (collision + many-body) with a custom SDF-inward force. Nodes settle into a self-organizing pack that fills the glyph. Adding new nodes (additional layer) triggers a fresh settle. Perfect physics backbone for interactive layers.',

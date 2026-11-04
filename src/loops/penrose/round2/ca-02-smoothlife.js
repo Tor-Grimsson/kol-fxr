@@ -36,7 +36,7 @@ function transition(n        , m        , b1        , b2        )         {
 
 export const r2_ca_02_smoothlife            = {
   id: 'r2-ca-02-smoothlife',
-  name: 'SMOOTHLIFE',
+  name: 'SmoothLife',
   repo: 'Rafler 2011 · arXiv:1111.1567',
   summary: 'Conway Life generalized to continuous floating-point states using disk/ring neighborhoods and sigmoid birth/death thresholds.',
   helps: 'Smooth translating gliders treat the glyph boundary as a wall — clean orbiting blobs inside letterforms.',

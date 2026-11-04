@@ -22,7 +22,7 @@ const PARAMS          = [
 
 export const r2_act_01_vicsek            = {
   id: 'r2-act-01-vicsek',
-  name: 'VICSEK BANDS',
+  name: 'Vicsek bands',
   repo: 'Vicsek 1995 PRL; Grégoire & Chaté 2004 PRL',
   summary: 'Polar alignment + noise in the coexistence window produces propagating high-density bands. No cohesion — pure direction averaging.',
   helps: 'Density stripes sweep the glyph interior; letterform reads as a standing wave reactor.',

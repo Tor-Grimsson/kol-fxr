@@ -29,7 +29,7 @@ const PARAMS          = [
 
 export const r2_lsys_01_tropism            = {
   id: 'r2-lsys-01-tropism',
-  name: 'BIOMECHANICAL TROPISM',
+  name: 'Biomechanical tropism',
   repo: 'Jirasek/Prusinkiewicz/Moulia 2000 + ABOP Ch.2',
   summary: 'SDF gradient replaces gravity as the tropism vector; branch headings bend inward weighted by accumulated mechanical load.',
   helps: 'Branches curve toward the letterform interior as they age — silhouette-hugging without hard clamping rules.',

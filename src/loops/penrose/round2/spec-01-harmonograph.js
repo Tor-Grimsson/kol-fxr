@@ -20,7 +20,7 @@ const TWO_PI = Math.PI * 2
 
 export const r2_spec_01_harmonograph            = {
   id: 'r2-spec-01-harmonograph',
-  name: 'DAMPED HARMONOGRAPH',
+  name: 'Damped harmonograph',
   repo: 'Bowditch 1815 · Blackburn 1844 · paulbourke.net/geometry/harmonograph',
   summary: 'Two pendulums trace a Bowditch curve with exponential damping — quasi-periodic figures spiral inward, reset on loop.',
   helps: 'Classic time-traced analog apparatus; the spiral-in maps the letterform to a breathing-out motion.',

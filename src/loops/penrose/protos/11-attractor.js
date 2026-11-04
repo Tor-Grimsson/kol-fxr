@@ -8,7 +8,7 @@ import { strokeOutline, wrapLoop } from '../common.js'
 // Reference: rreusser/clifford-and-de-jong-attractors (Observable notebook).
 export const attractor            = {
   id: '11-attractor',
-  name: 'CLIFFORD ATTRACTOR (SDF-CLIPPED)',
+  name: 'Clifford attractor (SDF-clipped)',
   repo: 'observablehq.com/@rreusser/clifford-and-de-jong-attractors',
   summary:
     'Clifford strange attractor iterated for 20k points per frame, then warped and clipped to the glyph SDF. The attractor does not naturally respect the shape — this shows why the shortlist deprioritizes attractors for letterform fill, but the pattern is gorgeous in its own right.',

@@ -10,7 +10,7 @@ import { clear, strokeOutline, wrapLoop, pc } from '../common.js'
 // Reference: classic quadtree + Mondrian / "Box and Circle" generative studies.
 export const quadtree            = {
   id: '08-quadtree',
-  name: 'QUADTREE SUBDIVISION',
+  name: 'Quadtree subdivision',
   repo: 'classic quadtree (d3-quadtree for nearest-neighbor)',
   summary:
     'Split the canvas into quads; each quad checks SDF at its 4 corners. Outside → drop. Inside → inscribe circle. Straddle → subdivide. Produces the grid-of-circles-in-box look from the ref mood. Layerable: each depth tier is its own layer.',

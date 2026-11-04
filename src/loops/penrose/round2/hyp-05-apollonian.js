@@ -67,7 +67,7 @@ function descartesZ4(
 
 export const r2_hyp_05_apollonian            = {
   id: 'r2-hyp-05-apollonian',
-  name: 'APOLLONIAN GASKET',
+  name: 'Apollonian gasket',
   repo: "Descartes theorem · Kleinian limit set · Indra's Pearls",
   summary:
     'Apollonian circle packing via recursive Descartes filling. Seed circles breathe continuously, rearranging the entire infinite packing. The gasket fills glyph counters with fractal recursive circles.',

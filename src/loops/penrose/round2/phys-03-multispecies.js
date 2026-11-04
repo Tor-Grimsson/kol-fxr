@@ -25,7 +25,7 @@ const N_SPECIES = 2
 
 export const r2_phys_03_multispecies            = {
   id: 'r2-phys-03-multispecies',
-  name: 'COMPETITIVE PHYSARUM',
+  name: 'Competitive Physarum',
   repo: 'Jones 2010 + Softology 2019 species matrix',
   summary: 'Two species each attract their own trail and repel the other. Territory boundaries and interlocking vein nets emerge from the stigmergic cross-inhibition — the glyph interior splits into living territories.',
   helps: 'High visual dynamism throughout territorial formation; two-tone color makes species borders immediately legible.',

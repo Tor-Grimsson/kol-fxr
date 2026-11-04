@@ -54,7 +54,9 @@ Parking, declaring stale, reopening and any design decision stay the **user's ca
 
 ## Archived
 
-_(none yet — ownership, deferral and context notes land in `archive/`)_
+| | Entry | About | Staged | State |
+|---|---|---|---|---|
+| ⚫ | [FloatTimeline](archive/FloatTimeline.md) | **kol-ds-ui** — the float timeline panel; filed here as the editor's, withdrawn the same day on the user's ruling: the DS builds it in `packages/design-editor` after refreshing the mirror from fxr | 2026-11-04 | ⚫ `retired` 2026-11-04 — withdrawn by the filer, nothing owed here |
 
 ## Filed elsewhere
 
@@ -65,6 +67,7 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | | Receipt | Last known | Remainder here |
 |---|---|---|---|
+| 🟢 | [FloatFoldBothSidesGrey](outbox/FloatFoldBothSidesGrey.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-11-03 — kol-component 0.333.0 · kol-shell 0.100.0 | none — adopted, both floats fold either way on the grey tab |
 | ⚫ | [FloatsRailOverlaysShadow](outbox/FloatsRailOverlaysShadow.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | ⚫ `withdrawn` 2026-11-03 — done in fxr | none |
 | 🟢 | [FloatsOverlayNoBands](outbox/FloatsOverlayNoBands.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-11-03 — kol-shell 0.99.3 | none — bumped; Labs at 390: stage top 0, floats over it. Phone check is the user's |
 | 🟢 | [HubHomeSignedOutPinned](outbox/HubHomeSignedOutPinned.md) | **kol-ds-ui** — `~/dev/projects/kol-ds-ui/lobby/INDEX.md` | 🟢 `closed` 2026-11-03 — kol-shell 0.99.2 | none — bumped (now 0.99.3); Home at 390: box fixed, 844, no scroll. Home-screen check is the user's |
@@ -180,6 +183,10 @@ last two to **kol-mirror** and **kol-monitor** (`~/dev/projects/<repo>/lobby/IND
 
 | Date | Event |
 |---|---|
+| 2026-11-04 | **`FloatTimeline` withdrawn by kol-ds-ui** the same day — the user: the DS builds every float element itself, the timeline included; the entry is in `archive/`, nothing owed here |
+| 2026-11-04 | **`FloatTimeline` filed from kol-ds-ui** — the float timeline panel is the editor's; the DS ships the tokens, fxr the panel |
+| 2026-11-03 | **`FloatFoldBothSidesGrey` adopted** — kol-shell 0.100.0 · kol-component 0.333.0, `floats.fold` passed |
+| 2026-11-03 | **`FloatFoldBothSidesGrey` filed to kol-ds-ui** — Labs floats fold to either side, grey handle (opt-in) |
 | 2026-11-03 | **`FloatsRailOverlaysShadow` withdrawn** — done in fxr (overlay Rail, float shadow); no round trips for editor work |
 | 2026-11-03 | **`FloatsRailOverlaysShadow` filed to kol-ds-ui** — Labs Rail overlays the stage; top float shadow |
 | 2026-11-03 | **`HubHomeSignedOutPinned` · `FloatsOverlayNoBands` adopted** — kol-shell 0.99.3 · kol-component 0.332.0; checked at 390×844 |

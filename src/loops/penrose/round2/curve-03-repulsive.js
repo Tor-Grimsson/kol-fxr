@@ -21,7 +21,7 @@ const PARAMS          = [
 
 export const r2_curve_03_repulsive            = {
   id: 'r2-curve-03-repulsive',
-  name: 'REPULSIVE CURVES',
+  name: 'Repulsive curves',
   repo: 'Yu–Schumacher–Crane ACM TOG 2021',
   summary: 'Inextensible closed curve with tangent-point self-repulsion energy. Packs densely inside the SDF glyph without ever crossing itself — like wound thread filling a letterform.',
   helps: 'Densest crossing-free packing achievable with a polyline. Clean topology at all times.',

@@ -34,7 +34,7 @@ const IC_VEL                     = [
 
 export const r2_nbody_01_fig8            = {
   id: 'r2-nbody-01-fig8',
-  name: 'FIGURE-8 CHOREOGRAPHY',
+  name: 'Figure-8 choreography',
   repo: 'Chenciner & Montgomery 2000; Moore 1993',
   summary: 'Three equal-mass bodies on the Chenciner-Montgomery figure-8 orbit. Leapfrog integration; perturb knob kicks velocities to watch the choreography shatter.',
   helps: 'Pure mathematical perpetual motion — the 8-curve maps naturally to letterforms with two enclosed bowls.',

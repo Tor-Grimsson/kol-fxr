@@ -21,7 +21,7 @@ const PARAMS          = [
 
 export const r2_soc_01_btw            = {
   id: 'r2-soc-01-btw',
-  name: 'BTW SANDPILE',
+  name: 'BTW sandpile',
   repo: 'Bak-Tang-Wiesenfeld 1987',
   summary: 'Sand grains dropped randomly inside the glyph; cells with height >= threshold topple to neighbors; dramatic power-law avalanches shaped by the letterform.',
   helps: 'Long quiescence punctuated by cascading avalanches — pure self-organized criticality. Narrow strokes create bottlenecks; counters form isolated basins.',

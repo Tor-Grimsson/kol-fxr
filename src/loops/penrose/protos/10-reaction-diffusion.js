@@ -9,7 +9,7 @@ import { clear, wrapLoop, rampRGB, roleRGB, stampGrid } from '../common.js'
 // https://karlsims.com/rd.html (Karl Sims) · mrob.com/pub/comp/xmorphia (Mrob)
 export const reactionDiff            = {
   id: '10-reaction-diffusion',
-  name: 'REACTION-DIFFUSION (GRAY-SCOTT)',
+  name: 'Reaction-diffusion (Gray-Scott)',
   repo: 'jasonwebb/reaction-diffusion-playground',
   summary:
     'Gray-Scott partial-differential equations solved on a coarse grid, masked by the SDF. Produces coral / zebra / spots / leopard depending on feed/kill rates. Slower iteration than vector algos; here CPU-bound at ~30fps, fine for demo. A pixel pattern layer instead of vector.',

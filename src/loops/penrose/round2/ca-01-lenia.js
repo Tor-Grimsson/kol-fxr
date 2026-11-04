@@ -18,7 +18,7 @@ const PARAMS          = [
 
 export const r2_ca_01_lenia            = {
   id: 'r2-ca-01-lenia',
-  name: 'LENIA',
+  name: 'Lenia',
   repo: 'Bert Chan 2018 · arXiv:1812.05433',
   summary: 'Continuous cellular automaton with Gaussian shell kernel and bell-curve growth function producing stable Orbium-like solitons.',
   helps: 'Self-moving gliders trapped inside the glyph — literal living forms orbiting the letterform interior.',

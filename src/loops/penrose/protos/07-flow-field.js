@@ -14,7 +14,7 @@ import { clear, strokeOutline, wrapLoop, sampleInside, stampGrid, pc, inwardDir 
 // https://tylerxhobbs.com/essays/2020/flow-fields
 export const flowField            = {
   id: '07-flow-field',
-  name: 'FLOW FIELD',
+  name: 'Flow field',
   repo: 'tylerxhobbs.com/essays/2020/flow-fields',
   summary:
     'Simplex noise → angle field, but the particles are ORGANISMS. Each carries energy: grazing the food field (rendered as accent ground) feeds it, moving burns it. Full organisms split — visible birth flashes — starved ones die with a collapse ring. Food regrows; hover pours food, press spins a vortex. The population visibly booms, mows the field bare, crashes, and recovers.',

@@ -20,7 +20,7 @@ const PARAMS          = [
 
 export const r2_stoch_04_eden            = {
   id: 'r2-stoch-04-eden',
-  name: 'EDEN GROWTH',
+  name: 'Eden growth',
   repo: 'Eden 1961 · Meakin 1998 · KPZ universality class',
   summary: 'Solid compact blob grows from random seeds, filling the glyph interior. Variant B weights boundary candidates by local exposure angle — concavities grow slower, exposed tips grow faster.',
   helps: 'Inverse of DLA — compact stain spreading to fill the mold, KPZ-rough surface, no branching. The spreading-ink aesthetic.',

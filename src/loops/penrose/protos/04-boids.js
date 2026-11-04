@@ -8,7 +8,7 @@ import { clear, strokeOutline, wrapLoop, sampleInside, sdfGrad, pc } from '../co
 // No external repo; algorithm is textbook (Reynolds, red3d.com/cwr/boids/).
 export const boids            = {
   id: '04-boids',
-  name: 'BOIDS / FLOCKING',
+  name: 'Boids / flocking',
   repo: 'red3d.com/cwr/boids (Reynolds 1986)',
   summary:
     'N autonomous agents with separation, alignment, cohesion forces + SDF inward force. Reads as a school or swarm drifting inside the letter. Ideal as a motion layer over a static pack (layer 1 structure, layer 2 life).',

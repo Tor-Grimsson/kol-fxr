@@ -26,7 +26,7 @@ const MODES                          = [
 
 export const r2_wave_02_chladni            = {
   id: 'r2-wave-02-chladni',
-  name: 'CHLADNI MEMBRANE',
+  name: 'Chladni membrane',
   repo: 'Chladni 1787 · Müller arXiv:1308.5523',
   summary: 'Standing-wave superposition on the glyph-shaped membrane. Two eigenmodes beat against each other; bright regions vibrate, the dark nodal band reveals where sand would settle in Chladni\'s original experiment.',
   helps: 'The glyph IS the membrane — its geometry uniquely determines the nodal topology.',

@@ -26,7 +26,7 @@ function circumradius(pts              , a        , b        , c        )       
 
 export const r2_geom_02_alpha            = {
   id: 'r2-geom-02-alpha',
-  name: 'ALPHA-SHAPE SWEEP',
+  name: 'Alpha-shape sweep',
   repo: 'd3-delaunay · alpha complex',
   summary: 'One Delaunay triangulation, animated alpha threshold. High α = convex hull fills the glyph; low α = boundary shreds into archipelagos of isolated points. Reverse mode crystallizes from dust.',
   helps: 'Topological erosion driven by a single scalar — conceptually clean, cinematically striking.',

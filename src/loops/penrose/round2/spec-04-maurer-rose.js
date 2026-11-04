@@ -30,7 +30,7 @@ const DEG = Math.PI / 180
 
 export const r2_spec_04_maurer_rose            = {
   id: 'r2-spec-04-maurer-rose',
-  name: 'MAURER ROSE',
+  name: 'Maurer rose',
   repo: 'Maurer 1987 · AMM 94(7):631–645 · en.wikipedia.org/wiki/Maurer_rose',
   summary: 'Chord diagram on rose r=sin(nθ); d drifts per second morphing explosive interference geometries continuously.',
   helps: 'Extreme complexity-to-code ratio — two ints produce wildly different lattice fills inside the glyph.',

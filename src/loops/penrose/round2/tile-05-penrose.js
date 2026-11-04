@@ -78,7 +78,7 @@ function buildPenrose(depth, radius) {
 
 export const r2_tile_05_penrose            = {
   id: 'r2-tile-05-penrose',
-  name: 'PENROSE P3 RHOMBS',
+  name: 'Penrose P3 rhombs',
   repo: 'Penrose 1974; Robinson triangle deflation',
   summary: 'Thin + thick golden-ratio rhombs from a wheel of ten Robinson triangles, subdivided until the tiles reach the chosen size; the tiling fades in from the centre and slowly rotates.',
   helps: 'The golden-ratio proportions of Penrose rhombs harmonize with Gullhamrar glyph structure; five-fold symmetry is visually distinct from all other round2 prototypes.',

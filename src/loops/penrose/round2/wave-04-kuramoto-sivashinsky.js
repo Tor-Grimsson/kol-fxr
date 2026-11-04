@@ -55,7 +55,7 @@ function fft1d(re              , im              , inv         )       {
 
 export const r2_wave_04_kuramoto_sivashinsky            = {
   id: 'r2-wave-04-kuramoto-sivashinsky',
-  name: 'KURAMOTO-SIVASHINSKY CHAOS',
+  name: 'Kuramoto-Sivashinsky chaos',
   repo: 'Kuramoto & Tsuzuki 1976',
   summary: 'Fourth-order PDE producing sustained spatiotemporal chaos. Energy injected at intermediate scales, damped at small scales, cascaded by the nonlinear ∇²u·∇u term. Cells crawl and merge indefinitely — never repeats.',
   helps: 'Best choice for an endlessly looping fill texture with no transient settling — the chaos is intrinsic, not decaying.',

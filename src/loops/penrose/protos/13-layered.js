@@ -12,7 +12,7 @@ import { clear, strokeOutline, wrapLoop, sampleInside, pc } from '../common.js'
 // respond to B (e.g. circles that shrink when many particles cross them).
 export const layered            = {
   id: '13-layered',
-  name: 'LAYERED (PACK × FLOW)',
+  name: 'Layered (pack × flow)',
   repo: 'composition · own code',
   summary:
     'TWO LAYERS live on the same canvas. Layer A: packed circles (dart-throw, SDF-masked). Layer B: flow-field particles (simplex-noise angle field, SDF-respawn). Layer B READS Layer A — each particle is repelled by the nearest circle center within a radius. The brief\'s "additive / subtractive / life-death" rules plug in here as additional cross-layer forces.',

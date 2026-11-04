@@ -26,7 +26,7 @@ const PARAMS = [
 
 export const r2_lsys_04_phyllotaxis = {
   id: 'r2-lsys-04-phyllotaxis',
-  name: 'PHYLLOTAXIS SPIRAL FILL',
+  name: 'Phyllotaxis spiral fill',
   repo: 'Fowler/Prusinkiewicz/Battjes SIGGRAPH 1992 + ABOP Ch.4',
   summary: 'Garden ecosystem of concurrent golden-angle spirals: organs bloom, mature, wither, and drop seeds that disperse and root new plants — oldest dying as new ones take. Hover is sunlight, press plants a seed burst.',
   helps: 'Population dynamics on top of the phyllotaxis fill — birth/death churn keeps the glyph alive instead of fossilizing into a finished spiral.',

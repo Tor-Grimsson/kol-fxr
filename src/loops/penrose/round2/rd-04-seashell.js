@@ -21,7 +21,7 @@ const PARAMS          = [
 
 export const r2_rd_04_seashell            = {
   id: 'r2-rd-04-seashell',
-  name: 'SEASHELL GROWTH FRONT',
+  name: 'Seashell growth front',
   repo: 'Meinhardt 1995 — Algorithmic Beauty of Sea Shells',
   summary: 'Scanline-cascaded 1D RD generates diagonal stripes, chevrons, and zigzags filling the glyph like a woodcut print.',
   helps: 'Orthogonal aesthetic — looks hand-drawn/engraved, nothing like the other RD systems; trivially cheap to compute.',

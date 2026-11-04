@@ -17,7 +17,7 @@ const PARAMS          = [
 // resolution, then upscale with putImageData to canvas size.
 export const r2_geom_03_apollonius            = {
   id: 'r2-geom-03-apollonius',
-  name: 'APOLLONIUS DIAGRAM',
+  name: 'Apollonius diagram',
   repo: 'raster CPU · additively-weighted Voronoi',
   summary: 'Multi-source wavefront competition inside the glyph. Each seed ignites at a different time; expanding circular wavefronts compete for territory. Cell boundaries are curved hyperbolas/parabolas — distinctly non-Euclidean texture.',
   helps: 'Most visually exotic of the Voronoi family: curved boundaries, competitive territorial dynamics, maps directly to wave propagation physics.',

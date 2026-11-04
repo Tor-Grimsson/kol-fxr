@@ -16,7 +16,7 @@ import { clear, strokeOutline, wrapLoop, sampleInside, pc, rampRGB } from '../co
 // the walker pool onto the cursor and the aggregate erupts there.
 export const dla            = {
   id: '06-dla',
-  name: 'DIFFUSION-LIMITED AGGREGATION',
+  name: 'Diffusion-limited aggregation',
   repo: 'jasonwebb/2d-diffusion-limited-aggregation-experiments',
   summary:
     'Random walkers step until they touch a stuck particle and join the aggregate. The boundary shape (SDF) bounces walkers inward. Output is organic dendritic branching — crystal-like fingers growing from a seed.',

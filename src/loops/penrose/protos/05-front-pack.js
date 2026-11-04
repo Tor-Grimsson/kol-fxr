@@ -11,7 +11,7 @@ import { clear, strokeOutline, wrapLoop, sampleInside, pc } from '../common.js'
 // also Gorilla Sun recursive circle packing strategy.
 export const frontPack            = {
   id: '05-front-pack',
-  name: 'CIRCLE PACKING (GROWING)',
+  name: 'Circle packing (growing)',
   repo: 'generativeartistry.com/tutorials/circle-packing',
   summary:
     'Each frame, N new seeds spawn and grow as circles until they collide with a neighbor or the SDF boundary. Higher-quality packings than dart-throwing (tighter, no gaps). Animates natively as circles visibly inflate.',

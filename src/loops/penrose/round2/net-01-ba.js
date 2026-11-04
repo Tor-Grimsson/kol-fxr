@@ -20,7 +20,7 @@ const PARAMS = [
 
 export const r2_net_01_ba = {
   id: 'r2-net-01-ba',
-  name: 'BARABÁSI-ALBERT',
+  name: 'Barabási-Albert',
   repo: 'Barabási & Albert, Science 286 (1999)',
   summary:
     'Preferential attachment at full weight: hubs render BIG (degree-sized discs with glow halos and bright cores), edges thicken with degree, and every attachment flashes in with a birth ring. Continuous churn; press bursts a hub cluster.',

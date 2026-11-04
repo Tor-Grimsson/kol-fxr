@@ -52,7 +52,7 @@ function remesh(pts, targetN) {
 
 export const r2_curve_01_csf            = {
   id: 'r2-curve-01-csf',
-  name: 'CURVE SHORTENING FLOW',
+  name: 'Curve shortening flow',
   repo: 'Gage–Hamilton–Grayson',
   summary: 'Closed polyline evolves along its inward normal at rate κ. Outward mode inflates a seed ring until it hits the SDF wall; inward mode erodes complex shapes to smooth ovals.',
   helps: 'Smooth geometric decay / bloom. SDF-bounded shrinking and inflation from a seed.',

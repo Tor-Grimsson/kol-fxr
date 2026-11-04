@@ -31,3 +31,17 @@
 ## Next Steps
 1. User checks on the phone: Home from the home-screen icon (no scroll, no band), Labs with the Rail open and closed
 2. The rest of the mobile issues the user mentioned — not yet listed
+
+## Amended — 2026-11-03
+
+- The home-screen scroll and bottom band were iOS 26's short viewport (WebKit 301108: `black-translucent` + `viewport-fit=cover`, open, no Apple workaround). Fixed by an opaque status bar: `apple-mobile-web-app-status-bar-style` `default` in `index.html`; the app must be re-added to the home screen. User confirmed fixed.
+- Retired from `src/editor/styles/kol-editor.css`: the standalone body/shell padding, the `html` min-height hack (frappe-ui #1289) and the Home `overflow: hidden` lock (ineffective in PWAs, WebKit 259568).
+- Labs on a phone: the params Rail is fxr's own fixed overlay in `src/AppLayout.jsx` (shell `floats.rail: null`), so the stage never resizes; the top float and its ··· circle take `--kol-shadow-float` via `[data-labs-floats]` in `kol-editor.css`.
+- `FloatsRailOverlaysShadow` was filed to kol-ds-ui and withdrawn the same hour: Labs is editor work, no round trips (user ruling 2026-10-08, restated). Entry in kol-ds-ui `lobby/archive/`.
+- Penrose's 55 preset names were all caps since the August port (labs proto `name`, used as `label`); rewritten in sentence case in each proto under `src/loops/penrose/`, proper names and acronyms kept. Saved files key on preset id, so nothing breaks.
+- The "i" button wears its row's frame (no `tone`, same classes as ‹ ›) and is the popover's native invoker (`popoverTarget`), so a click toggles it; the old `onClick` toggle lost to light dismiss and reopened on the second click.
+
+## Amended — 2026-11-04
+
+- Floats fold either side onto a grey tab: kol-component 0.333.0 (TabsRow `foldSide`/`foldTone`) · kol-shell 0.100.0 (`floats.fold`), opt-in; `src/AppLayout.jsx` passes `fold: { side: 'swipe', tone: 'handle' }`. Checked at 390×844. FloatFoldBothSidesGrey adopted.
+- KOL queued `lobby/inbox/FloatTimeline.md` (the float timeline, built in the editor). On hold: the user says KOL's framing (timeline as the only fxr piece of the new float UI) is wrong and is taking it up with them. Don't start it until he says.

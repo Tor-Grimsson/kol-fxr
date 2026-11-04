@@ -19,7 +19,7 @@ const PARAMS          = [
 
 export const r2_hyp_03_droste            = {
   id: 'r2-hyp-03-droste',
-  name: 'HYPERBOLIC DROSTE SPIRAL',
+  name: 'Hyperbolic Droste spiral',
   repo: 'Conformal map · log-exp · Escher Print Gallery',
   summary:
     'Log-polar spiral: a pattern that repeats exactly once per turn and once per scale step k, so it zooms inward forever with no seam. Twist sets whole spiral turns per step; the Droste self-similarity of Escher\'s Print Gallery.',

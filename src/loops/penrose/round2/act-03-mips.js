@@ -21,7 +21,7 @@ const PARAMS          = [
 
 export const r2_act_03_mips            = {
   id: 'r2-act-03-mips',
-  name: 'MIPS / LIVING DROPLET',
+  name: 'MIPS / living droplet',
   repo: 'Cates & Tailleur Annu. Rev. Condens. Matter 6 219 (2015)',
   summary: 'Active Brownian Particles: density-dependent speed v(ρ) drives phase separation into a dense motile cluster + dilute gas. No alignment — pure activity-driven transition.',
   helps: 'Dense bright droplet wanders glyph interior; thin strokes guide it like a channel.',

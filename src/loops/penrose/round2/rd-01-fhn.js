@@ -20,7 +20,7 @@ const PARAMS          = [
 
 export const r2_rd_01_fhn            = {
   id: 'r2-rd-01-fhn',
-  name: 'FITZHUGH-NAGUMO',
+  name: 'FitzHugh-Nagumo',
   repo: 'FitzHugh 1961 + Nagumo 1962',
   summary: 'Excitable-medium PDE producing perpetual rotating spiral waves confined inside the SDF-masked glyph.',
   helps: 'Continuous motion — never settles. Classic cardiac-tissue dynamics render the letter as living tissue.',

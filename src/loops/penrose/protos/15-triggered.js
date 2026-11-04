@@ -11,7 +11,7 @@ import { clear, strokeOutline, wrapLoop, sampleInside, pc } from '../common.js'
 // shape" in miniature.
 export const triggered            = {
   id: '15-triggered',
-  name: 'TRIGGERED GROWTH (CLICK)',
+  name: 'Triggered growth (click)',
   repo: 'composition · interactive',
   summary:
     'Empty on load — only the outline is visible. Click inside the letter to plant a DLA seed at that point and release 60 walkers. Each click adds another seed with its own color. Walkers stick to their own aggregate when they land nearby. Multi-click → multi-layer growth.',

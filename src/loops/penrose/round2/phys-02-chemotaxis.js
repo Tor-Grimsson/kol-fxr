@@ -24,7 +24,7 @@ const N_FOOD = 6  // food nodes
 
 export const r2_phys_02_chemotaxis            = {
   id: 'r2-phys-02-chemotaxis',
-  name: 'CHEMOTAXIS PHYSARUM',
+  name: 'Chemotaxis Physarum',
   repo: 'Tero et al. 2010 Science + Jones 2010',
   summary: 'A diffusing food field placed at glyph-interior nodes steers agents long-range. Veins converge on food sources and form Steiner-tree-like networks — the letterform is vascularized.',
   helps: 'Directed growth produces topologically meaningful veins tied to the glyph structure rather than random space-filling.',

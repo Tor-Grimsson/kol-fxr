@@ -11,7 +11,7 @@ import { clear, strokeOutline, wrapLoop, sampleInside, repelPoints, pc } from '.
 // http://www.codeplastic.com/2017/07/22/differential-line-growth-with-processing/
 export const diffgrow            = {
   id: '02-diffgrow',
-  name: 'DIFFERENTIAL CURVE GROWTH',
+  name: 'Differential curve growth',
   repo: 'inconvergent/differential-line',
   summary:
     'Several closed curves that fold and branch as they fill the glyph. Per-node: repulsion from ALL nearby nodes (curves shove each other), spring to adjacent chain neighbors, inward SDF force. Edges subdivide when stretched → length increases exponentially → organic folded fill.',

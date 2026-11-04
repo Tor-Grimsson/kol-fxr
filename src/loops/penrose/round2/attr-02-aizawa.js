@@ -50,7 +50,7 @@ function rk4Aizawa(
 
 export const r2_attr_02_aizawa            = {
   id: 'r2-attr-02-aizawa',
-  name: 'AIZAWA TRAIL',
+  name: 'Aizawa trail',
   repo: 'Aizawa · algosome.com/articles/aizawa-attractor-chaos.html',
   summary: '3D Aizawa toroidal attractor integrated via RK4; projected with a slowly precessing camera angle to reveal the spinning ring structure.',
   helps: 'The precessing torus orbit is the most sculptural animated motion in this set — fills letterform interiors naturally.',

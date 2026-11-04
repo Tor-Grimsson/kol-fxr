@@ -18,7 +18,7 @@ const PARAMS = [
 
 export const r2_net_04_mst = {
   id: 'r2-net-04-mst',
-  name: 'MST MEDIAL AXIS VEIN',
+  name: 'MST medial axis vein',
   repo: 'Kruskal (1956) + Blum medial axis (1967)',
   summary:
     'Dense node field biased toward the medial axis; Kruskal MST grows shortest-first as a THICK vein network — backbone edges heavy, growth front glowing and pulsing. Dissolve-and-regrow churn; press bursts new nodes for the veins to reach.',

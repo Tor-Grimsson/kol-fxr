@@ -25,7 +25,7 @@ const BURNING = 2
 
 export const r2_soc_03_forestfire            = {
   id: 'r2-soc-03-forestfire',
-  name: 'FOREST FIRE',
+  name: 'Forest fire',
   repo: 'Drossel-Schwabl 1992',
   summary: 'Trees grow into glyph interior, rare lightning ignites them, fire sweeps through connected clusters then regrows. p/f ratio controls canopy density vs fire frequency.',
   helps: 'Most visually legible SOC model — the green fill, catastrophic orange burn, and black regrowth cycle maps directly onto the letterform as a dramatic reveal rhythm.',

@@ -481,6 +481,8 @@ export default function AppLayout() {
                resized the picture (user 2026-11-03: *"settings panel is not supposed to move the background … its
                supposed to OVERLAY"*) */
             rail: null,
+            /* both floats fold to whichever edge the swipe goes, into the grey handle (FloatFoldBothSidesGrey, kol-shell 0.100.0) */
+            fold: { side: 'swipe', tone: 'handle' },
           },
         }),
       }}

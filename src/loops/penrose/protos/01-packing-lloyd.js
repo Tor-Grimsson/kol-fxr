@@ -12,7 +12,7 @@ import { clear, strokeOutline, wrapLoop, pc, repelPoints } from '../common.js'
 // Repo: kchapelier/fast-2d-poisson-disk-sampling (Bridson) + d3/d3-delaunay (Voronoi).
 export const packingLloyd            = {
   id: '01-packing-lloyd',
-  name: 'PACKING + LLOYD',
+  name: 'Packing + Lloyd',
   repo: 'd3-delaunay · Bridson PDS',
   summary:
     'Variable-radius Poisson-disc pack (SDF-scaled radii) settled by Lloyd relaxation. Each frame: Voronoi → move each circle to its cell centroid. Blue-noise → centroidal Voronoi tessellation. Re-usable as the base "packed" layer.',

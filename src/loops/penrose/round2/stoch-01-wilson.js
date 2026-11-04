@@ -25,7 +25,7 @@ const PARAMS          = [
 
 export const r2_stoch_01_wilson            = {
   id: 'r2-stoch-01-wilson',
-  name: 'WILSON LERW / UST',
+  name: 'Wilson LERW / UST',
   repo: 'Wilson 1996 STOC · Bostock gist/11357811',
   summary: 'Loop-erased random walk builds a uniform spanning tree on a lattice inside the glyph. The live walker wanders, erases its own loops, and snaps into the growing tree on contact.',
   helps: 'Dramatic live walk + loop erasure + tree fill — the most visually theatrical stochastic growth algorithm.',

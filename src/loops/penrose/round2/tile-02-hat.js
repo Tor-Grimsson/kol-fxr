@@ -102,7 +102,7 @@ function buildLattice(depth, scale, W, H, rng) {
 
 export const r2_tile_02_hat = {
   id: 'r2-tile-02-hat',
-  name: 'HAT MONOTILE 2023',
+  name: 'Hat monotile 2023',
   repo: 'Smith, Myers, Kaplan, Goodman-Strauss arXiv 2303.10798',
   summary: 'Game of Life ON the hat tiling: each einstein tile is a cell in a food-driven birth/death CA on the tile adjacency — colonies sweep, starve the ground, collapse to embers, and recolonize. Pointer paints life; press floods a patch.',
   helps: 'The 2023 aperiodic-monotile discovery becomes a living substrate — population waves and ember fronts trace the tiling structure inside the glyph.',

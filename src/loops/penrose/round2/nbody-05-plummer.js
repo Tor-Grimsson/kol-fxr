@@ -30,7 +30,7 @@ function plummerSample(rng, cx, cy, a) {
 
 export const r2_nbody_05_plummer = {
   id: 'r2-nbody-05-plummer',
-  name: 'PLUMMER CORE COLLAPSE',
+  name: 'Plummer core collapse',
   repo: 'Plummer 1911; Hénon 1961; Aarseth 1999',
   summary: 'Globular cluster in direct O(N²) gravity, stars sized by mass with core glow. Core-density spikes detonate SUPERNOVAE — shockwave rings kick the neighborhood while new stars twinkle in out in the halo. Hold grips the cluster, press slams.',
   helps: 'Core-collapse drama made visible: collapse → detonation → re-expansion → star formation, cycling forever inside the glyph.',

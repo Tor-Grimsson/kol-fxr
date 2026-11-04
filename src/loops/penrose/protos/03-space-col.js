@@ -13,7 +13,7 @@ import { clear, strokeOutline, wrapLoop, sampleInside } from '../common.js'
 // Paper: algorithmicbotany.org/papers/colonization.egwnp2007.pdf
 export const spaceCol            = {
   id: '03-space-col',
-  name: 'SPACE COLONIZATION',
+  name: 'Space colonization',
   repo: 'jasonwebb/2d-space-colonization-experiments',
   summary:
     'Runions 2007 venation algorithm. Attractors live inside the glyph; each branch tip advances toward the mean of its visible attractors; attractors die on contact. Output is dendritic — like a root system conforming to the letter.',
